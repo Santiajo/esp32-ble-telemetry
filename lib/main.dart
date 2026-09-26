@@ -13,7 +13,7 @@ class TelemetryStationApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Balancín · Estación BLE',
+      title: 'Balancín',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
