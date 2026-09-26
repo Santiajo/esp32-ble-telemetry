@@ -1,0 +1,254 @@
+RESUMEN DEL PROYECTO
+Migración de estación de telemetría BLE (Web -> Flutter nativo Android)
+========================================================================
+
+1. OBJETIVO DEL PROYECTO
+------------------------
+Migrar un prototipo web existente (Vanilla JS + Web Bluetooth API) hacia una
+app movil nativa hecha en Flutter, orientada exclusivamente a Android (iOS
+y navegadores web quedan fuera de alcance).
+
+La aplicacion es una estacion de monitoreo telemetrico en tiempo real que se
+conecta por Bluetooth Low Energy (BLE) a dos placas ESP32 con sensores
+inerciales MPU6050:
+
+  - ESP A (Turquesa, #00FFCC) -> nombre esperado: ESP32-MPU-A
+  - ESP B (Naranja,  #FF5722) -> nombre esperado: ESP32-MPU-B
+
+Ambas placas transmiten datos crudos de aceleracion (formato "rawX,rawY\n")
+via el protocolo Nordic UART Service (NUS). Los datos se procesan con un
+motor cinematico propio y se visualizan a 60 FPS en un plano cartesiano 2D
+mas tres osciloscopios de onda (velocidad, aceleracion y energia cinetica).
+
+
+2. PROYECTO ORIGINAL (REFERENCIA WEB)
+--------------------------------------
+Stack: Vanilla JavaScript (ES6+), HTML5, CSS3, Canvas 2D nativo a 60 FPS,
+Web Bluetooth API, Screen Wake Lock API, y estructura de PWA (manifest.json
++ service worker). Este proyecto se uso como referencia de logica de negocio
+(carpeta reference/legacy-web dentro del workspace), no como codigo a
+traducir literalmente.
+
+
+3. FLUJO Y HERRAMIENTAS DE TRABAJO UTILIZADAS
+-----------------------------------------------
+- IDE: Google Antigravity, cubierto sin costo adicional por la suscripcion
+  Google AI Pro ya existente.
+- Integracion Dart/Flutter MCP server (dart mcp-server) instalada y
+  verificada activa (14 herramientas habilitadas: analyze_files,
+  get_runtime_errors, hot_reload, hot_restart, widget_inspector, vm_service,
+  pub_dev_search, pub, lsp, entre otras), dando al agente introspeccion en
+  vivo del proyecto (analizador, arbol de widgets, ejecucion de tests) en
+  lugar de generar codigo a ciegas.
+- Agent skills oficiales de Flutter/Dart instaladas para reforzar patrones
+  idiomaticos (manejo de estado, layouts, tests de widgets).
+- Proyecto de referencia web clonado dentro del workspace (reference/legacy-web)
+  para que el agente pudiera leer y entender la logica original antes de
+  proponer la migracion.
+- Se uso el modo de Planificacion (Plan Mode) del agente para generar un
+  documento de arquitectura, revisarlo, corregirlo y aprobarlo ANTES de
+  escribir codigo.
+
+
+4. ARQUITECTURA FINAL IMPLEMENTADA
+-------------------------------------
+
+  A. Motor cinematico puro
+     Archivo: lib/core/physics/physics_engine.dart
+     Port fiel (1:1) de physics.js a Dart puro, sin dependencias de
+     navegador. Parametros conservados:
+       - Conversion de escala MPU6050: rawToMs2 = 9.81 / 16384.0 (+/-2g)
+       - Filtro anti-picos adaptativo: descarta lecturas > 35 m/s^2;
+         tolera saltos > 15 m/s^2 hasta 3 rechazos consecutivos, luego
+         adopta el nuevo valor (para no bloquearse ante giros reales)
+       - Filtro pasa-altos (cancelacion de gravedad/inclinacion):
+         gravedadAlpha = 0.02
+       - Filtro EMA de suavizado: alpha = 0.35
+       - Integracion cinematica en tiempo continuo (delta-t real medido
+         con Stopwatch, descartando saltos > 0.5 s)
+       - Zona muerta: deadzone = 0.08 m/s^2
+       - Limite de velocidad terminal: 3.5 m/s
+       - Friccion normalizada al framerate real: factor = 0.95^(dt * 60)
+       - ZUPT (Zero Velocity Update): tras 300 ms sin movimiento, aplica
+         frenado (frenadoZupt = 0.55) y resorte elastico de retorno al
+         centro (fuerzaRetorno = 0.03)
+       - Limites espaciales del plano: +/-58 cm, con despegue instantaneo
+         de bordes
+       - Funcion de calibracion de centro (Tara) que descuenta el offset
+         de reposo en lecturas posteriores
+
+  B. Constantes y protocolo BLE
+     Archivo: lib/core/ble/ble_constants.dart
+       - UUID de servicio NUS: 6e400001-b5a3-f393-e0a9-e50e24dcca9e
+       - UUID de caracteristica TX (notify): 6e400003-b5a3-f393-e0a9-e50e24dcca9e
+       - Prefijo de nombre: "ESP32"; nombres esperados: ESP32-MPU-A / -B
+     Estos UUIDs son identicos a los usados en la version web: el firmware
+     de los ESP32 no requirio ningun cambio.
+
+  C. Persistencia de direcciones MAC
+     Archivo: lib/services/storage_service.dart
+     Guarda y recupera (via shared_preferences) la direccion MAC de cada
+     placa ya vinculada, para permitir reconexion inmediata sin necesidad
+     de un nuevo escaneo.
+
+  D. Controlador dual independiente por placa
+     Archivo: lib/controllers/esp_device_controller.dart
+     Dos instancias independientes de ChangeNotifier (una para ESP A, otra
+     para ESP B), cada una maneja:
+       - Estados: sin vincular / buscando / conectado
+       - Reconexion: bucle de reintento ACTIVO (no se uso el autoConnect
+         nativo de Android). Justificacion tecnica documentada en el plan:
+           * autoConnect es lento (espera pasiva de paquetes, puede tardar
+             minutos) y consume ranuras GATT limitadas (Android soporta
+             solo 4-7 conexiones concurrentes)
+           * En capas de fabricante (MIUI/HyperOS, OneUI, ColorOS) los
+             daemons de ahorro de bateria suelen suspender listeners
+             pasivos de autoConnect de forma erratica
+           * El reintento manual (conexion activa con timeout de 3.5 s y
+             backoff exponencial de 2.0 s hasta 10.0 s) es mas predecible,
+             permite mostrar progreso real al usuario ("Buscando...", 
+             conteo de reintentos) y libera la ranura GATT si el intento
+             falla
+       - Ensamblado de paquetes BLE fragmentados (buffer UTF-8 acumulativo,
+         separado por saltos de linea) en tramas CSV (rawX,rawY)
+       - Buffers circulares de historial (180 muestras) para velocidad,
+         aceleracion y energia cinetica, usados por los osciloscopios
+       - Metodo de interpolacion visual: tickInterpolacion() con factor
+         SUAVIZADO_VISUAL = 0.18
+       - Acciones expuestas: calibrarCentro() (Tara) y reiniciarPosicion()
+
+  E. Prevencion de suspension de pantalla
+     Paquete: wakelock_plus
+     Se activa (WakelockPlus.enable()) en cuanto al menos una placa esta
+     conectada, y se desactiva cuando ambas se desconectan. Limpieza segura
+     en el dispose() de la pantalla. Es el equivalente nativo directo de la
+     Screen Wake Lock API que usaba la version web para evitar que el
+     telefono apague la pantalla y corte el enlace BLE.
+
+  F. Renderizado grafico a 60 FPS (CustomPainter)
+     Archivos:
+       - lib/widgets/radar_cartesian_painter.dart: plano cartesiano 2D,
+         fondo oscuro (#0D0D0D), reticula cada 24 px (#181818), ejes
+         centrales, puntos con halo difuso (15% opacidad), nucleo solido
+         con borde blanco y etiquetas "A"/"B". Escala: 4.0 px por cm.
+       - lib/widgets/oscilloscope_painter.dart: curvas Bezier cuadraticas
+         continuas, superpuestas para A (turquesa) y B (naranja), en tres
+         canales: velocidad total, aceleracion/impulso y energia cinetica.
+       - lib/widgets/metric_card.dart: tarjetas de metricas (aceleracion
+         X/Y, velocidad total, posicion en cm) por cada placa.
+       - lib/widgets/telemetry_console.dart: consola de texto raw con
+         auto-scroll.
+
+     Desacoplamiento estricto (punto critico de diseno):
+       - La llegada de un paquete BLE NUNCA dispara un repintado directo.
+         Solo actualiza los valores en memoria dentro de PhysicsEngine.
+       - El repintado se controla exclusivamente por un Ticker de Flutter
+         (AnimationController.repeat()) sincronizado al vsync de pantalla
+         (~16.6 ms a 60 Hz). En cada pulso: se actualiza la interpolacion
+         visual, se alimentan los buffers de onda, y se notifica al
+         CustomPainter.
+       - Esto evita que el jitter irregular del BLE (rafagas de 40-80 Hz)
+         se traduzca en parpadeos o tirones visuales.
+
+  G. Pantalla principal
+     Archivo: lib/screens/dashboard_screen.dart
+       - Conduce el Ticker de 60 FPS
+       - Administra Wakelock segun estado de conexion
+       - Monitorea el estado del adaptador Bluetooth del telefono
+         (FlutterBluePlus.adapterState): si esta apagado, muestra un
+         banner de aviso con boton para encenderlo (FlutterBluePlus.turnOn())
+       - Header con chips interactivos por placa ("Toca para vincular",
+         "Buscando...", "Conectado")
+       - Layout responsive: panel dividido en pantallas anchas (tablet/
+         landscape), vista en scroll con cuadrantes en moviles verticales
+
+  H. Permisos de Android declarados (AndroidManifest.xml)
+       - Android 12+ (API 31+): BLUETOOTH_SCAN con
+         android:usesPermissionFlags="neverForLocation" (evita pedir
+         ubicacion continua), y BLUETOOTH_CONNECT para enlaces GATT
+       - Android 11 y anteriores (compatibilidad legacy, maxSdkVersion=30):
+         BLUETOOTH, BLUETOOTH_ADMIN, ACCESS_FINE_LOCATION,
+         ACCESS_COARSE_LOCATION
+       - Declaracion de hardware requerido: android.hardware.bluetooth_le
+       - Solicitud en tiempo de ejecucion manejada con el paquete
+         permission_handler
+
+  I. Dependencias finales verificadas (pubspec.yaml)
+       - flutter_blue_plus: ^2.3.13 (BLE nativo)
+       - wakelock_plus: ^1.8.0 (mantener pantalla encendida)
+       - shared_preferences: ^2.5.0 (persistencia de MAC)
+       - permission_handler: ^11.4.0 (permisos runtime)
+
+     Nota: la primera version del plan tenia flutter_blue_plus fijado en
+     una version desactualizada/inexistente (^1.35.0); se corrigio antes
+     de implementar tras verificar en pub.dev la serie estable real (2.x).
+
+
+5. LO QUE SE ELIMINO / NO SE MIGRO (correctamente, por decision de alcance)
+-----------------------------------------------------------------------------
+  - manifest.json y sw.js (Service Worker): pertenecen a la logica de PWA
+    instalable en navegador, sin sentido en una app nativa Android.
+  - Cualquier consideracion de iOS: descartado explicitamente desde el
+    planteo del alcance del proyecto.
+
+
+6. VERIFICACION Y RESULTADOS DE PRUEBAS
+-------------------------------------------
+  A. Pruebas automatizadas (flutter test) - 7 pruebas, 0 fallos:
+     1. Conversion de LSB a m/s^2 exacta con factor 9.81/16384
+     2. Calibracion de centro (Tara) descuenta offset en lecturas
+        posteriores
+     3. Filtro descarta lecturas absurdas > 35 m/s^2
+     4. Filtro anti-picos descarta pico aislado pero se adapta tras 3
+        rechazos consecutivos
+     5. resetPosicion reinicia velocidades y coordenadas a cero
+     6. Limites espaciales impiden superar +/-58 cm
+     7. Smoke test de la app y elementos del Dashboard
+
+  B. Analisis estatico (flutter analyze): 0 errores, 0 advertencias,
+     0 lints.
+
+  C. Verificacion manual en dispositivo Android fisico:
+     - Se activaron Opciones de desarrollador y Depuracion USB en el
+       telefono, se conecto por cable, y se acepto el dialogo de
+       autorizacion en pantalla.
+     - Se confirmo el reconocimiento del dispositivo (flutter devices) y
+       se ejecuto la app en modo debug (flutter run) directamente sobre
+       el telefono real, no en emulador (los emuladores no soportan BLE
+       real).
+     - Se aceptaron los permisos de Bluetooth solicitados por el sistema
+       operativo dentro de la app.
+     - RESULTADO CONFIRMADO POR EL USUARIO: la aplicacion migrada
+       funciona correctamente y logra vincularse (parear y conectar) con
+       el dispositivo ESP32 real mencionado en el proyecto.
+
+
+7. ESTADO FINAL
+------------------
+La migracion del prototipo web a Flutter nativo (Android) se considera
+COMPLETA y FUNCIONAL:
+  - Arquitectura aprobada en modo de planificacion antes de escribir codigo
+  - Codigo implementado siguiendo el plan corregido
+  - Pruebas automatizadas y analisis estatico limpios
+  - Prueba en hardware real exitosa: conexion BLE, lectura de datos del
+    acelerometro, y funcionamiento general de la app confirmados por el
+    usuario en su propio dispositivo fisico
+
+
+8. PENDIENTES / SUGERENCIAS OPCIONALES (no bloqueantes)
+-----------------------------------------------------------
+  - Renombrar el proyecto Flutter: quedo con el nombre por defecto
+    generado por "flutter create" (aparece como "hola_mundo" en los logs
+    de analisis); se sugirio renombrarlo a algo descriptivo (por ejemplo
+    esp32_ble_telemetry) antes de publicar el codigo, ya que afecta
+    pubspec.yaml, el namespace de Android y algunos imports internos.
+  - Publicacion en GitHub: se dejo pendiente de decision del usuario
+    (repositorio publico o privado, licencia a usar) antes de pedirle al
+    agente que cree el repositorio (via "gh repo create") y genere un
+    README completo con arquitectura, protocolo BLE, requisitos y
+    instrucciones de build.
+  - Prueba de persistencia real de auto-reconexion: se recomendo instalar
+    un build real (flutter build apk + flutter install) y cerrar/reabrir
+    la app manualmente desde el icono del telefono, ya que el hot reload
+    de una sesion de desarrollo no simula fielmente un cierre completo
+    del proceso.

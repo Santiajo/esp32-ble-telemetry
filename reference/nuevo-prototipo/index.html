@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<!--
+  BRANDING · prototipo funcional (Seminario de Título · Joaquín Muñoz Quiroz · Escuela de Diseño UDP)
+  Instrumento sonoro de balanceo compartido: adulto + niño (2–5 años).
+
+  Un solo archivo, sin dependencias (HTML + CSS + JS vanilla + Web Audio API).
+  En el objeto real los sticks envían datos de una unidad inercial por Bluetooth;
+  aquí se simulan con el dedo o el ratón sobre dos mitades de la pantalla.
+
+  ESTRUCTURA DEL ARCHIVO
+   1. <style>   estilos por pantalla (login, onboarding, inserción, sesión, modo eje, pérdida, recuerdo, tablero interno)
+   2. <body>    una <section class="screen"> por pantalla; solo la que tiene .active es visible
+   3. <script>  lógica, en este orden:
+        audio · wake lock · onboarding · sticks (lectura de gesto) · campo y máquina de estados
+        · loop de render · controles del tablero interno · pérdida de stick · flujo de usuario · cierre y reportes · deep links
+
+  PRINCIPIO DE DISEÑO
+   El adulto abre y sostiene un "campo" de alturas (notas pentatónicas). El niño articula dentro de él.
+   Sin adulto no hay campo; sin niño no hay notas. Nada suena "mal".
+-->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#ffffff">
+<title>Branding · prototipo de simulación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ===== Base ===== */
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:Nunito,ui-rounded,"Arial Rounded MT Bold","Segoe UI",system-ui,sans-serif;color:#2B2536;background:#EFECE4;line-height:1.35;-webkit-text-size-adjust:100%;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+body.lock{overflow:hidden}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.screen{display:none}.screen.active{display:block}
+button{font:inherit;font-weight:800;color:#2B2536;border:1.5px solid rgba(43,37,54,.25);background:#fff;border-radius:16px;padding:12px 20px;min-height:52px;min-width:52px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .08s}
+button:active:not(:disabled){transform:translateY(2px)}
+button.primary{background:#2B2536;color:#fff}
+button:disabled{opacity:.35;cursor:default}
+:focus-visible{outline:3px solid #5B35B8;outline-offset:3px}
+h1{font-size:36px;font-weight:900;letter-spacing:-.02em;line-height:1.05}
+h2{font-size:22px;font-weight:900;letter-spacing:-.01em}
+p{text-wrap:pretty}
+.small{font-size:14px;color:#5a536b}
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 28px}
+.brand{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px}
+.brand i{display:block;width:16px;height:16px;flex:none}
+.brand i:nth-child(1){background:#B3A2DC;border-radius:7px}
+.brand i:nth-child(2){background:#E85E45;border-radius:50%}
+.brand i:nth-child(3){background:#F2E44A;border-radius:50%}
+.brand i:nth-child(4){background:#7A8B34;clip-path:polygon(50% 4%,100% 100%,0 100%)}
+.sim{background:#fff;border:0;border-radius:16px;padding:12px 16px;font-size:14px;margin:16px 0 22px}
+/* ===== Onboarding (stepper de 5 pasos, un paso visible a la vez) ===== */
+.prep{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;max-width:720px;margin:0 auto;padding:16px 18px 20px;gap:14px}
+.ph{display:flex;flex-direction:column;align-items:center;gap:10px}
+.brand{margin:0}
+.prog{list-style:none;display:flex;gap:5px;width:140px;padding:0}
+.prog li{flex:1;height:5px;border-radius:3px;background:#dcd8cf;transition:background .2s}
+.prog li.cur{background:#2B2536}.prog li.done{background:#7A8B34}
+.sim{margin:0;padding:4px 10px;font-size:11.5px;color:#5a536b;background:transparent;border-radius:0;border:0;text-align:center}
+.st{display:none}.st.cur{display:flex;flex-direction:column;flex:1;gap:16px}
+.fig{flex:1;min-height:250px;background:#fff;border-radius:28px;display:grid;place-items:center;position:relative;overflow:hidden;padding:24px}
+.figin{display:flex;flex-direction:column;align-items:center;gap:22px}
+.txt .k{font-size:13px;font-weight:800;color:#5B35B8}
+.txt h2{font-size:26px;margin:4px 0 8px;line-height:1.1}
+.txt p{font-size:15px;color:#4a445a}
+.act{display:flex;flex-wrap:wrap;gap:10px}
+.act .primary{flex:1 1 100%;min-height:58px;font-size:17px}
+.phone{width:112px;height:210px;border-radius:26px;background:#2B2536;position:relative;display:grid;place-items:center}
+.phone::after{content:"";position:absolute;left:50%;top:10px;width:38px;height:6px;border-radius:3px;background:#5a536b;transform:translateX(-50%)}
+.badge{position:absolute;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:13px;color:#2B2536}
+.badge.bt{background:#B3A2DC;right:-26px;top:22px}
+.badge.dnd{background:#F2E44A;right:-26px;top:92px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.chip{padding:7px 14px;border-radius:999px;font-size:13px;font-weight:800;color:#2B2536}
+.chip.lav{background:#B3A2DC}.chip.yel{background:#F2E44A}.chip.cor{background:#F4C3B6}.chip.oli{background:#7A8B34;color:#fff}
+.moon{width:76px;height:76px;border-radius:50%;background:#F2E44A;position:relative;overflow:hidden}
+.moon::after{content:"";position:absolute;width:64px;height:64px;border-radius:50%;background:#2B2536;left:26px;top:-12px}
+.arrow{width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:22px solid #2B2536}
+.ejefig{width:min(280px,80vw);height:124px;border-radius:48px;background:#B3A2DC;position:relative}
+.ejefig .slot{position:absolute;left:50%;top:-10px;width:70%;height:72px;transform:translateX(-50%);border-radius:16px;background:#2B2536}
+.ejefig .back{position:absolute;left:50%;top:0;width:64%;height:56px;transform:translateX(-50%);border-radius:14px;background:#5a536b}
+.ejefig .back::after{content:"";position:absolute;left:12px;top:12px;width:14px;height:14px;border-radius:50%;background:#2B2536}
+.ejefig .figglow{position:absolute;left:50%;bottom:16px;width:22px;height:22px;transform:translateX(-50%);border-radius:50%;background:#F2E44A;box-shadow:0 0 26px 10px rgba(242,228,74,.55)}
+.sticks{display:flex;align-items:flex-end;gap:56px}
+.stick{border-radius:999px;position:relative}
+.stick.big{width:62px;height:220px;background:#B3A2DC}
+.stick.sm{width:44px;height:150px;background:#E85E45}
+.stick .sled{position:absolute;left:50%;top:18px;width:14px;height:14px;border-radius:50%;transform:translateX(-50%);background:rgba(43,37,54,.25)}
+.stick .sled.lit{background:#F2E44A;box-shadow:0 0 14px 4px rgba(242,228,74,.7)}
+.who{display:grid;grid-template-columns:1fr 1fr;gap:56px;text-align:center;font-weight:800;font-size:14px}
+.hold{position:relative;display:flex;align-items:center;gap:10px;overflow:hidden;padding:12px 18px;min-height:60px;flex:1 1 150px;text-align:left}
+.hold .led{width:14px;height:14px;border-radius:50%;background:#e2ded6;flex:none}
+.hold .led.lit{background:#F2E44A}
+.hold .bar{position:absolute;left:0;bottom:0;height:7px;width:100%}
+.hold .bar i{display:block;height:100%;width:0;background:#B3A2DC}
+.hold.done{border-color:rgba(122,139,52,.5);background:#f3f5e8}
+.hold.done .lab{color:#5c6a25}
+.hold.done .bar i{background:#7A8B34}
+/* ===== Sesión · tablero interno de mediciones (para el equipo, no para el usuario final) ===== */
+.stage{min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto minmax(45vh,1fr);grid-template-rows:auto auto minmax(45dvh,1fr);grid-template-areas:"pill pill" "axis axis" "L R";gap:10px;padding:10px}
+@media(min-width:820px){.stage{grid-template-columns:1fr 1.25fr 1fr;grid-template-rows:auto 1fr;grid-template-areas:"pill pill pill" "L axis R";gap:14px;padding:14px;max-width:1200px;margin:0 auto}}
+.pill{grid-area:pill;background:#2B2536;color:#fff;border-radius:18px;padding:10px 16px;display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline;font-size:13px;line-height:1.3}
+.pill strong{font-size:16px;font-weight:900;white-space:nowrap;color:#F2E44A}
+.axis{grid-area:axis;background:#fff;border:0;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:8px;justify-content:center}
+.band{position:relative;display:grid;grid-template-columns:repeat(25,1fr);gap:3px;height:84px;padding:5px 0}
+.col{background:#EFECE4;border-radius:6px;transition:background .12s}
+.col.on{background:#7B5FCB}
+.col.flash{background:#E85E45;transition:none}
+.col.flashH{background:#F2E44A;transition:none}
+.win{position:absolute;top:0;bottom:0;border:2px solid #2B2536;border-radius:10px;transition:left .1s linear,width .1s linear;display:none}
+.bandLabels{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#5a536b}
+#fieldText{font-size:14px;min-height:2.6em;font-weight:600}
+.ledRow{display:flex;align-items:center;gap:12px;font-size:12px;color:#5a536b}
+#led{width:30px;height:30px;border-radius:50%;background:#F2E44A;opacity:.25;flex:none}
+#hidden{font-size:13px;font-weight:800;color:#2B2536;background:#F2E44A;border-radius:10px;padding:5px 12px;align-self:flex-start}
+.panel{position:relative;border:0;border-radius:22px;touch-action:none;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:14px;min-height:200px;transition:box-shadow .15s}
+.panel>*{pointer-events:none}
+.panel[data-side="L"]{grid-area:L}.panel[data-side="R"]{grid-area:R}
+.panel[data-role="adult"]{background:#B3A2DC}
+.panel[data-role="child"]{background:#F4C3B6}
+.panel[data-role="adult"].moving{box-shadow:inset 0 0 0 4px #5B35B8}
+.panel[data-role="child"].moving{box-shadow:inset 0 0 0 4px #E85E45}
+.panel h3{font-size:15px;font-weight:900;color:#2B2536}
+.panel p{font-size:12.5px;color:#3a3449;margin-top:2px}
+.panel .map{font-size:11.5px;color:#3a3449;border-top:2px solid rgba(43,37,54,.25);padding-top:8px;font-weight:600}
+.dot{position:absolute;left:0;top:0;border-radius:50%;transform:translate(-50%,-50%);display:none;will-change:transform}
+.panel[data-role="adult"] .dot{width:50px;height:50px;background:#5B35B8}
+.panel[data-role="child"] .dot{width:32px;height:32px;background:#E85E45}
+.below{max-width:1200px;margin:0 auto;padding:10px 10px 28px;display:flex;flex-direction:column;gap:16px}
+.ctrls{display:flex;flex-wrap:wrap;gap:10px}
+.kbd{font-size:13px;color:#5a536b}
+.kbd kbd{border:1px solid rgba(43,37,54,.3);border-radius:5px;padding:0 5px;font-family:inherit;background:#fff}
+@media(hover:none) and (pointer:coarse){.kbd{display:none}}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(min-width:820px){.cards{grid-template-columns:repeat(6,1fr)}}
+.card{background:#fff;border:0;border-radius:16px;padding:12px}
+.card b{display:block;font-size:24px;font-weight:900;letter-spacing:-.02em}
+.card span{font-size:11.5px;color:#5a536b;font-weight:600}
+/* ===== Cierre interno (datos crudos + descarga JSON) ===== */
+.sum{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:18px 0 26px}
+@media(min-width:600px){.sum{grid-template-columns:repeat(5,1fr)}}
+.bars{display:grid;gap:10px;margin:12px 0}
+.bar-row{display:grid;grid-template-columns:1fr 60px;gap:10px;align-items:center;font-size:14px;font-weight:600}
+.bar-row .track{height:14px;background:#fff;border:0;border-radius:8px;overflow:hidden;margin-top:5px}
+.bar-row .track i{display:block;height:100%;background:#7B5FCB}
+.bar-row[data-r="2"] .track i{background:#7A8B34}
+.bar-row[data-r="3"] .track i{background:#E85E45}
+.bar-row[data-r="4"] .track i{background:#B3A2DC}
+.bar-row[data-r="5"] .track i{background:#F2E44A}
+.bar-row .pct{text-align:right;font-weight:900;font-size:16px}
+footer{max-width:720px;margin:0 auto;padding:16px;font-size:12px;color:#5a536b}
+#audioNotice{position:fixed;left:10px;right:10px;top:10px;background:#E85E45;color:#fff;border:0;border-radius:14px;padding:10px 14px;font-size:14px;font-weight:700;z-index:9;display:none}
+/* ===== Modo eje: lo que el usuario ve con el celular dentro del objeto.
+   Solo luz en las franjas superior e inferior; el centro queda tapado por el cuerpo del eje. ===== */
+#ejeView{position:fixed;inset:0;background:#1d1927;display:none;overflow:hidden}
+body.modo-eje #ejeView{display:block}
+body.modo-eje .stage{position:relative;z-index:1;grid-template-columns:1fr 1fr;grid-template-rows:1fr;grid-template-areas:"L R";padding:0;gap:0}
+body.modo-eje .pill,body.modo-eje .axis,body.modo-eje .below,body.modo-eje footer{display:none}
+body.modo-eje .panel,body.modo-eje .panel.moving{background:transparent;border-radius:0;box-shadow:none;transition:none}
+body.modo-eje .panel>*{visibility:hidden}
+.lightband{position:absolute;left:0;right:0;height:40%;--c:#7B5FCB;transition:transform .3s,opacity .3s}
+#glowT{top:0;transform-origin:50% 0;background:linear-gradient(to bottom,var(--c) 0%,var(--c) 30%,transparent 100%)}
+#glowB{bottom:0;transform-origin:50% 100%;background:linear-gradient(to top,var(--c) 0%,var(--c) 30%,transparent 100%)}
+.fl{position:absolute;width:16vmin;height:16vmin;border-radius:50%;background:radial-gradient(circle,#E85E45 0%,#E85E45 45%,transparent 72%);transform:translate(-50%,-50%) scale(.4);animation:flr .55s ease-out forwards}
+#ejeCenter{left:50%;top:50%;transform:translate(-50%,-50%) rotate(-90deg);width:min(78vh,420px);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;color:#fff;font-family:Nunito,system-ui,sans-serif}
+#ejeCenter .box{border:1.5px dashed rgba(255,255,255,.28);border-radius:22px;padding:22px 20px;display:flex;flex-direction:column;gap:12px;align-items:center;width:100%}
+#ejeCenter .pulse{width:14px;height:14px;border-radius:50%;background:#F2E44A}
+#ejeCenter strong{font-size:18px;font-weight:900}
+#ejeCenter p{font-size:12.5px;color:rgba(255,255,255,.6);font-weight:600;margin:0}
+#ejeCenter small{font-size:11px;color:rgba(255,255,255,.4);font-weight:600}
+@keyframes flr{0%{opacity:1;transform:translate(-50%,-50%) scale(.4)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}}
+#ejeExit{background:rgba(255,255,255,.14);color:#fff;border:0;min-height:52px;padding:12px 22px;font-size:14px;border-radius:16px;font-weight:800}
+#ejeCenter{display:none;position:fixed;z-index:3}
+body.modo-eje #ejeCenter{display:flex}
+/* ===== Flujo del usuario: login, inserción en el eje ===== */
+.full{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;max-width:720px;margin:0 auto;padding:24px 22px 28px}
+.login{justify-content:center;align-items:center;text-align:center;gap:14px}
+.login .brand{gap:12px;margin-bottom:18px}.login .brand i{width:34px;height:34px}
+.login h1{font-size:44px}
+.login .tag{font-size:16px;color:#4a445a;font-weight:600;max-width:300px}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:340px;min-height:58px;font-size:16px;margin-top:30px}
+.gbtn .g{width:28px;height:28px;border-radius:50%;background:#2B2536;color:#fff;display:grid;place-items:center;font-weight:900;font-size:15px}
+.gbtn.busy{opacity:.6;pointer-events:none}
+.login .priv{font-size:12px;color:#5a536b;max-width:300px;margin-top:8px}
+.login .alt{font-size:13px;color:#5a536b;font-weight:700;margin-top:18px;background:none;border:0;text-decoration:underline;min-height:44px}
+.insert{gap:16px;justify-content:center;align-items:center;text-align:center;padding:16px}
+.insert>div:not(.fig){max-width:300px}
+.insert .fig{background:#fff;border-radius:28px;flex:0 1 auto;width:100%;max-height:44vh;min-height:0;display:grid;place-items:center;overflow:hidden}
+.insscene{position:relative;width:300px;height:300px;transform:scale(min(1,calc((100vw - 64px)/300)))}
+.insscene .ejefig{position:absolute;left:10px;bottom:40px}
+.insscene .ejefig .slot{background:#2B2536}
+.insscene .ejefig .back{display:none}
+.insscene .fone{position:absolute;left:50%;top:0;width:176px;height:56px;border-radius:14px;background:#5a536b;transform:translateX(-50%);animation:ins 2.6s ease-in-out infinite}
+.insscene .fone::after{content:"";position:absolute;left:12px;top:12px;width:14px;height:14px;border-radius:50%;background:#2B2536}
+.insscene .light{position:absolute;left:0;right:0;bottom:0;height:60px;display:flex;justify-content:space-between;padding:0 10px}
+.insscene .light i{width:80px;height:36px;border-radius:18px;background:radial-gradient(ellipse,#7B5FCB 0%,#7B5FCB 40%,transparent 75%);opacity:0;animation:lt 2.6s ease-in-out infinite}
+@keyframes ins{0%,15%{transform:translate(-50%,0)}55%,100%{transform:translate(-50%,130px)}}
+@keyframes lt{0%,55%{opacity:0}75%,100%{opacity:.9}}
+.insert h2{font-size:24px;line-height:1.1;margin-bottom:6px}
+.insert p{font-size:15px;color:#4a445a}
+.insert .primary{width:100%;max-width:300px}
+.insert .count{font-size:14px;font-weight:800;color:#5B35B8}
+/* ===== Pérdida de conexión de un stick ===== */
+.lost{gap:16px;justify-content:center;align-items:center;text-align:center;padding:20px}
+.lost .fig{background:#fff;border-radius:28px;width:100%;max-height:40vh;min-height:240px;display:grid;place-items:center}
+.lost .stickwrap{position:relative;display:grid;place-items:center;padding:26px}
+.lost .stick{background:#cfc9d8}
+.lost .stick .sled{background:#b8b2c4}
+.lost .ring{position:absolute;inset:0;border:2.5px dashed #E85E45;border-radius:999px;animation:ring 1.6s ease-in-out infinite}
+@keyframes ring{0%,100%{opacity:.35;transform:scale(.97)}50%{opacity:1;transform:scale(1)}}
+.lost .cause{display:inline-flex;align-items:center;gap:8px;background:#F4C3B6;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:800}
+.lost .cause b{width:10px;height:10px;border-radius:50%;background:#E85E45}
+.lost h2{font-size:24px;line-height:1.1;margin:8px 0 6px}
+.lost p{font-size:15px;color:#4a445a;max-width:300px}
+.lost .hold{flex:0 1 auto;width:100%;max-width:320px;justify-content:center;text-align:center}
+.lost .hold .lab{flex:1}
+.lost .tips{font-size:12.5px;color:#5a536b;max-width:300px}
+.lost .link{background:none;border:0;text-decoration:underline;font-size:14px;color:#5a536b;min-height:44px}
+@media(prefers-reduced-motion:reduce){.lost .ring{animation:none}}
+/* ===== Recuerdo de la experiencia (recap visual para el usuario) ===== */
+.rs{gap:18px}
+.rs h1{font-size:34px;line-height:1.05}
+.rs .sub{font-size:16px;color:#4a445a;font-weight:600}
+.ribbon{display:flex;height:64px;border-radius:32px;overflow:hidden;background:#fff;gap:3px;padding:6px}
+.ribbon i{display:block;height:100%;border-radius:26px;min-width:8px;transition:width .3s}
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;background:#fff;border-radius:999px;padding:6px 12px 6px 8px}
+.legend b{width:14px;height:14px;border-radius:50%;display:inline-block}
+.hl{display:grid;grid-template-columns:1fr;gap:10px}
+.hl .c{background:#fff;border-radius:22px;padding:18px 18px 18px 84px;position:relative;min-height:96px}
+.hl .c::before{content:"";position:absolute;left:18px;top:50%;width:48px;height:48px;transform:translateY(-50%)}
+.hl .c.lav::before{background:#B3A2DC;border-radius:14px}
+.hl .c.yel::before{background:#F2E44A;border-radius:50%}
+.hl .c.oli::before{background:#7A8B34;clip-path:polygon(50% 4%,100% 100%,0 100%)}
+.hl .c.cor::before{background:#E85E45;border-radius:50%}
+.hl .c b{display:block;font-size:22px;font-weight:900;letter-spacing:-.01em}
+.hl .c span{font-size:13.5px;color:#4a445a;font-weight:600}
+.rs .note{font-size:13px;color:#5a536b}
+.rs .acts{display:flex;flex-direction:column;gap:10px;margin-top:auto}
+.rs .acts .primary{min-height:58px;font-size:17px}
+@media(prefers-reduced-motion:reduce){.insscene .fone{animation:none;transform:translate(-50%,130px)}.insscene .light i{animation:none;opacity:.9}}
+@media(prefers-reduced-motion:reduce){.panel,.win,.col,.step,button{transition:none}}
+</style>
+</head>
+<body>
+<div id="ejeView"><div class="lightband" id="glowT"></div><div class="lightband" id="glowB"></div></div><div id="ejeCenter"><div class="box"><span class="pulse"></span><strong>Experiencia activa</strong><p>Esta zona queda cubierta por el eje.</p><button id="ejeExit">Terminar</button></div><small>Los sticks siguen leyéndose en las dos mitades de la pantalla</small></div>
+<div id="audioNotice">El audio está en pausa. En iPhone, revisa el interruptor de silencio; luego toca la pantalla para reanudar.</div>
+
+<section id="login" class="screen">
+ <div class="full login">
+  <div class="brand"><i></i><i></i><i></i><i></i></div>
+  <h1>Branding</h1>
+  <p class="tag">Un instrumento para sonar juntos: un adulto, un niño y ninguna pantalla a la vista.</p>
+  <button class="gbtn" id="gbtn"><span class="g">G</span><span class="glab">Continuar con Google</span></button>
+  <p class="priv">Tu cuenta solo guarda tus sesiones de juego. Nunca registramos audio, imagen ni datos del niño.</p>
+  <button class="alt" id="guest">Probar sin cuenta</button>
+ </div>
+</section>
+
+<section id="insert" class="screen">
+ <div class="full insert">
+  <div class="fig"><div class="insscene"><div class="fone"></div><div class="ejefig"><div class="slot"></div><div class="glow"></div></div><div class="light"><i></i><i></i></div></div></div>
+  <div><h2>Coloca el celular en el eje</h2><p>Pantalla hacia adentro. Solo los bordes quedan a la vista.</p></div>
+  <p class="count" id="insCount">Empieza sola en 6 s</p>
+  <button class="primary" id="insGo" style="min-height:58px;font-size:17px">Ya está adentro</button>
+ </div>
+</section>
+
+<section id="lost" class="screen">
+ <div class="full lost">
+  <div class="fig"><div class="stickwrap"><div class="ring"></div><div class="stick sm" id="lostStick"><div class="sled"></div></div></div></div>
+  <div><span class="cause"><b></b><span id="lostCause">Fuera de alcance</span></span><h2 id="lostTitle">Se perdió el stick pequeño</h2><p id="lostText">El juego quedó en pausa y el sonido se apagó suavemente. Acerca el stick al eje y mantén pulsado para reconectarlo.</p></div>
+  <button class="hold" id="hLost" data-done="Stick reconectado"><span class="led"></span><span class="lab">Mantener 3 s para reconectar</span><span class="bar"><i></i></span></button>
+  <p class="tips" id="lostTips">Si no reconecta: revisa que la luz del stick encienda al moverlo; si no, necesita carga.</p>
+  <button class="link" id="lostEnd">Terminar y ver el recuerdo</button>
+ </div>
+</section>
+
+<section id="resumen" class="screen">
+ <div class="full rs">
+  <div style="text-align:center"><div class="brand" style="margin-bottom:14px"><i></i><i></i><i></i><i></i></div><h1 id="rsTitle">¡Sonaron juntos!</h1><p class="sub" id="rsSub"></p></div>
+  <div><div class="ribbon" id="ribbon"></div><div class="legend" id="legend" style="margin-top:10px"></div></div>
+  <div class="hl" id="hl"></div>
+  <p class="note">No hay puntaje: una tarde calma vale tanto como una intensa. Lo que cambia es el paisaje que sonaron.</p>
+  <div class="acts"><button class="primary" id="rsAgain">Jugar otra vez</button><button id="rsSave">Guardar este recuerdo</button></div>
+ </div>
+</section>
+
+<section id="prep" class="screen active">
+ <div class="prep">
+  <header class="ph"><div class="brand"><i></i><i></i><i></i><i></i></div><ol class="prog"><li class="cur"></li><li></li><li></li><li></li><li></li></ol></header>
+  <p class="sim">Tablero de simulación para validación, no la interfaz del producto: en el objeto real la pantalla va oculta dentro del eje.</p>
+  <article class="st cur">
+   <div class="fig"><div class="figin"><div class="phone"><div class="badge bt">BT</div><div class="badge dnd">zz</div></div><div class="chips"><span class="chip lav">Bluetooth</span><span class="chip yel">No molestar</span></div></div></div>
+   <div class="txt"><span class="k">Paso 1 de 5</span><h2>Permisos de Bluetooth y No Molestar</h2><p>El teléfono necesita hablar con los dos sticks y silenciarse mientras dure el juego.</p></div>
+   <div class="act"><button id="b1" class="primary">Conceder permisos</button></div>
+  </article>
+  <article class="st">
+   <div class="fig"><div class="figin"><div class="phone"><div class="moon"></div></div><div class="chips"><span class="chip yel">Sin sonido</span><span class="chip yel">Sin vibración</span><span class="chip yel">Sin notificaciones</span></div></div></div>
+   <div class="txt"><span class="k">Paso 2 de 5 · activado</span><h2>No Molestar y bloqueo de notificaciones</h2><p>Durante el juego el teléfono no suena ni vibra. Quedó activado al conceder los permisos.</p></div>
+   <div class="act"><button id="b2" class="primary">Continuar</button></div>
+  </article>
+  <article class="st">
+   <div class="fig"><div class="figin"><div class="arrow"></div><div class="ejefig"><div class="slot"></div><div class="back"></div><div class="figglow"></div></div><div class="chips"><span class="chip lav">Pantalla hacia adentro</span><span class="chip yel">Solo sonido y luz</span></div></div></div>
+   <div class="txt"><span class="k">Paso 3 de 5</span><h2>Inserta el celular en el eje</h2><p>Pantalla hacia el interior. Desde aquí la única salida es el sonido y una luz difusa de refuerzo.</p></div>
+   <div class="act"><button id="b3" class="primary">Ya está en el eje</button></div>
+  </article>
+  <article class="st">
+   <div class="fig"><div class="figin"><div class="sticks"><div class="stick big"><div class="sled" id="fl1"></div></div><div class="stick sm"><div class="sled" id="fl2"></div></div></div><div class="chips"><span class="chip lav">Stick grande</span><span class="chip cor">Stick pequeño</span></div></div></div>
+   <div class="txt"><span class="k">Paso 4 de 5</span><h2>Vincula los dos sticks</h2><p>Mantén pulsado tres segundos cada botón. El LED del stick parpadea mientras se vincula y queda fijo al terminar.</p></div>
+   <div class="act">
+    <button class="hold" id="h1" data-fig="#fl1" data-done="Stick grande vinculado"><span class="led"></span><span class="lab">Mantener · stick grande</span><span class="bar"><i></i></span></button>
+    <button class="hold" id="h2" data-fig="#fl2" data-done="Stick pequeño vinculado"><span class="led"></span><span class="lab">Mantener · stick pequeño</span><span class="bar"><i></i></span></button>
+   </div>
+  </article>
+  <article class="st">
+   <div class="fig"><div class="figin"><div class="sticks"><div class="stick big"><div class="sled lit"></div></div><div class="stick sm"><div class="sled lit"></div></div></div><div class="who"><span>Grande<br>adulto</span><span>Pequeño<br>niño</span></div></div></div>
+   <div class="txt"><span class="k">Paso 5 de 5</span><h2>Entrega el stick pequeño al niño y conserva el grande</h2><p>La asimetría de tamaño indica a quién va cada uno; no hay nada más que explicar.</p></div>
+   <div class="act"><button class="primary" id="b5">Comenzar</button></div>
+  </article>
+ </div>
+</section>
+
+<section id="session" class="screen">
+ <div class="stage">
+  <div class="pill"><strong id="stName">Reposo</strong><span id="stDesc"></span></div>
+  <div class="axis">
+   <div class="band" id="band"><div class="win" id="win"></div></div>
+   <div class="bandLabels"><span>grave · marimba</span><span>agudo · glockenspiel</span></div>
+   <p id="fieldText"></p>
+   <div id="hidden" hidden></div>
+   <div class="ledRow"><div id="led"></div><span>Luz difusa de refuerzo: sigue la amplitud del sonido, sin información propia.</span></div>
+  </div>
+  <div class="panel" data-side="L" data-role="adult"><div><h3></h3><p></p></div><div class="map"></div><div class="dot"></div></div>
+  <div class="panel" data-side="R" data-role="child"><div><h3></h3><p></p></div><div class="map"></div><div class="dot"></div></div>
+ </div>
+ <div class="below">
+  <div class="ctrls">
+   <button id="swap">Intercambiar sticks</button>
+   <button id="auto">Niño automático: apagado</button>
+   <button id="ejeBtn">Modo eje: solo luz</button>
+   <button id="end">Terminar sesión</button>
+  </div>
+  <p class="kbd">Apoyo en computador: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> mueve el punto del panel izquierdo · flechas mueven el del panel derecho. Con el ratón, basta pasar sobre un panel.</p>
+  <div class="cards" id="tele"></div>
+ </div>
+</section>
+
+<section id="closed" class="screen">
+ <div class="wrap">
+  <h1>Sesión cerrada</h1>
+  <p>El instrumento sonó una resonancia final y guardó la telemetría de movimiento. No se registró audio, imagen ni datos identificables.</p>
+  <div class="sum" id="sum"></div>
+  <h2>Distribución del tiempo entre regímenes de relación</h2>
+  <div class="bars" id="bars"></div>
+  <p class="small">Descripción de la escena, no puntaje: una sesión calma no es peor que una densa, sino distinta. La variedad es en sí misma un indicador de exploración.</p>
+  <div class="ctrls" style="margin-top:16px"><button class="primary" id="again">Nueva sesión</button><button id="dl">Descargar telemetría (JSON)</button></div>
+ </div>
+</section>
+
+<footer>Prototipo de Seminario de Título · Joaquín Muñoz Quiroz · Escuela de Diseño UDP. Simulación: los sticks reales envían datos de una unidad inercial por Bluetooth; aquí se reemplazan por el desplazamiento del dedo o el ratón.</footer>
+
+<script>
+(()=>{
+/* Utilidades */
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+// 25 alturas pentatónicas (C mayor: C D E G A) a lo largo de 5 octavas, en números MIDI desde C3.
+const NOTES=Array.from({length:25},(_,i)=>48+12*Math.floor(i/5)+[0,2,4,7,9][i%5]);
+const hz=m=>440*Math.pow(2,(m-69)/12);
+const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Audio ----------
+   Síntesis aditiva simple: cada "familia" de timbre es una lista de parciales [ratio, ganancia, duración relativa].
+   marimba (grave) · mixta (medio) · glock (agudo) · oculto (campana, solo por coincidencia). */
+const FAM={
+ marimba:{type:'sine',decay:.8,p:[[1,1,1],[4,.3,.25],[9,.15,.12]]},
+ mixta:{type:'sine',decay:1.1,p:[[1,1,1],[3,.3,.5],[5.4,.18,.4]]},
+ glock:{type:'sine',decay:1.6,p:[[1,1,1],[2.76,.45,.9],[5.4,.25,.7],[8.9,.12,.5]]},
+ oculto:{type:'triangle',decay:2.2,p:[[1,.7,1],[1.5,.45,.9],[2,.35,.8],[3,.2,.6]]}
+};
+// AU: contexto de audio compartido. Cadena: osciladores → bus → compresor → analizador (para la luz) → salida.
+const AU={ctx:null,bus:null,an:null,buf:null,touched:false,
+ ensure(){
+  this.touched=true;
+  if(!this.ctx){
+   const C=window.AudioContext||window.webkitAudioContext; if(!C) return;
+   const c=this.ctx=new C({latencyHint:'interactive'});
+   this.bus=c.createGain(); this.bus.gain.value=.8;
+   const comp=c.createDynamicsCompressor(); comp.threshold.value=-16; comp.knee.value=18; comp.ratio.value=3; comp.attack.value=.004; comp.release.value=.2;
+   this.an=c.createAnalyser(); this.an.fftSize=1024; this.buf=new Float32Array(1024);
+   this.bus.connect(comp); comp.connect(this.an); this.an.connect(c.destination);
+   c.onstatechange=notice;
+  }
+  if(this.ctx.state!=='running') this.ctx.resume().then(notice,notice);
+  notice();
+ },
+ // Dispara una nota percusiva: ataque de 4 ms y caída exponencial por parcial.
+ tone(freq,fam,gain,decay,at){
+  const c=this.ctx; if(!c||c.state!=='running') return;
+  const t=at||c.currentTime, F=FAM[fam]||fam, dec=decay||F.decay;
+  for(const [r,g,d] of F.p){
+   const o=c.createOscillator(); o.type=F.type; o.frequency.value=freq*r;
+   const e=c.createGain(); e.gain.setValueAtTime(.0001,t); e.gain.exponentialRampToValueAtTime(Math.max(.0002,gain*g),t+.004); e.gain.exponentialRampToValueAtTime(.0001,t+dec*d);
+   o.connect(e); e.connect(this.bus); o.start(t); o.stop(t+dec*d+.05);
+  }
+ },
+ // Nivel RMS de la salida: alimenta la luz difusa (la luz nunca tiene información propia, solo sigue al sonido).
+ rms(){ if(!this.an) return 0; this.an.getFloatTimeDomainData(this.buf); let s=0; for(let i=0;i<this.buf.length;i++) s+=this.buf[i]*this.buf[i]; return Math.sqrt(s/this.buf.length); }
+};
+const LOW={type:'sine',decay:3,p:[[1,1,1],[2,.25,.6],[3,.1,.4]]};
+// Sonidos de sistema: apertura del campo (Espera), resonancia al pausar el niño, y cierre de sesión.
+function playOpening(){ [48,55,60].forEach((m,i)=>AU.tone(hz(m),LOW,.22-i*.05,3,AU.ctx&&AU.ctx.currentTime+i*.06)); }
+function playFieldResonance(lo,n){ if(!AU.ctx||n<=0) return; const step=Math.max(1,Math.floor(n/6)); let k=0; for(let i=0;i<n;i+=step){ AU.tone(hz(NOTES[lo+i]),family(),.13,2.4,AU.ctx.currentTime+k*.07); k++; } }
+function playFinal(){ [48,52,55].forEach((m,i)=>AU.tone(hz(m),LOW,.2,5,AU.ctx&&AU.ctx.currentTime+i*.12)); }
+function notice(){ const show=AU.touched&&AU.ctx&&AU.ctx.state!=='running'; $('#audioNotice').style.display=show?'block':'none'; }
+document.addEventListener('pointerdown',()=>AU.ensure(),{passive:true});
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ if(AU.ctx) AU.ctx.resume().then(notice,notice); if(running) wake(); } });
+
+/* ---------- Wake lock: evita que la pantalla se apague dentro del eje ---------- */
+let wl=null;
+async function wake(){ try{ if('wakeLock' in navigator&&document.visibilityState==='visible') wl=await navigator.wakeLock.request('screen'); }catch(e){} }
+function unwake(){ if(wl){ wl.release().catch(()=>{}); wl=null; } }
+
+/* ---------- Onboarding ----------
+   goStep(i) muestra un paso. hold(btn) implementa "mantener pulsado 3 s" con barra de progreso y LED que parpadea. */
+const steps=[...document.querySelectorAll('.st')],prog=[...document.querySelectorAll('.prog li')];
+function goStep(i){ steps.forEach((s,k)=>s.classList.toggle('cur',k===i)); prog.forEach((p,k)=>{ p.classList.toggle('done',k<i); p.classList.toggle('cur',k===i); }); scrollTo(0,0); }
+$('#b1').onclick=()=>goStep(1); $('#b2').onclick=()=>goStep(2); $('#b3').onclick=()=>goStep(3);
+const linked={h1:false,h2:false};
+function hold(btn,onDone){
+ let t0=null,raf=0,blink=0; const leds=[btn.querySelector('.led'),document.querySelector(btn.dataset.fig)].filter(Boolean),bar=btn.querySelector('.bar i'),lab=btn.querySelector('.lab');
+ const set=on=>leds.forEach(l=>l.classList.toggle('lit',on));
+ const cancel=()=>{ if(t0==null) return; t0=null; cancelAnimationFrame(raf); clearInterval(blink); set(false); bar.style.width='0'; };
+ const finish=()=>{ clearInterval(blink); t0=null; set(true); bar.style.width='100%'; btn.classList.add('done'); lab.textContent=btn.dataset.done; AU.tone(hz(72),{type:'sine',decay:.5,p:[[1,1,1],[3,.3,.5]]},.25);
+  if(onDone) setTimeout(onDone,700); else { linked[btn.id]=true; if(linked.h1&&linked.h2) setTimeout(()=>goStep(4),900); } };
+ btn.addEventListener('pointerdown',e=>{ if(btn.classList.contains('done')) return; AU.ensure(); btn.setPointerCapture(e.pointerId); t0=performance.now(); let on=false; blink=setInterval(()=>{on=!on;set(on);},125);
+  const tick=()=>{ const p=Math.min(1,(performance.now()-t0)/3000); bar.style.width=p*100+'%'; if(p>=1) finish(); else raf=requestAnimationFrame(tick); }; raf=requestAnimationFrame(tick); });
+ ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>btn.addEventListener(ev,cancel));
+}
+hold($('#h1')); hold($('#h2'));
+$('#b5').onclick=()=>appMode?goInsert():startSession();
+/* ---------- Pérdida de conexión de un stick ----------
+   loseStick(role, causa) pausa el loop, apaga el audio en 1.2 s y muestra la pantalla de reconexión.
+   resumeSession() reanuda desde REPOSO conservando la telemetría. window.simularPerdida() permite provocarla desde fuera. */
+let lostRole=null;
+function loseStick(role,cause){
+ if(!M) M=newMetrics();
+ lostRole=role; running=false; unwake(); clearInterval(insT);
+ if(AU.ctx&&AU.bus){ const t=AU.ctx.currentTime; AU.bus.gain.cancelScheduledValues(t); AU.bus.gain.setValueAtTime(AU.bus.gain.value,t); AU.bus.gain.linearRampToValueAtTime(0.0001,t+1.2); }
+ const big=role==='adult';
+ $('#lostStick').className='stick '+(big?'big':'sm');
+ $('#lostTitle').textContent='Se perdió el stick '+(big?'grande':'pequeño');
+ const bat=cause==='bateria';
+ $('#lostCause').textContent=bat?'Batería agotada':'Fuera de alcance';
+ $('#lostText').textContent=bat?'El juego quedó en pausa y el sonido se apagó suavemente. Conecta el stick a su cargador un momento y mantén pulsado para volver.':'El juego quedó en pausa y el sonido se apagó suavemente. Acerca el stick al eje y mantén pulsado para reconectarlo.';
+ $('#lostTips').textContent=bat?'Con diez minutos de carga alcanza para una sesión.':'Si no reconecta: revisa que la luz del stick encienda al moverlo; si no, necesita carga.';
+ const b=$('#hLost'); b.classList.remove('done'); b.querySelector('.lab').textContent='Mantener 3 s para reconectar'; b.querySelector('.bar i').style.width='0'; b.querySelector('.led').classList.remove('lit');
+ document.body.classList.remove('modo-eje'); document.body.classList.remove('lock'); activePointers=0; for(const s of ['L','R']) panels[s]._pid=null;
+ show('lost');
+}
+function resumeSession(){
+ sticks.adult.reset(); sticks.child.reset(); state=''; setState('REPOSO',performance.now());
+ if(AU.ctx&&AU.bus){ const t=AU.ctx.currentTime; AU.bus.gain.cancelScheduledValues(t); AU.bus.gain.setValueAtTime(0.0001,t); AU.bus.gain.linearRampToValueAtTime(.8,t+.6); }
+ show('session'); if(appMode) setEje(true); running=true; last=performance.now(); wake(); requestAnimationFrame(frame);
+}
+hold($('#hLost'),resumeSession);
+$('#lostEnd').onclick=()=>{ running=true; closeSession(performance.now()); };
+window.simularPerdida=(role,cause)=>loseStick(role||'child',cause||'alcance');
+/* ---------- Flujo del usuario final ----------
+   appMode=true cambia el destino de cada paso: onboarding → pantalla de inserción → modo eje → recuerdo (nunca el tablero interno).
+   El botón de Google es una simulación (1.1 s de espera). */
+let appMode=false,insT=0;
+$('#gbtn').onclick=e=>{ const b=$('#gbtn'); b.classList.add('busy'); b.querySelector('.glab').textContent='Conectando con Google…'; setTimeout(()=>{ b.classList.remove('busy'); b.querySelector('.glab').textContent='Continuar con Google'; goStep(0); show('prep'); },1100); };
+$('#guest').onclick=()=>{ goStep(0); show('prep'); };
+function goInsert(){ show('insert'); clearInterval(insT); let n=6; const c=$('#insCount'); c.textContent='Empieza sola en '+n+' s'; insT=setInterval(()=>{ n--; if(n<=0){ clearInterval(insT); goEje(); } else c.textContent='Empieza sola en '+n+' s'; },1000); }
+function goEje(){ clearInterval(insT); document.body.classList.add('modo-eje'); ejeMode=true; startSession(); setEje(true); }
+$('#insGo').onclick=goEje;
+$('#rsAgain').onclick=goInsert;
+$('#rsSave').onclick=()=>$('#dl').click();
+// Nombres amables de los 5 regímenes para el recuerdo (mismo orden que REG).
+const FR=[['En su ritmo','#B3A2DC'],['Explorando','#7A8B34'],['A todo ritmo','#E85E45'],['Tranquilos','#7B5FCB'],['¡Coincidieron!','#F2E44A']];
+// Recuerdo: cinta proporcional al tiempo en cada régimen + 3 tarjetas (pausas/regresos, coincidencias, alturas recorridas).
+function renderResumen(){
+ const r=report(); const tot=r.regimenes.reduce((a,g)=>a+g.segundos,0);
+ const mins=Math.round(r.duracion_total_s/60), dur=mins>=1?mins+' min':Math.round(r.duracion_total_s)+' s';
+ $('#rsTitle').textContent=r.eventos_nino>0?'¡Sonaron juntos!':'Hoy quedó en silencio';
+ $('#rsSub').textContent=r.eventos_nino>0?dur+' de juego · '+r.eventos_nino+' notas del niño':'Faltó que los dos sticks se movieran a la vez. La próxima será.';
+ const segs=r.regimenes.map((g,i)=>[g.segundos,FR[i]]).filter(s=>s[0]>0);
+ $('#ribbon').innerHTML=segs.length?segs.map(([s,[n,c]])=>'<i style="width:'+(s/tot*100)+'%;background:'+c+'" title="'+n+'"></i>').join(''):'<i style="width:100%;background:#EFECE4"></i>';
+ $('#legend').innerHTML=segs.map(([s,[n,c]])=>'<span><b style="background:'+c+'"></b>'+n+' · '+Math.round(s/tot*100)+'%</span>').join('');
+ const cards=[];
+ cards.push(['lav','<b>'+r.latencias.cantidad+' pausa'+(r.latencias.cantidad===1?'':'s')+', '+r.reanudaciones+' regreso'+(r.reanudaciones===1?'':'s')+'</b><span>Se detuvieron y volvieron a encontrarse.</span>']);
+ cards.push(['yel','<b>'+(r.timbres_ocultos?r.timbres_ocultos+(r.timbres_ocultos===1?' vez':' veces')+' sacudieron a la vez':'Ninguna coincidencia todavía')+'</b><span>'+(r.timbres_ocultos?'Solo pasa cuando los dos lo hacen juntos.':'Sacudir los dos sticks a la vez abre un sonido distinto.')+'</span>']);
+ cards.push(['oli','<b>'+Math.round(r.variacion_campo_alturas)+' alturas recorridas</b><span>De lo grave a lo agudo y de vuelta, guiados por el adulto.</span>']);
+ $('#hl').innerHTML=cards.map(([k,inner])=>'<div class="c '+k+'">'+inner+'</div>').join('');
+}
+
+/* ---------- Sticks: lectura del gesto ----------
+   Cada Stick guarda 1 s de posiciones y deriva:
+     vel   velocidad suavizada (px/s)          → el adulto la usa para mover el registro (centro del campo)
+     amp   amplitud del gesto en 0.8 s (0–1)   → adulto: ancho del campo · niño: intensidad de la nota
+     dx/dy dirección del último movimiento     → niño: sentido del recorrido melódico
+     acc   distancia acumulada                 → niño: cada 42 px dispara una nota (densidad rítmica)
+     moving  se movió en los últimos 200 ms
+     shake   ≥4 inversiones de dirección en 0.6 s (sacudida) → coincidencia de ambos abre el timbre oculto */
+class Stick{
+ constructor(){ this.reset(); }
+ reset(){ this.s=[]; this.vel=0; this.amp=0; this.dx=0; this.dy=0; this.lastMove=-1e9; this.moving=false; this.shake=false; this.x=null; this.y=null; this.w=1; this.h=1; this.acc=0; }
+ feed(x,y,t,w,h){
+  this.w=w; this.h=h; const p=this.s[this.s.length-1];
+  if(p){ const dx=x-p.x,dy=y-p.y,dt=Math.max(1,t-p.t),d=Math.hypot(dx,dy);
+   if(d>0){ this.vel=this.vel*.7+(d/dt*1000)*.3; if(Math.abs(dx)>.5) this.dx=Math.sign(dx); if(Math.abs(dy)>.5) this.dy=Math.sign(dy); this.lastMove=t; this.acc+=d; } }
+  this.x=x; this.y=y; this.s.push({t,x,y});
+ }
+ update(t){
+  while(this.s.length&&t-this.s[0].t>1000) this.s.shift();
+  if(t-this.lastMove>80) this.vel*=.85; if(this.vel<2) this.vel=0;
+  let a=1e9,b=-1e9,c=1e9,d=-1e9,n=0;
+  for(const q of this.s){ if(t-q.t>800) continue; n++; a=Math.min(a,q.x); b=Math.max(b,q.x); c=Math.min(c,q.y); d=Math.max(d,q.y); }
+  this.amp=n>1?clamp(Math.hypot(b-a,d-c)/(Math.hypot(this.w,this.h)*.55),0,1):0;
+  this.moving=t-this.lastMove<200;
+  let inv=0,last=0;
+  for(let i=1;i<this.s.length;i++){ const q=this.s[i]; if(t-q.t>600) continue; const sx=Math.sign(q.x-this.s[i-1].x); if(sx&&last&&sx!==last) inv++; if(sx) last=sx; }
+  this.shake=inv>=4;
+ }
+}
+const sticks={adult:new Stick(),child:new Stick()};
+// sides: qué stick lee cada mitad de la pantalla (intercambiable con el botón del tablero).
+let sides={L:'adult',R:'child'};
+const panels={L:$('.panel[data-side="L"]'),R:$('.panel[data-side="R"]')};
+const COPY={adult:{h:'Stick grande · adulto',p:'Abre y sostiene el campo. Gestos lentos y pequeños bastan.',m:'Amplitud → ancho del campo · Velocidad → registro (lento grave, rápido agudo) · Quietud → el campo se estrecha'},
+ child:{h:'Stick pequeño · niño',p:'Articula dentro del campo. Sin campo, no suena.',m:'Velocidad → densidad rítmica · Amplitud → intensidad · Dirección → recorrido melódico dentro del campo'}};
+function labelPanels(){ for(const side of ['L','R']){ const r=sides[side],el=panels[side],c=COPY[r]; el.dataset.role=r; el.querySelector('h3').textContent=c.h; el.querySelector('div>p').textContent=c.p; el.querySelector('.map').textContent=c.m; } }
+labelPanels();
+let activePointers=0;
+function feedPanel(side,e){ const el=panels[side],r=el.getBoundingClientRect(); sticks[sides[side]].feed(e.clientX-r.left,e.clientY-r.top,performance.now(),r.width,r.height); }
+for(const side of ['L','R']){
+ const el=panels[side]; el._pid=null;
+ el.addEventListener('pointerdown',e=>{ if(el._pid!=null) return; el._pid=e.pointerId; el.setPointerCapture(e.pointerId); activePointers++; document.body.classList.add('lock'); feedPanel(side,e); e.preventDefault(); });
+ el.addEventListener('pointermove',e=>{ if(e.pointerId===el._pid||(e.pointerType==='mouse'&&el._pid==null)) feedPanel(side,e); });
+ const up=e=>{ if(el._pid!==e.pointerId) return; el._pid=null; activePointers=Math.max(0,activePointers-1); if(!activePointers) document.body.classList.remove('lock'); };
+ ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>el.addEventListener(ev,up));
+}
+// Apoyo en computador: WASD mueve el panel izquierdo, flechas el derecho.
+const keys=new Set();
+addEventListener('keydown',e=>{ if(['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){ keys.add(e.key); if(e.key.startsWith('Arrow')) e.preventDefault(); } });
+addEventListener('keyup',e=>keys.delete(e.key));
+function keyDrive(dt,now){
+ if(!keys.size) return;
+ const drive=(side,u,d,l,r)=>{ let vx=(keys.has(r)?1:0)-(keys.has(l)?1:0), vy=(keys.has(d)?1:0)-(keys.has(u)?1:0); if(!vx&&!vy) return;
+  const el=panels[side],rc=el.getBoundingClientRect(),st=sticks[sides[side]]; let x=st.x==null?rc.width/2:st.x, y=st.y==null?rc.height/2:st.y;
+  x=clamp(x+vx*420*dt,0,rc.width); y=clamp(y+vy*420*dt,0,rc.height); st.feed(x,y,now,rc.width,rc.height); };
+ drive('L','w','s','a','d'); drive('R','ArrowUp','ArrowDown','ArrowLeft','ArrowRight');
+}
+// "Niño automático": mueve el stick del niño solo, para probar sin dos manos.
+let auto=false;
+function autoDrive(now){
+ const side=sides.L==='child'?'L':'R',el=panels[side],rc=el.getBoundingClientRect(),t=now/1000;
+ sticks.child.feed(rc.width/2+rc.width*.36*Math.sin(t*1.7),rc.height/2+rc.height*.32*Math.sin(t*3.4),now,rc.width,rc.height);
+}
+
+// Demos por URL (#demo=activo, #demo=latA, …): mueven ambos sticks solos para mostrar cada estado.
+function demoFeed(role,fx,fy,now){ const side=sides.L===role?'L':'R',rc=panels[side].getBoundingClientRect(); sticks[role].feed(rc.width/2+rc.width*fx,rc.height/2+rc.height*fy,now,rc.width,rc.height); }
+function demoDrive(now){
+ const t=now/1000, cyc=t%16;
+ const adult=(sp=1)=>demoFeed('adult',.3*Math.sin(t*.9*sp),.25*Math.sin(t*1.3*sp),now);
+ const child=()=>demoFeed('child',.34*Math.sin(t*1.9),.3*Math.sin(t*3.8),now);
+ const shake=r=>demoFeed(r,.3*Math.sin(t*34),.05*Math.sin(t*3),now);
+ switch(demo){
+  case 'espera': adult(); break;
+  case 'silencio': child(); break;
+  case 'activo': adult(); child(); break;
+  case 'rapido': adult(7); child(); break;
+  case 'latN': adult(); if(cyc<3) child(); break;
+  case 'latA': child(); if(cyc<3) adult(); break;
+  case 'oculto': if(cyc>5&&cyc<6.2){ shake('adult'); shake('child'); } else { adult(); child(); } break;
+ }
+}
+/* ---------- Campo y máquina de estados ----------
+   Estados (ver texto de cada uno en STATES):
+     REPOSO → ESPERA (solo adulto) / SILENCIO (solo niño) → ACTIVO (ambos)
+     ACTIVO → LAT_N (niño quieto 1.5 s) / LAT_A (adulto quieto 1.5 s) → ACTIVO al volver, o cierre tras 20 s. */
+const STATES={
+ REPOSO:['Reposo','Ningún stick en movimiento. El motor de síntesis está en silencio.'],
+ ESPERA:['Espera','Solo se mueve el stick del adulto: el campo se abre con una única resonancia que decae. Después, nada, hasta que el niño entre.'],
+ SILENCIO:['Silencio absoluto','Solo se mueve el stick del niño: no hay campo donde sonar. Hace falta el otro.'],
+ ACTIVO:['Juego activo','El adulto abre y sostiene el campo; el niño articula dentro de él. La relación entre ambos movimientos decide la textura. No hay forma incorrecta.'],
+ LAT_N:['Latencia','Se detuvo el niño: el campo queda resonando y decae lentamente. Invitación a volver, no sanción.'],
+ LAT_A:['Latencia','Se detuvo el adulto: el campo se estrecha y los eventos del niño van quedando sin alturas hasta apagarse.']
+};
+// Los 5 regímenes de relación (se clasifica cada frame de juego ACTIVO en uno de ellos).
+const REG=['Campo estable, articulación regular','Campo en desplazamiento','Campo ancho, articulación densa','Campo estrecho, articulación mínima','Coincidencias: timbres ocultos'];
+// F: el campo. width/count = alturas abiertas (0–14) · center = registro (0–24) · lo = primera altura del campo
+//    pos = posición del niño dentro del campo · hiddenUntil = fin del timbre oculto · rate = velocidad de migración del centro.
+const F={width:0,center:12,count:0,lo:0,pos:0,hiddenUntil:0,rate:0};
+let state='REPOSO',running=false,last=0,latStart=0,T0=0,M=null,evTimes=[];
+// Timbre según registro: grave marimba, medio mixta, agudo glockenspiel; o campana si hay timbre oculto.
+function family(){ if(performance.now()<F.hiddenUntil) return 'oculto'; return F.center<8.33?'marimba':F.center<16.67?'mixta':'glock'; }
+function register(){ return F.center<8.33?'grave':F.center<16.67?'medio':'agudo'; }
+// M: telemetría de la sesión (solo movimiento; sin audio, imagen ni datos identificables).
+function newMetrics(){ return {total:0,active:0,fieldOpen:0,latN:0,latDur:[],resum:0,events:0,variation:0,hidden:0,swaps:0,reg:[0,0,0,0,0]}; }
+const cols=[];
+const band=$('#band');
+for(let i=0;i<25;i++){ const c=document.createElement('div'); c.className='col'; band.appendChild(c); cols.push(c); }
+function flash(i,hidden){ const c=cols[i]; if(!c) return; const cl=hidden?'flashH':'flash'; c.classList.remove('flash','flashH'); c.classList.add(cl); clearTimeout(c._t); c._t=setTimeout(()=>c.classList.remove(cl),140); }
+// Cambia de estado, contabiliza latencias/reanudaciones y dispara sonidos de sistema.
+function setState(s,now){
+ if(s===state) return;
+ if((state==='LAT_N'||state==='LAT_A')){ M.latDur.push((now-latStart)/1000); if(s==='ACTIVO') M.resum++; }
+ if(s==='LAT_N'||s==='LAT_A'){ latStart=now; M.latN++; }
+ if(s==='ESPERA') playOpening();
+ if(s==='LAT_N') playFieldResonance(F.lo,F.count);
+ state=s; $('#stName').textContent=STATES[s][0]; $('#stDesc').textContent=STATES[s][1];
+}
+/* ---------- Loop principal (cada frame) ----------
+   1) lee entradas (teclado, auto, demo)  2) actualiza sticks  3) transiciones de estado
+   4) dinámica del campo  5) timbre oculto  6) notas del niño  7) métricas y regímenes  8) render. */
+function frame(now){
+ if(!running) return;
+ requestAnimationFrame(frame);
+ const dt=Math.min(.05,(now-last)/1000||0); last=now;
+ keyDrive(dt,now); if(auto) autoDrive(now); if(demo) demoDrive(now);
+ const ad=sticks.adult,ch=sticks.child; ad.update(now); ch.update(now);
+ const A=ad.moving,C=ch.moving;
+ switch(state){
+  case 'REPOSO': if(A&&C) setState('ACTIVO',now); else if(A) setState('ESPERA',now); else if(C) setState('SILENCIO',now); break;
+  case 'ESPERA': if(A&&C) setState('ACTIVO',now); else if(!A) setState('REPOSO',now); break;
+  case 'SILENCIO': if(A&&C) setState('ACTIVO',now); else if(!C) setState('REPOSO',now); break;
+  case 'ACTIVO': if(!C&&now-ch.lastMove>1500) setState('LAT_N',now); else if(!A&&now-ad.lastMove>1500) setState('LAT_A',now); break;
+  case 'LAT_N': case 'LAT_A': if(A&&C) setState('ACTIVO',now); else if(now-latStart>20000){ closeSession(now); return; } break;
+ }
+ /* Dinámica del campo: el adulto lo ensancha con la amplitud (1–14 alturas) y mueve el registro con la velocidad
+    (lento → grave, rápido → agudo; migración lenta, ~1 s de inercia). Sin adulto, el campo se estrecha:
+    0.6 alturas/s en latencia del niño, 1.6 alturas/s en latencia del adulto, rápido en reposo. */
+ const prevC=F.center;
+ if(A&&(state==='ACTIVO'||state==='ESPERA'||state==='LAT_N')){
+  const tw=1+13*ad.amp; F.width+=(tw-F.width)*Math.min(1,dt*4);
+  const tc=2+20*clamp(ad.vel/900,0,1); F.center+=(tc-F.center)*Math.min(1,dt*.9);
+ } else if(state==='LAT_N') F.width-=.6*dt;
+ else if(state==='ACTIVO'||state==='LAT_A'||state==='ESPERA') F.width-=1.6*dt;
+ else F.width-=12*dt;
+ F.width=clamp(F.width,0,14);
+ F.count=F.width<.5?0:Math.round(F.width);
+ F.lo=clamp(Math.round(F.center-F.count/2),0,25-F.count);
+ const dc=Math.abs(F.center-prevC); F.rate=F.rate*.9+(dt?dc/dt:0)*.1;
+ /* Timbre oculto: ambos sacuden a la vez durante juego activo → 6 s de campana. */
+ if(state==='ACTIVO'&&ad.shake&&ch.shake&&now>=F.hiddenUntil){ F.hiddenUntil=now+6000; M.hidden++; }
+ const hidden=now<F.hiddenUntil;
+ /* Articulación del niño: cada 42 px de recorrido, una nota. El paso melódico sigue su dirección (arriba/derecha sube). */
+ if((state==='ACTIVO'||state==='LAT_A')&&F.count>0){
+  while(ch.acc>=42){ ch.acc-=42; let step=-ch.dy+ch.dx; if(!step) step=1; F.pos=((F.pos+step)%F.count+F.count)%F.count; const idx=F.lo+F.pos;
+   AU.tone(hz(NOTES[idx]),family(),(.18+.82*ch.amp)*.3); flash(idx,hidden); if(ejeMode) ejeFlash(idx,hidden); M.events++; evTimes.push(now); }
+ } else ch.acc=0;
+ while(evTimes.length&&now-evTimes[0]>1000) evTimes.shift();
+ const evs=evTimes.length;
+ /* Métricas y clasificación en régimen (solo durante ACTIVO):
+    4 ¡Coincidieron! (timbre oculto) · 1 Explorando (centro migra >1.2 alturas/s)
+    2 A todo ritmo (campo ≥8 y ≥5 notas/s) · 3 Tranquilos (campo ≤3 y ≤2 notas/s) · 0 En su ritmo (resto). */
+ M.total+=dt; if(A&&F.count>0) M.fieldOpen+=dt; M.variation+=dc;
+ if(state==='ACTIVO'){ M.active+=dt; let r=0; if(hidden) r=4; else if(F.rate>1.2) r=1; else if(F.count>=8&&evs>=5) r=2; else if(F.count<=3&&evs<=2) r=3; M.reg[r]+=dt; }
+ /* Render: banda de 25 alturas (tablero interno), texto de estado, luz LED, y en modo eje las franjas de luz. */
+ for(let i=0;i<25;i++) cols[i].classList.toggle('on',i>=F.lo&&i<F.lo+F.count);
+ const win=$('#win'); if(F.count>0){ win.style.display='block'; win.style.left=(F.lo/25*100)+'%'; win.style.width=(F.count/25*100)+'%'; win.style.borderColor=hidden?'#E9D64A':'#5B35B8'; } else win.style.display='none';
+ $('#fieldText').textContent=F.count>0?`Campo abierto: ${F.count} alturas disponibles · registro ${register()} · el niño articula a ${evs} ev/s`:'Campo cerrado. Sin campo, el stick del niño no produce nada.';
+ const hd=$('#hidden'); if(hidden){ hd.hidden=false; hd.textContent=`Timbre oculto abierto por coincidencia · ${((F.hiddenUntil-now)/1000).toFixed(1)} s`; } else hd.hidden=true;
+ const rms=AU.rms(); const led=$('#led'); const lvl=clamp(rms*6,0,1); led.style.opacity=(.15+.85*lvl).toFixed(3); led.style.boxShadow=`0 0 ${Math.round(6+40*lvl)}px ${Math.round(2+14*lvl)}px rgba(233,214,74,${(lvl*.7).toFixed(2)})`;
+ if(ejeMode){ const running=AU.ctx&&AU.ctx.state==='running'; sLvl*=.92; const base=F.count>0?.35:(state==='ESPERA'?.5:0); const l=running?lvl:clamp(Math.max(base,sLvl),0,1); const sz=F.count>0?(.3+F.count/14*.7):(state==='ESPERA'?.5:0); const reg=clamp((F.center-2)/20,0,1); const col=hidden?'#F2E44A':'#7B5FCB'; const gT=$('#glowT'),gB=$('#glowB'); gT.style.transform='scaleY('+(sz*(.55+.45*reg)).toFixed(3)+')'; gB.style.transform='scaleY('+(sz*(1-.45*reg)).toFixed(3)+')'; gT.style.setProperty('--c',col); gB.style.setProperty('--c',col); gT.style.opacity=gB.style.opacity=(.2+.8*l).toFixed(3); }
+ for(const side of ['L','R']){ const el=panels[side],st=sticks[sides[side]],dot=el.querySelector('.dot'); el.classList.toggle('moving',st.moving); if(st.x!=null){ dot.style.display='block'; dot.style.transform=`translate(${st.x-el.clientLeft}px,${st.y-el.clientTop}px) translate(-50%,-50%)`; } else dot.style.display='none'; }
+ if((now-teleT)>250){ teleT=now; renderTele(); }
+}
+let teleT=0;
+function renderTele(){
+ const c=[[M.total.toFixed(0)+' s','juego total'],[M.active.toFixed(0)+' s','juego activo'],[M.fieldOpen.toFixed(0)+' s','campo abierto · permanencia del adulto'],[M.latN,'latencias'],[M.resum,'reanudaciones'],[M.events,'eventos del niño'],[M.hidden,'timbres ocultos']];
+ c.splice(0,1); $('#tele').innerHTML=c.map(([v,l])=>`<div class="card"><b>${v}</b><span>${l}</span></div>`).join('');
+}
+
+/* ---------- Controles del tablero interno ---------- */
+$('#swap').onclick=()=>{ sides=sides.L==='adult'?{L:'child',R:'adult'}:{L:'adult',R:'child'}; sticks.adult.x=sticks.adult.y=null; sticks.child.x=sticks.child.y=null; labelPanels(); if(M) M.swaps++; };
+$('#auto').onclick=e=>{ auto=!auto; e.target.textContent='Niño automático: '+(auto?'encendido':'apagado'); if(!auto){ sticks.child.x=sticks.child.y=null; } };
+$('#end').onclick=()=>closeSession(performance.now());
+// Modo eje: oculta todo salvo la luz. La franja superior carga más cuando el registro es agudo; la inferior, cuando es grave.
+let ejeMode=false,sLvl=0;
+function setEje(on){ ejeMode=on; document.body.classList.toggle('modo-eje',on); scrollTo(0,0); }
+$('#ejeBtn').onclick=()=>setEje(true); $('#ejeExit').onclick=()=>appMode?closeSession(performance.now()):setEje(false);
+function ejeFlash(idx,hidden){ const v=$('#ejeView'),e=document.createElement('div'); e.className='fl'; if(hidden) e.style.background='radial-gradient(circle,#F2E44A 0%,#F2E44A 45%,transparent 72%)'; e.style.left=(10+80*idx/24)+'%'; e.style.top=(Math.random()<.5?8+Math.random()*12:80+Math.random()*12)+'%'; v.appendChild(e); setTimeout(()=>e.remove(),600); sLvl=1; }
+let blobY=50;
+$('#again').onclick=startSession;
+$('#dl').onclick=()=>{ const blob=new Blob([JSON.stringify(report(),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='balancin-telemetria.json'; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500); };
+
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id===id)); scrollTo(0,0); }
+/* ---------- Ciclo de sesión ---------- */
+function startSession(){
+ AU.ensure(); M=newMetrics(); evTimes=[]; sticks.adult.reset(); sticks.child.reset(); Object.assign(F,{width:0,center:12,count:0,lo:0,pos:0,hiddenUntil:0,rate:0});
+ state=''; setState('REPOSO',performance.now()); show('session'); running=true; last=performance.now(); T0=Date.now(); renderTele(); wake(); requestAnimationFrame(frame);
+}
+// Cierra: resonancia final, resumen amable (usuario) o tablero de cierre (equipo).
+function closeSession(now){
+ if(!running) return; running=false;
+ if(state==='LAT_N'||state==='LAT_A') M.latDur.push((now-latStart)/1000);
+ for(const s of ['L','R']){ panels[s]._pid=null; } activePointers=0; document.body.classList.remove('lock');
+ playFinal(); unwake();
+ if(appMode){ renderResumen(); show('resumen'); setEje(false); } else { setEje(false); renderSummary(); setTimeout(()=>show('closed'),700); }
+}
+// Reporte JSON descargable (telemetría completa de la sesión).
+function report(){
+ const tot=M.reg.reduce((a,b)=>a+b,0)||1;
+ return {proyecto:'Balancín · prototipo de simulación',nota:'Solo métricas de movimiento. Sin audio, imagen ni datos identificables.',inicio:new Date(T0).toISOString(),
+  duracion_total_s:+M.total.toFixed(1),juego_activo_s:+M.active.toFixed(1),campo_abierto_s:+M.fieldOpen.toFixed(1),
+  latencias:{cantidad:M.latN,duracion_media_s:M.latDur.length?+(M.latDur.reduce((a,b)=>a+b,0)/M.latDur.length).toFixed(1):0,duraciones_s:M.latDur.map(v=>+v.toFixed(1))},
+  reanudaciones:M.resum,eventos_nino:M.events,variacion_campo_alturas:+M.variation.toFixed(1),timbres_ocultos:M.hidden,intercambios_stick:M.swaps,
+  regimenes:REG.map((n,i)=>({regimen:n,segundos:+M.reg[i].toFixed(1),porcentaje:+(M.reg[i]/tot*100).toFixed(1)}))};
+}
+/* ---------- Deep links por hash ----------
+   (vacío) o #app → flujo del usuario desde el login · #app=onboarding|insert|eje|perdida|bateria|resumen → una pantalla concreta
+   #session → tablero interno · #demo=espera|silencio|activo|rapido|latN|latA|oculto (+ &eje) · #closed → cierre interno de ejemplo.
+   (vista previa en canvas): #session abre la sesión con sticks ya vinculados; #closed muestra un resumen de ejemplo */
+const parts=(location.hash.slice(1)||'app').split('&'),deep=parts[0];
+let demo=null;
+if(deep==='session'){ startSession(); }
+else if(deep.startsWith('demo=')){ demo=deep.slice(5); startSession(); }
+if(parts.includes('eje')) setEje(true);
+if(deep==='app'||deep.startsWith('app=')){ appMode=true; const v=deep.split('=')[1]||'login';
+ if(v==='login') show('login'); else if(v==='onboarding'){ goStep(0); show('prep'); } else if(v==='insert') goInsert(); else if(v==='eje'){ demo='activo'; goEje(); }
+ else if(v==='perdida'||v==='bateria'){ M=newMetrics(); Object.assign(M,{total:212,active:151,events:180}); loseStick(v==='bateria'?'adult':'child',v==='bateria'?'bateria':'alcance'); }
+ else if(v==='resumen'){ M=newMetrics(); Object.assign(M,{total:762,active:551,fieldOpen:610,latN:3,latDur:[4.2,7.8,20],resum:2,events:612,variation:37.4,hidden:1,swaps:0,reg:[288,71,84,62,46]}); renderResumen(); show('resumen'); } }
+else if(deep==='closed'){ M=newMetrics(); Object.assign(M,{total:214,active:151,fieldOpen:168,latN:3,latDur:[4.2,7.8,20],resum:2,events:612,variation:37.4,hidden:1,swaps:1,reg:[88,21,24,12,6]}); renderSummary(); show('closed'); }
+function renderSummary(){
+ const r=report();
+ const cards=[[r.duracion_total_s+' s','duración total'],[r.juego_activo_s+' s','juego activo'],[r.campo_abierto_s+' s','campo abierto'],[r.latencias.cantidad,'latencias'],[r.latencias.duracion_media_s+' s','duración media de latencia'],[r.reanudaciones,'reanudaciones'],[r.eventos_nino,'eventos del niño'],[r.variacion_campo_alturas,'variación del campo (alturas recorridas)'],[r.timbres_ocultos,'timbres ocultos hallados'],[r.intercambios_stick,'intercambios de stick']];
+ $('#sum').innerHTML=cards.map(([v,l])=>`<div class="card"><b>${v}</b><span>${l}</span></div>`).join('');
+ $('#bars').innerHTML=r.regimenes.map((g,i)=>`<div class="bar-row" data-r="${i+1}"><div>${g.regimen}<div class="track"><i style="width:${g.porcentaje}%"></i></div></div><div class="pct">${g.porcentaje.toFixed(0)} %</div></div>`).join('');
+}
+})();
+</script>
+</body>
+</html>
