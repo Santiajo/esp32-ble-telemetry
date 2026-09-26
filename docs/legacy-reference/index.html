@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar I2C/BLE - MPU6050</title>
+    <meta name="theme-color" content="#0d0d0d">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Estación de Monitoreo Telemétrico - ESP32 BLE</h1>
+        <div class="controles">
+            <div id="chip-a" class="chip-estado st-sin-vincular"></div>
+            <div id="chip-b" class="chip-estado st-sin-vincular"></div>
+            <button id="btn-calibrar" class="btn warning" disabled>Calibrar Centro (Tara)</button>
+            <button id="btn-reset" class="btn danger" disabled>Reiniciar Posición</button>
+        </div>
+    </header>
+
+    <main class="grid-container">
+        <!-- FILA SUPERIOR - IZQUIERDA: Plano Cartesiano 2D -->
+        <section class="panel plano-section">
+            <h2>Plano Cartesiano 2D (Posición X / Y)</h2>
+            <div class="canvas-container">
+                <canvas id="plano2d" width="480" height="480"></canvas>
+            </div>
+        </section>
+
+        <!-- FILA SUPERIOR - DERECHA: Osciloscopios de Onda en Tiempo Real -->
+        <section class="panel ondas-section">
+            <h2>Análisis Telemétrico en Tiempo Real (Ondas Biomiméticas)</h2>
+            <div class="osciloscopios-container">
+                
+                <div class="onda-box">
+                    <div class="onda-header">
+                        <span class="onda-titulo">Velocidad Total (m/s)</span>
+                        <span class="onda-subtitulo">ESP A (Turquesa) | ESP B (Naranja)</span>
+                    </div>
+                    <canvas id="canvas-velocidad" height="110"></canvas>
+                </div>
+
+                <div class="onda-box">
+                    <div class="onda-header">
+                        <span class="onda-titulo">Aceleración / Impulso (m/s²)</span>
+                        <span class="onda-subtitulo">ESP A (Turquesa) | ESP B (Naranja)</span>
+                    </div>
+                    <canvas id="canvas-aceleracion" height="110"></canvas>
+                </div>
+
+                <div class="onda-box">
+                    <div class="onda-header">
+                        <span class="onda-titulo">Energía Cinética Sostenida</span>
+                        <span class="onda-subtitulo">ESP A (Turquesa) | ESP B (Naranja)</span>
+                    </div>
+                    <canvas id="canvas-energia" height="110"></canvas>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- FILA INFERIOR (100% ANCHO): Tarjetas de Métricas y Consola -->
+        <section class="panel datos-section">
+            <div class="metricas-grid">
+                <div class="tarjeta-metrica" style="border-left: 3px solid #00ffcc;">
+                    <h3 style="color:#00ffcc;">ESP A · Turquesa</h3>
+                    <p>Acel: X <span id="a-acc-x">0.00</span> | Y <span id="a-acc-y">0.00</span> m/s²</p>
+                    <p class="resaltado">Vel Total: <span id="a-vel-total">0.00</span> m/s</p>
+                    <p>Pos: X <span id="a-pos-x">0.0</span> | Y <span id="a-pos-y">0.0</span> cm</p>
+                </div>
+                <div class="tarjeta-metrica" style="border-left: 3px solid #ff5722;">
+                    <h3 style="color:#ff5722;">ESP B · Naranja</h3>
+                    <p>Acel: X <span id="b-acc-x">0.00</span> | Y <span id="b-acc-y">0.00</span> m/s²</p>
+                    <p class="resaltado">Vel Total: <span id="b-vel-total">0.00</span> m/s</p>
+                    <p>Pos: X <span id="b-pos-x">0.0</span> | Y <span id="b-pos-y">0.0</span> cm</p>
+                </div>
+            </div>
+
+            <div class="consola-container">
+                <h3>Consola de Recepción BLE (Raw Data)</h3>
+                <div id="consola" class="consola-box"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Carga de scripts modularizados -->
+    <script src="physics.js"></script>
+    <script src="ble.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // Registro del Service Worker (habilita la instalación como PWA)
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW:', e));
+        }
+    </script>
+</body>
+</html>
