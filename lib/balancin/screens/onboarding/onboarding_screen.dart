@@ -10,7 +10,7 @@ import '../../platform/audio_engine.dart';
 import '../../platform/stick_hub.dart';
 import '../../session/board_session.dart';
 import '../../widgets/hold_button.dart';
-import '../board_screen.dart';
+import '../experience/insert_screen.dart';
 
 /// Pantalla de Onboarding en 5 pasos (#prep del prototipo web).
 ///
@@ -272,21 +272,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (!mounted) return;
 
-    final initialSources = <StickRole, StickSource>{
-      StickRole.child: widget.hub.isConnected(StickRole.child)
-          ? StickSource.stick
-          : StickSource.auto,
-      StickRole.adult: widget.hub.isConnected(StickRole.adult)
-          ? StickSource.stick
-          : StickSource.auto,
-    };
-
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => BoardScreen(
+        builder: (_) => InsertScreen(
           audioEngine: widget.audioEngine,
           hub: widget.hub,
-          initialSources: initialSources,
         ),
       ),
     );

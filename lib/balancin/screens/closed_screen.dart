@@ -15,12 +15,14 @@ import 'board_screen.dart';
 class ClosedScreen extends StatelessWidget {
   const ClosedScreen({
     super.key,
-    required this.session,
+    this.session,
+    this.report,
     required this.audioEngine,
     required this.hub,
-  });
+  }) : assert(session != null || report != null);
 
-  final BoardSession session;
+  final BoardSession? session;
+  final Map<String, Object>? report;
   final AudioEngine audioEngine;
   final StickHub hub;
 
@@ -32,9 +34,11 @@ class ClosedScreen extends StatelessWidget {
     Color(0xFFF2E44A), // 5: Coincidencias / oculto (amarillo)
   ];
 
+  Map<String, Object> _obtenerReporte() => report ?? session!.report();
+
   Future<void> _exportar(BuildContext context) async {
-    final report = session.report();
-    final shared = await TelemetryExporter.exportJson(report);
+    final rep = _obtenerReporte();
+    final shared = await TelemetryExporter.exportJson(rep);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -64,8 +68,27 @@ class ClosedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final summaryCards = session.summaryCards;
-    final regimeBars = session.regimeBars;
+    final rep = _obtenerReporte();
+    final lat = rep['latencias']! as Map<String, Object>;
+
+    final summaryCards = session?.summaryCards ?? [
+      (value: '${rep['duracion_total_s']} s', label: 'duración total'),
+      (value: '${rep['juego_activo_s']} s', label: 'juego activo'),
+      (value: '${rep['campo_abierto_s']} s', label: 'campo abierto'),
+      (value: '${lat['cantidad']}', label: 'latencias'),
+      (value: '${lat['duracion_media_s']} s', label: 'duración media de latencia'),
+      (value: '${rep['reanudaciones']}', label: 'reanudaciones'),
+      (value: '${rep['eventos_nino']}', label: 'eventos del niño'),
+      (value: '${rep['variacion_campo_alturas']}', label: 'variación del campo (alturas recorridas)'),
+      (value: '${rep['timbres_ocultos']}', label: 'timbres ocultos hallados'),
+      (value: '${rep['intercambios_stick']}', label: 'intercambios de stick'),
+    ];
+
+    final regs = (rep['regimenes']! as List).cast<Map<String, Object>>();
+    final regimeBars = session?.regimeBars ?? [
+      for (final g in regs)
+        (name: g['regimen']! as String, percent: (g['porcentaje']! as num).toDouble()),
+    ];
 
     return Scaffold(
       backgroundColor: const Color(0xFFEFECE4),

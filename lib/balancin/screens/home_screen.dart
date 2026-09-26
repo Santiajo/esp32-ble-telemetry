@@ -7,9 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../screens/dashboard_screen.dart';
 import '../platform/audio_engine.dart';
 import '../platform/stick_hub.dart';
-import '../session/board_session.dart';
 import 'audio_test_screen.dart';
 import 'board_screen.dart';
+import 'experience/insert_screen.dart';
 import 'onboarding/onboarding_screen.dart';
 
 /// Pantalla de inicio de la aplicación Balancín.
@@ -82,21 +82,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
 
     if (done) {
-      final initialSources = <StickRole, StickSource>{
-        StickRole.child: _hub.isConnected(StickRole.child)
-            ? StickSource.stick
-            : StickSource.auto,
-        StickRole.adult: _hub.isConnected(StickRole.adult)
-            ? StickSource.stick
-            : StickSource.auto,
-      };
-
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => BoardScreen(
+          builder: (_) => InsertScreen(
             audioEngine: _audioEngine,
             hub: _hub,
-            initialSources: initialSources,
           ),
         ),
       );
