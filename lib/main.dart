@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:esp32_ble_telemetry/screens/dashboard_screen.dart';
+import 'package:esp32_ble_telemetry/balancin/screens/home_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +13,7 @@ class TelemetryStationApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Estación Telemétrica MPU6050',
+      title: 'Balancín · Estación BLE',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -29,7 +29,7 @@ class TelemetryStationApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: const DashboardScreen(),
+      home: const HomeScreen(),
     );
   }
 }

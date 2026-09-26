@@ -9,20 +9,12 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('Smoke test de TelemetryStationApp y elementos del Dashboard',
+  testWidgets('Smoke test de TelemetryStationApp y HomeScreen',
       (WidgetTester tester) async {
     await tester.pumpWidget(const TelemetryStationApp());
     await tester.pump();
 
-    // Verificar AppBar
-    expect(find.text('Estación Telemétrica · ESP32 BLE'), findsOneWidget);
-
-    // Verificar presencia de los chips de ESP A y ESP B
-    expect(find.textContaining('ESP A'), findsWidgets);
-    expect(find.textContaining('ESP B'), findsWidgets);
-
-    // Verificar secciones clave
-    expect(find.text('Plano Cartesiano 2D (Posición X / Y)'), findsOneWidget);
-    expect(find.text('Análisis Telemétrico en Tiempo Real'), findsOneWidget);
+    // Verifica que HomeScreen se monte mostrando la vista de preparación de sonidos
+    expect(find.text('Preparando sonidos…'), findsOneWidget);
   });
 }

@@ -11,7 +11,9 @@ import '../platform/audio_engine.dart';
 
 /// Pantalla de prueba para el motor de audio SoLoud y síntesis aditiva en memoria.
 class AudioTestScreen extends StatefulWidget {
-  const AudioTestScreen({super.key});
+  const AudioTestScreen({super.key, this.audioEngine});
+
+  final AudioEngine? audioEngine;
 
   @override
   State<AudioTestScreen> createState() => _AudioTestScreenState();
@@ -52,11 +54,16 @@ class _AudioTestScreenState extends State<AudioTestScreen>
   @override
   void initState() {
     super.initState();
-    _audioEngine = AudioEngine();
+    _audioEngine = widget.audioEngine ?? AudioEngine();
     _lightEnvelope = LightEnvelope();
 
     _ticker = createTicker(_onTick);
-    _iniciarAudio();
+    if (_audioEngine.isInitialized) {
+      _loading = false;
+      _ticker.start();
+    } else {
+      _iniciarAudio();
+    }
   }
 
   Future<void> _iniciarAudio() async {
@@ -134,7 +141,9 @@ class _AudioTestScreenState extends State<AudioTestScreen>
       t.cancel();
     }
     _rafagaTimers.clear();
-    _audioEngine.dispose();
+    if (widget.audioEngine == null) {
+      _audioEngine.dispose();
+    }
     super.dispose();
   }
 
