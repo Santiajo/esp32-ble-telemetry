@@ -10,6 +10,7 @@ import 'package:esp32_ble_telemetry/widgets/metric_card.dart';
 import 'package:esp32_ble_telemetry/widgets/oscilloscope_painter.dart';
 import 'package:esp32_ble_telemetry/widgets/radar_cartesian_painter.dart';
 import 'package:esp32_ble_telemetry/widgets/telemetry_console.dart';
+import 'package:esp32_ble_telemetry/balancin/screens/audio_test_screen.dart';
 
 /// Pantalla principal telemétrica del sistema dual ESP32 MPU-6050.
 class DashboardScreen extends StatefulWidget {
@@ -185,6 +186,20 @@ class _DashboardScreenState extends State<DashboardScreen>
             color: Colors.white,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.music_note, color: Colors.tealAccent),
+            tooltip: 'Probar audio Balancín',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => const AudioTestScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(

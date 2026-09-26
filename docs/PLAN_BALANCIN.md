@@ -189,6 +189,14 @@ rate  = rate*0.9 + (|Δcenter|/dt)*0.1
 2. `AudioEngine` (Antigravity) hace `SoLoud.init` con `bufferSize` bajo, `loadMem` de cada WAV, y `play(source, volume: gain)` por nota. Agrega el filtro limitador al bus y hace el fade global en la pérdida de stick.
 3. Se mide la latencia: tap en el panel → sonido (grabación con otro teléfono, o un loopback de audio). **Meta: ≤ 30 ms de extremo a extremo**, según la especificación.
 
+**Detalles decididos al implementar la fase 3:**
+- `SoLoud.init(bufferSize: …)`: el valor por defecto de 2048 frames equivale a unos 46 ms y **rompe la meta**. Se empieza en 512 y se prueba 256; si hay crujidos se sube.
+- Mono, 44,1 kHz. Parciales por sobre 0,45·sr se omiten (sin aliasing). Triángulo del timbre oculto: banda limitada hasta el 9.º armónico.
+- **Precarga:** 100 notas de juego (4 familias × 25) más apertura, final y campanita, renderizadas en un `Isolate`. Son unos 13 MB en WAV.
+- **Resonancias de campo (decay 2,4 s): se renderizan bajo demanda** en un `Isolate` y se cachean. Suenan después de 1,5 s de quietud, así que no son sensibles a la latencia. Precargarlas costaría más de 20 MB adicionales.
+- Los WAV se guardan a escala 0,5 (sin saturación); `SynthRenderer.volumeFor(gain)` y `bakedVolume` compensan al reproducir.
+- La luz se calcula con `LightEnvelope` (modelo de envolventes en Dart), no leyendo el audio.
+
 ## 6. Arquitectura de carpetas nueva
 
 ```
@@ -325,3 +333,5 @@ El motor es **determinista**: recibe `now` y los lectores. Así los tests reprod
 | 26-09-2026 | 1 | Firmware pasa a MicroPython (el usuario ya trabajaba con Thonny). `main.py` escrito. |
 | 26-09-2026 | 1 | Firmware v2 corriendo en el stick B: MPU en 0x68, 1 g ≈ 4096 LSB, bucle exacto a 100 Hz. Bias de giroscopio X ≈ 41,6 °/s. Falta la verificación BLE con nRF Connect. |
 | 26-09-2026 | 2 | Núcleo Dart escrito en `lib/balancin/core/` más 2 archivos de test en `test/balancin/`. Expectativas validadas contra una réplica en Python del motor. Pendiente: `flutter analyze` y `flutter test` en Antigravity. |
+| 26-09-2026 | 2 | ✅ Tests en verde (Antigravity), commit en `balancin`. Núcleo verificado sin cambios (hash idéntico). |
+| 26-09-2026 | 3 | Claude escribió `core/audio/synth_renderer.dart`, `core/audio/light_envelope.dart` y `test/balancin/audio_core_test.dart`. Siguiente: `AudioEngine` (flutter_soloud) y la pantalla de prueba de audio en Antigravity. |

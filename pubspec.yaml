@@ -38,6 +38,7 @@ dependencies:
   wakelock_plus: ^1.8.0
   shared_preferences: ^2.5.0
   permission_handler: ^11.4.0
+  flutter_soloud: ^5.1.2
 
 dev_dependencies:
   flutter_test:
