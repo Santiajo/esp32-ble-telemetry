@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../platform/audio_engine.dart';
+import '../platform/stick_hub.dart';
 import '../platform/telemetry_exporter.dart';
 import '../session/board_session.dart';
 import 'board_screen.dart';
@@ -16,10 +17,12 @@ class ClosedScreen extends StatelessWidget {
     super.key,
     required this.session,
     required this.audioEngine,
+    required this.hub,
   });
 
   final BoardSession session;
   final AudioEngine audioEngine;
+  final StickHub hub;
 
   static const List<Color> _regimeColors = [
     Color(0xFF7B5FCB), // 1: Campo estable (violeta)
@@ -51,7 +54,10 @@ class ClosedScreen extends StatelessWidget {
   void _nuevaSesion(BuildContext context) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => BoardScreen(audioEngine: audioEngine),
+        builder: (_) => BoardScreen(
+          audioEngine: audioEngine,
+          hub: hub,
+        ),
       ),
     );
   }

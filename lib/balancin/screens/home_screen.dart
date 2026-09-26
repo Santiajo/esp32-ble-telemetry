@@ -1,18 +1,26 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../screens/dashboard_screen.dart';
 import '../platform/audio_engine.dart';
+import '../platform/stick_hub.dart';
+import '../session/board_session.dart';
 import 'audio_test_screen.dart';
 import 'board_screen.dart';
+import 'onboarding/onboarding_screen.dart';
 
 /// Pantalla de inicio de la aplicación Balancín.
 ///
-/// Inicializa el motor [AudioEngine] una única vez al arrancar,
-/// muestra "Preparando sonidos…" mientras se renderizan y cargan los WAVs en memoria,
-/// y provee acceso a:
-/// 1. Tablero de validación (`BoardScreen`)
-/// 2. Prueba de audio (`AudioTestScreen`)
-/// 3. Diagnóstico BLE (`DashboardScreen`)
+/// Inicializa el motor [AudioEngine] y el controlador central [StickHub] una única
+/// vez al arrancar, reconecta sticks guardados si hay permisos y provee acceso a:
+/// 1. "Comenzar" (Onboarding o directo a BoardScreen si ya fue completado)
+/// 2. "Tablero de validación" (`BoardScreen`)
+/// 3. "Prueba de audio" (`AudioTestScreen`)
+/// 4. "Diagnóstico BLE" (`DashboardScreen`)
+/// 5. Enlace "Repetir onboarding"
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -22,6 +30,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final AudioEngine _audioEngine;
+  late final StickHub _hub;
   bool _loading = true;
   String? _error;
 
@@ -29,7 +38,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _audioEngine = AudioEngine();
+    _hub = StickHub();
     _iniciarMotor();
+    _reconnectIfPermitted();
   }
 
   Future<void> _iniciarMotor() async {
@@ -50,8 +61,60 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _reconnectIfPermitted() async {
+    try {
+      if (Platform.isAndroid) {
+        if (await Permission.bluetoothConnect.isGranted) {
+          await _hub.reconnectSaved();
+        }
+      } else {
+        await _hub.reconnectSaved();
+      }
+    } catch (_) {
+      // Ignorar fallos de reconexión inicial
+    }
+  }
+
+  Future<void> _onComenzar() async {
+    final prefs = await SharedPreferences.getInstance();
+    final done = prefs.getBool('balancin_onboarding_done') ?? false;
+
+    if (!mounted) return;
+
+    if (done) {
+      final initialSources = <StickRole, StickSource>{
+        StickRole.child: _hub.isConnected(StickRole.child)
+            ? StickSource.stick
+            : StickSource.auto,
+        StickRole.adult: _hub.isConnected(StickRole.adult)
+            ? StickSource.stick
+            : StickSource.auto,
+      };
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BoardScreen(
+            audioEngine: _audioEngine,
+            hub: _hub,
+            initialSources: initialSources,
+          ),
+        ),
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OnboardingScreen(
+            audioEngine: _audioEngine,
+            hub: _hub,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
+    _hub.dispose();
     _audioEngine.dispose();
     super.dispose();
   }
@@ -215,15 +278,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
         const Spacer(),
 
-        // Botón 1: Tablero de validación
+        // Botón 0: Comenzar (Onboarding o juego)
         ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => BoardScreen(audioEngine: _audioEngine),
-              ),
-            );
-          },
+          onPressed: _onComenzar,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF2B2536),
             foregroundColor: Colors.white,
@@ -234,10 +291,41 @@ class _HomeScreenState extends State<HomeScreen> {
             elevation: 0,
           ),
           child: const Text(
+            'Comenzar',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Botón 1: Tablero de validación
+        OutlinedButton(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => BoardScreen(
+                  audioEngine: _audioEngine,
+                  hub: _hub,
+                ),
+              ),
+            );
+          },
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF2B2536),
+            side: const BorderSide(color: Color(0x402B2536), width: 1.5),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+          child: const Text(
             'Tablero de validación',
             style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),
@@ -274,6 +362,8 @@ class _HomeScreenState extends State<HomeScreen> {
         // Botón 3: Diagnóstico BLE
         OutlinedButton(
           onPressed: () {
+            // Liberar conexiones del hub antes de abrir diagnóstico
+            _hub.releaseAll();
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => const DashboardScreen(),
@@ -294,6 +384,32 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Enlace chico: Repetir onboarding
+        Center(
+          child: TextButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => OnboardingScreen(
+                    audioEngine: _audioEngine,
+                    hub: _hub,
+                  ),
+                ),
+              );
+            },
+            child: const Text(
+              'Repetir onboarding',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF5A536B),
+                decoration: TextDecoration.underline,
+              ),
             ),
           ),
         ),

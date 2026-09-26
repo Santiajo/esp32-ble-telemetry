@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 
@@ -12,8 +13,11 @@ import '../core/constants.dart';
 import '../core/gesture/synthetic_motion.dart';
 import '../platform/audio_engine.dart';
 import '../platform/ble_stick_link.dart';
+import '../platform/stick_hub.dart';
 import '../session/board_session.dart';
+import '../session/loss_monitor.dart';
 import 'closed_screen.dart';
+import 'lost_screen.dart';
 import 'tuning_panel.dart';
 
 /// Fuente de control para cada rol de stick.
@@ -24,9 +28,13 @@ class BoardScreen extends StatefulWidget {
   const BoardScreen({
     super.key,
     required this.audioEngine,
+    required this.hub,
+    this.initialSources,
   });
 
   final AudioEngine audioEngine;
+  final StickHub hub;
+  final Map<StickRole, StickSource>? initialSources;
 
   @override
   State<BoardScreen> createState() => _BoardScreenState();
@@ -36,8 +44,10 @@ class _BoardScreenState extends State<BoardScreen>
     with SingleTickerProviderStateMixin {
   late final BoardSession _session;
   late final Ticker _ticker;
+  StreamSubscription<LossEvent>? _lossSub;
 
   bool _navigatedToClosed = false;
+  bool _navigatedToLost = false;
   bool _isLeftTouching = false;
   bool _isRightTouching = false;
 
@@ -45,8 +55,6 @@ class _BoardScreenState extends State<BoardScreen>
     StickRole.adult: StickSource.dedo,
     StickRole.child: StickSource.dedo,
   };
-
-  final Map<StickRole, BleStickLink> _links = {};
 
   double _lastTeleUpdate = 0;
   List<({String value, String label})> _cachedTelemetry = [];
@@ -61,6 +69,52 @@ class _BoardScreenState extends State<BoardScreen>
     _ticker = createTicker(_onTick)..start();
 
     WakelockPlus.enable();
+
+    // Monitoreo de pérdidas de sticks armados
+    _lossSub = widget.hub.lossEvents.listen((ev) {
+      if (ev.lost && _session.isExternal(ev.role) && _session.running) {
+        if (!_navigatedToLost && mounted) {
+          _navigatedToLost = true;
+          _session.loseStick(ev.role, LossCause.alcance);
+          Navigator.of(context).push<String>(
+            MaterialPageRoute(
+              builder: (_) => LostScreen(
+                hub: widget.hub,
+                role: ev.role,
+                session: _session,
+                cause: LossCause.alcance,
+                audioEngine: widget.audioEngine,
+              ),
+            ),
+          ).then((res) {
+            _navigatedToLost = false;
+            if (res == 'end') {
+              _session.end();
+            }
+          });
+        }
+      }
+    });
+
+    // Aplicar fuentes iniciales (ej. desde el onboarding)
+    if (widget.initialSources != null) {
+      for (final entry in widget.initialSources!.entries) {
+        final role = entry.key;
+        final src = entry.value;
+        _sources[role] = src;
+        if (src == StickSource.auto) {
+          if (role == StickRole.adult) {
+            _session.setAutoAdult(true);
+          } else {
+            _session.setAutoChild(true);
+          }
+        } else if (src == StickSource.stick) {
+          final link = widget.hub.ensureLink(role);
+          _session.attachReader(role, link.reader);
+          widget.hub.arm(role);
+        }
+      }
+    }
   }
 
   void _onTick(Duration elapsed) {
@@ -94,6 +148,7 @@ class _BoardScreenState extends State<BoardScreen>
           builder: (_) => ClosedScreen(
             session: _session,
             audioEngine: widget.audioEngine,
+            hub: widget.hub,
           ),
         ),
       );
@@ -103,8 +158,12 @@ class _BoardScreenState extends State<BoardScreen>
   Future<void> _onSourceSelected(StickRole role, StickSource source) async {
     if (_sources[role] == source) return;
 
+    if (_sources[role] == StickSource.stick) {
+      _session.attachReader(role, null);
+      widget.hub.disarm(role);
+    }
+
     if (source == StickSource.auto) {
-      _quitarStickLink(role);
       if (role == StickRole.adult) {
         _session.setAutoAdult(true);
       } else {
@@ -120,7 +179,6 @@ class _BoardScreenState extends State<BoardScreen>
       } else {
         _session.setAutoChild(false);
       }
-      _quitarStickLink(role);
       setState(() => _sources[role] = StickSource.dedo);
       return;
     }
@@ -187,32 +245,23 @@ class _BoardScreenState extends State<BoardScreen>
         }
       }
 
-      // 3. Crear BleStickLink
-      _quitarStickLink(role);
-      final link = BleStickLink(role: role, clock: () => _session.nowMs);
-      _links[role] = link;
-      _session.attachReader(role, link.reader);
-      setState(() => _sources[role] = StickSource.stick);
-
-      await link.start();
+      // 3. Obtener o crear BleStickLink en el StickHub
+      final link = widget.hub.ensureLink(role);
 
       // 4. Si no tiene MAC guardada, abrir modal de escaneo BLE
-      if (mounted && link.savedMac == null) {
-        _abrirVinculacion(link);
+      final hasSaved = await widget.hub.hasSavedStick(role);
+      if (!hasSaved && mounted) {
+        await _abrirVinculacion(link);
       }
+
+      _session.attachReader(role, link.reader);
+      widget.hub.arm(role);
+      setState(() => _sources[role] = StickSource.stick);
     }
   }
 
-  void _quitarStickLink(StickRole role) {
-    if (_links.containsKey(role)) {
-      _session.attachReader(role, null);
-      _links[role]!.dispose();
-      _links.remove(role);
-    }
-  }
-
-  void _abrirVinculacion(BleStickLink link) {
-    showModalBottomSheet<void>(
+  Future<void> _abrirVinculacion(BleStickLink link) async {
+    await showModalBottomSheet<void>(
       context: context,
       backgroundColor: const Color(0xFF141414),
       shape: const RoundedRectangleBorder(
@@ -230,7 +279,7 @@ class _BoardScreenState extends State<BoardScreen>
   }
 
   void _abrirAjusteImu() {
-    final link = _links[StickRole.child] ?? _links[StickRole.adult];
+    final link = widget.hub.link(StickRole.child) ?? widget.hub.link(StickRole.adult);
     if (link == null) return;
     showModalBottomSheet<void>(
       context: context,
@@ -243,18 +292,29 @@ class _BoardScreenState extends State<BoardScreen>
   @override
   void dispose() {
     _ticker.dispose();
+    _lossSub?.cancel();
     WakelockPlus.disable();
-    for (final link in _links.values) {
-      _session.attachReader(link.role, null);
-      link.dispose();
+    for (final role in StickRole.values) {
+      if (_sources[role] == StickSource.stick) {
+        widget.hub.disarm(role);
+        _session.attachReader(role, null);
+      }
     }
-    _links.clear();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final mergeList = <Listenable>[_session, ..._links.values];
+    final activeLinks = [
+      widget.hub.link(StickRole.adult),
+      widget.hub.link(StickRole.child),
+    ].whereType<BleStickLink>();
+
+    final mergeList = <Listenable>[
+      _session,
+      widget.hub,
+      ...activeLinks,
+    ];
 
     return ListenableBuilder(
       listenable: Listenable.merge(mergeList),
@@ -302,10 +362,10 @@ class _BoardScreenState extends State<BoardScreen>
                                     side: PanelSide.left,
                                     session: _session,
                                     source: _sources[leftRole]!,
-                                    link: _links[leftRole],
+                                    link: widget.hub.link(leftRole),
                                     onSourceSelected: (s) => _onSourceSelected(leftRole, s),
-                                    onRebind: () => _links[leftRole] != null
-                                        ? _abrirVinculacion(_links[leftRole]!)
+                                    onRebind: () => widget.hub.link(leftRole) != null
+                                        ? _abrirVinculacion(widget.hub.link(leftRole)!)
                                         : null,
                                     onPointerActiveChange: (active) {
                                       setState(() => _isLeftTouching = active);
@@ -318,10 +378,10 @@ class _BoardScreenState extends State<BoardScreen>
                                     side: PanelSide.right,
                                     session: _session,
                                     source: _sources[rightRole]!,
-                                    link: _links[rightRole],
+                                    link: widget.hub.link(rightRole),
                                     onSourceSelected: (s) => _onSourceSelected(rightRole, s),
-                                    onRebind: () => _links[rightRole] != null
-                                        ? _abrirVinculacion(_links[rightRole]!)
+                                    onRebind: () => widget.hub.link(rightRole) != null
+                                        ? _abrirVinculacion(widget.hub.link(rightRole)!)
                                         : null,
                                     onPointerActiveChange: (active) {
                                       setState(() => _isRightTouching = active);
@@ -589,7 +649,8 @@ class _BoardScreenState extends State<BoardScreen>
             ),
 
             // Botón Ajuste IMU (visible si algún rol es Stick)
-            if (_links.isNotEmpty)
+            if (widget.hub.link(StickRole.child) != null ||
+                widget.hub.link(StickRole.adult) != null)
               ElevatedButton.icon(
                 onPressed: _abrirAjusteImu,
                 icon: const Icon(Icons.tune, size: 18),

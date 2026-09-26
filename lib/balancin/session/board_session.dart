@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
+import '../core/app_clock.dart';
 import '../core/audio/light_envelope.dart';
 import '../core/constants.dart';
 import '../core/engine/balancin_engine.dart';
@@ -102,21 +103,17 @@ class EjeGlow {
 ///  - lee los getters para pintar.
 /// El sonido sale por [onSound] (conectar a `AudioEngine.handle`).
 ///
-/// El reloj es propio (Stopwatch) para que toques y ticks usen la misma base de tiempo.
+/// El reloj por defecto es [AppClock]: toques, ticks y muestras BLE comparten la misma base de tiempo.
 class BoardSession extends ChangeNotifier {
   BoardSession({
     required this.onSound,
     double Function()? clock,
     math.Random? random,
-  })  : _clock = clock ?? _stopwatchClock(),
+  })  : _clock = clock ?? AppClock.nowMs,
         _random = random ?? math.Random() {
     engine = BalancinEngine(adult: adultTouch, child: childTouch);
   }
 
-  static double Function() _stopwatchClock() {
-    final sw = Stopwatch()..start();
-    return () => sw.elapsedMicroseconds / 1000.0;
-  }
 
   final void Function(List<SoundCommand> cmds) onSound;
   final double Function() _clock;
