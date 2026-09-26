@@ -47,7 +47,12 @@
 v2,<t_ms>,<ax>,<ay>,<az>,<gx>,<gy>,<gz>
 ```
 
-  - `t_ms`: `millis()` del ESP (uint32). Sirve para medir jitter y, más adelante, alinear A con B.
+  - `t_ms`: `time.ticks_ms()` del ESP. En MicroPython **da la vuelta cada 2^30 ms** (unos 12 días), así que la app debe calcular diferencias módulo 2^30. Sirve para medir jitter y, más adelante, alinear A con B.
+  - Una línea mide como máximo 56 bytes. Si el MTU es chico, el firmware la parte en trozos y la app la reúne por `\n`. **El parser debe exigir exactamente 8 campos**: si se descarta un trozo, la línea mezclada resultante se ignora.
+- Firmware: **MicroPython** en `firmware/balancin_stick/main.py` (se carga con Thonny). El original está en `firmware/legacy/main.py`.
+- **Frecuencia adaptativa:** 100 Hz si la línea cabe en un solo paquete (MTU ≥ 59); si no, 50 Hz. El firmware antiguo documentó desconexiones por encima de ~66 Hz con líneas cortas y MTU por defecto. **La app debe pedir un MTU alto al conectar.**
+- **LED GPIO2** (el prototipo lo usa en el onboarding y en la pantalla de pérdida): parpadea = esperando teléfono · fijo = conectado · parpadeo rápido = MPU6050 no encontrado.
+- `LEGACY_OUTPUT = True` envía `rawX,rawY` a ±2 g y 50 Hz, para probar con la app antigua.
   - `ax..gz`: enteros crudos int16 del MPU6050.
 - Configuración del MPU6050: **acelerómetro ±8 g** (4096 LSB/g), porque un niño sacudiendo supera ±2 g; **giroscopio ±1000 °/s** (32.8 LSB/(°/s)); DLPF de 44 Hz.
 - Tamaño aproximado de la línea: 45 bytes. Se pide MTU ≥ 64 (Android con flutter_blue_plus ya negocia uno mayor).
@@ -84,7 +89,7 @@ El motor **no sabe** si el gesto viene del dedo, de un simulador o de la IMU. Ca
 - `shake` = ≥ 4 inversiones de signo en X dentro de 0,6 s.
 
 **`ImuGestureReader`** (nuevo; propuesta inicial que se ajusta en la fase 5 con el stick real):
-- Bias del giroscopio: promedio de 1 s en reposo al conectar (y se re-estima en reposo prolongado).
+- Bias del giroscopio: promedio de 1 s en reposo al conectar (y se re-estima en reposo prolongado). **Obligatorio.** El stick B real marca en reposo `gx ≈ 1360 LSB ≈ 41,6 °/s`, más que el umbral `on`. Sin restar el bias, el stick parecería moverse siempre. La estimación debe hacerse solo cuando la varianza del giro sea baja (stick realmente quieto), no simplemente "al conectar".
 - `ω = |giro|` en °/s, con EMA.
 - `moving`: histéresis de dos niveles sobre ω (`on ≈ 25 °/s`, `off ≈ 12 °/s`) para no parpadear con gestos pequeños del adulto (criterio 8).
 - `vel01 = clamp(ω / ω_max)`, con `ω_max ≈ 400 °/s`.
@@ -225,9 +230,9 @@ El motor es **determinista**: recibe `now` y los lectores. Así los tests reprod
 - [ ] Crear la rama `balancin`.
 - **Hecho cuando:** `git log` muestra el commit y la rama existe.
 
-### Fase 1 · Firmware v2 del stick B (Claude escribe, tú flasheas)
-- Claude entrega `firmware/balancin_stick/balancin_stick.ino` (ESP32 Arduino core, BLE NUS y MPU6050 por `Wire` sin librerías externas) con un `#define STICK_ROLE 'B'`.
-- Tú instalas Arduino IDE con el core ESP32 y flasheas; Claude te da una guía paso a paso.
+### Fase 1 · Firmware v2 del stick B (Claude escribe, tú cargas con Thonny)
+- Claude entrega `firmware/balancin_stick/main.py` (MicroPython: módulo `bluetooth` con NUS y MPU6050 por `machine.I2C`, sin librerías externas) con `STICK_ROLE = 'B'`.
+- Tú lo cargas con Thonny. Antes, respaldas el `main.py` viejo del ESP en `firmware/legacy/`.
 - **Hecho cuando:** nRF Connect (o la pantalla de diagnóstico) muestra líneas `v2,…` a ~100 Hz y el giro responde al mover el stick.
 
 ### Fase 2 · Núcleo en Dart puro (Claude)
@@ -316,3 +321,7 @@ El motor es **determinista**: recibe `now` y los lectores. Así los tests reprod
 | Fecha | Fase | Nota |
 |---|---|---|
 | 26-09-2026 | — | Plan v1. Audio: flutter_soloud 5.1.2. |
+| 26-09-2026 | 0 | Commit en `main` y rama `balancin` creada. |
+| 26-09-2026 | 1 | Firmware pasa a MicroPython (el usuario ya trabajaba con Thonny). `main.py` escrito. |
+| 26-09-2026 | 1 | Firmware v2 corriendo en el stick B: MPU en 0x68, 1 g ≈ 4096 LSB, bucle exacto a 100 Hz. Bias de giroscopio X ≈ 41,6 °/s. Falta la verificación BLE con nRF Connect. |
+| 26-09-2026 | 2 | Núcleo Dart escrito en `lib/balancin/core/` más 2 archivos de test en `test/balancin/`. Expectativas validadas contra una réplica en Python del motor. Pendiente: `flutter analyze` y `flutter test` en Antigravity. |
