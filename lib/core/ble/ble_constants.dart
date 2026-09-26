@@ -17,4 +17,13 @@ class BleConstants {
 
   /// Nombre esperado para la placa B
   static const String nameDispB = 'ESP32-MPU-B';
+
+  /// Balancín: nombres del firmware v2 (firmware/balancin_stick/main.py).
+  /// Stick A = grande (adulto) · Stick B = pequeño (niño).
+  static const String nameStickA = 'ESP32-BAL-A';
+  static const String nameStickB = 'ESP32-BAL-B';
+
+  /// Nombres aceptados por rol (firmware v2 y firmware antiguo).
+  static const List<String> namesForA = [nameStickA, nameDispA];
+  static const List<String> namesForB = [nameStickB, nameDispB];
 }

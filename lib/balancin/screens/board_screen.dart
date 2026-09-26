@@ -1,14 +1,23 @@
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../../widgets/ble_scan_modal.dart';
 import '../core/constants.dart';
 import '../core/gesture/synthetic_motion.dart';
 import '../platform/audio_engine.dart';
+import '../platform/ble_stick_link.dart';
 import '../session/board_session.dart';
 import 'closed_screen.dart';
+import 'tuning_panel.dart';
+
+/// Fuente de control para cada rol de stick.
+enum StickSource { dedo, auto, stick }
 
 /// Pantalla principal del Tablero de Validación (`#session` del prototipo).
 class BoardScreen extends StatefulWidget {
@@ -32,6 +41,13 @@ class _BoardScreenState extends State<BoardScreen>
   bool _isLeftTouching = false;
   bool _isRightTouching = false;
 
+  final Map<StickRole, StickSource> _sources = {
+    StickRole.adult: StickSource.dedo,
+    StickRole.child: StickSource.dedo,
+  };
+
+  final Map<StickRole, BleStickLink> _links = {};
+
   double _lastTeleUpdate = 0;
   List<({String value, String label})> _cachedTelemetry = [];
 
@@ -52,6 +68,19 @@ class _BoardScreenState extends State<BoardScreen>
 
     _session.tick();
 
+    // Sincronizar estado de las fuentes si los toggles globales cambiaron
+    if (_session.autoAdult && _sources[StickRole.adult] == StickSource.dedo) {
+      _sources[StickRole.adult] = StickSource.auto;
+    } else if (!_session.autoAdult && _sources[StickRole.adult] == StickSource.auto) {
+      _sources[StickRole.adult] = StickSource.dedo;
+    }
+
+    if (_session.autoChild && _sources[StickRole.child] == StickSource.dedo) {
+      _sources[StickRole.child] = StickSource.auto;
+    } else if (!_session.autoChild && _sources[StickRole.child] == StickSource.auto) {
+      _sources[StickRole.child] = StickSource.dedo;
+    }
+
     final now = _session.nowMs;
     if (now - _lastTeleUpdate >= 250) {
       _lastTeleUpdate = now;
@@ -71,19 +100,169 @@ class _BoardScreenState extends State<BoardScreen>
     }
   }
 
+  Future<void> _onSourceSelected(StickRole role, StickSource source) async {
+    if (_sources[role] == source) return;
+
+    if (source == StickSource.auto) {
+      _quitarStickLink(role);
+      if (role == StickRole.adult) {
+        _session.setAutoAdult(true);
+      } else {
+        _session.setAutoChild(true);
+      }
+      setState(() => _sources[role] = StickSource.auto);
+      return;
+    }
+
+    if (source == StickSource.dedo) {
+      if (role == StickRole.adult) {
+        _session.setAutoAdult(false);
+      } else {
+        _session.setAutoChild(false);
+      }
+      _quitarStickLink(role);
+      setState(() => _sources[role] = StickSource.dedo);
+      return;
+    }
+
+    // Fuente: Stick real
+    if (source == StickSource.stick) {
+      if (role == StickRole.adult) {
+        _session.setAutoAdult(false);
+      } else {
+        _session.setAutoChild(false);
+      }
+
+      // 1. Permisos Bluetooth
+      if (Platform.isAndroid) {
+        final scan = await Permission.bluetoothScan.request();
+        final connect = await Permission.bluetoothConnect.request();
+        if (!scan.isGranted || !connect.isGranted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Se requieren permisos de Bluetooth para conectar el stick'),
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      // 2. Verificar que el adaptador esté encendido
+      final state = await FlutterBluePlus.adapterState.first;
+      if (state == BluetoothAdapterState.off) {
+        if (mounted) {
+          final activar = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF1E1A29),
+              title: const Text('Bluetooth desactivado', style: TextStyle(color: Colors.white)),
+              content: const Text(
+                'El adaptador Bluetooth está apagado. ¿Deseas activarlo?',
+                style: TextStyle(color: Colors.white70),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF2E44A),
+                    foregroundColor: const Color(0xFF2B2536),
+                  ),
+                  child: const Text('Activar'),
+                ),
+              ],
+            ),
+          );
+
+          if (activar == true) {
+            await FlutterBluePlus.turnOn();
+          } else {
+            return;
+          }
+        }
+      }
+
+      // 3. Crear BleStickLink
+      _quitarStickLink(role);
+      final link = BleStickLink(role: role, clock: () => _session.nowMs);
+      _links[role] = link;
+      _session.attachReader(role, link.reader);
+      setState(() => _sources[role] = StickSource.stick);
+
+      await link.start();
+
+      // 4. Si no tiene MAC guardada, abrir modal de escaneo BLE
+      if (mounted && link.savedMac == null) {
+        _abrirVinculacion(link);
+      }
+    }
+  }
+
+  void _quitarStickLink(StickRole role) {
+    if (_links.containsKey(role)) {
+      _session.attachReader(role, null);
+      _links[role]!.dispose();
+      _links.remove(role);
+    }
+  }
+
+  void _abrirVinculacion(BleStickLink link) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF141414),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => BleScanModal(
+        controller: link.controller,
+        preferredNames: link.acceptedNames,
+        onSeleccionado: (dev) async {
+          Navigator.pop(ctx);
+          await link.adopt(dev);
+        },
+      ),
+    );
+  }
+
+  void _abrirAjusteImu() {
+    final link = _links[StickRole.child] ?? _links[StickRole.adult];
+    if (link == null) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => TuningPanel(link: link),
+    );
+  }
+
   @override
   void dispose() {
     _ticker.dispose();
     WakelockPlus.disable();
+    for (final link in _links.values) {
+      _session.attachReader(link.role, null);
+      link.dispose();
+    }
+    _links.clear();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final mergeList = <Listenable>[_session, ..._links.values];
+
     return ListenableBuilder(
-      listenable: _session,
+      listenable: Listenable.merge(mergeList),
       builder: (context, _) {
         final isScrollingBlocked = _isLeftTouching || _isRightTouching;
+
+        final leftRole = _session.sides[PanelSide.left]!;
+        final rightRole = _session.sides[PanelSide.right]!;
 
         return Scaffold(
           backgroundColor: const Color(0xFFEFECE4),
@@ -113,8 +292,8 @@ class _BoardScreenState extends State<BoardScreen>
                           // c) Dos paneles táctiles lado a lado (al menos 40% de altura)
                           SizedBox(
                             height: math.max(
-                              320,
-                              MediaQuery.of(context).size.height * 0.42,
+                              380,
+                              MediaQuery.of(context).size.height * 0.44,
                             ),
                             child: Row(
                               children: [
@@ -122,6 +301,12 @@ class _BoardScreenState extends State<BoardScreen>
                                   child: _TouchPanelWidget(
                                     side: PanelSide.left,
                                     session: _session,
+                                    source: _sources[leftRole]!,
+                                    link: _links[leftRole],
+                                    onSourceSelected: (s) => _onSourceSelected(leftRole, s),
+                                    onRebind: () => _links[leftRole] != null
+                                        ? _abrirVinculacion(_links[leftRole]!)
+                                        : null,
                                     onPointerActiveChange: (active) {
                                       setState(() => _isLeftTouching = active);
                                     },
@@ -132,6 +317,12 @@ class _BoardScreenState extends State<BoardScreen>
                                   child: _TouchPanelWidget(
                                     side: PanelSide.right,
                                     session: _session,
+                                    source: _sources[rightRole]!,
+                                    link: _links[rightRole],
+                                    onSourceSelected: (s) => _onSourceSelected(rightRole, s),
+                                    onRebind: () => _links[rightRole] != null
+                                        ? _abrirVinculacion(_links[rightRole]!)
+                                        : null,
                                     onPointerActiveChange: (active) {
                                       setState(() => _isRightTouching = active);
                                     },
@@ -347,7 +538,7 @@ class _BoardScreenState extends State<BoardScreen>
     );
   }
 
-  /// Barra de controles: Intercambiar, Niño auto, Adulto auto, Modo eje, Terminar, Demos.
+  /// Barra de controles: Intercambiar, Niño auto, Adulto auto, Modo eje, Terminar, Demos, Ajuste IMU.
   Widget _buildControlsBar() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -365,7 +556,15 @@ class _BoardScreenState extends State<BoardScreen>
 
             // Niño automático
             OutlinedButton(
-              onPressed: () => _session.setAutoChild(!_session.autoChild),
+              onPressed: () {
+                final nuevo = !_session.autoChild;
+                _session.setAutoChild(nuevo);
+                if (nuevo && _sources[StickRole.child] != StickSource.stick) {
+                  _sources[StickRole.child] = StickSource.auto;
+                } else if (!nuevo && _sources[StickRole.child] == StickSource.auto) {
+                  _sources[StickRole.child] = StickSource.dedo;
+                }
+              },
               style: _controlButtonStyle(active: _session.autoChild),
               child: Text(
                 'Niño automático: ${_session.autoChild ? 'encendido' : 'apagado'}',
@@ -374,12 +573,36 @@ class _BoardScreenState extends State<BoardScreen>
 
             // Adulto automático
             OutlinedButton(
-              onPressed: () => _session.setAutoAdult(!_session.autoAdult),
+              onPressed: () {
+                final nuevo = !_session.autoAdult;
+                _session.setAutoAdult(nuevo);
+                if (nuevo && _sources[StickRole.adult] != StickSource.stick) {
+                  _sources[StickRole.adult] = StickSource.auto;
+                } else if (!nuevo && _sources[StickRole.adult] == StickSource.auto) {
+                  _sources[StickRole.adult] = StickSource.dedo;
+                }
+              },
               style: _controlButtonStyle(active: _session.autoAdult),
               child: Text(
                 'Adulto automático: ${_session.autoAdult ? 'encendido' : 'apagado'}',
               ),
             ),
+
+            // Botón Ajuste IMU (visible si algún rol es Stick)
+            if (_links.isNotEmpty)
+              ElevatedButton.icon(
+                onPressed: _abrirAjusteImu,
+                icon: const Icon(Icons.tune, size: 18),
+                label: const Text('Ajuste IMU'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5B35B8),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  elevation: 0,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                ),
+              ),
 
             // Selector de Demo
             PopupMenuButton<DemoScenario?>(
@@ -635,17 +858,28 @@ class BandPainter extends CustomPainter {
 
 /// Panel interactivo de un stick (izquierdo o derecho).
 ///
-/// Recibe eventos crudos con [Listener] para responder con latencia cero
-/// y rastrear un puntero único de inicio a fin.
+/// Soporta 3 fuentes:
+/// - "Dedo": captura toques con [Listener] para latencia cero.
+/// - "Automático": genera movimiento sintético.
+/// - "Stick": conectado al sensor BLE real ([BleStickLink]), muestra telemetría
+///   en vivo, estado del enlace, calibración y botones de configuración.
 class _TouchPanelWidget extends StatefulWidget {
   const _TouchPanelWidget({
     required this.side,
     required this.session,
+    required this.source,
+    required this.onSourceSelected,
+    this.link,
+    this.onRebind,
     required this.onPointerActiveChange,
   });
 
   final PanelSide side;
   final BoardSession session;
+  final StickSource source;
+  final ValueChanged<StickSource> onSourceSelected;
+  final BleStickLink? link;
+  final VoidCallback? onRebind;
   final ValueChanged<bool> onPointerActiveChange;
 
   @override
@@ -661,7 +895,7 @@ class _TouchPanelWidgetState extends State<_TouchPanelWidget> {
     final isAdult = role == StickRole.adult;
     final isMoving = widget.session.panelMoving(widget.side);
     final copy = kPanelTexts[role]!;
-    final dot = widget.session.dotFor(widget.side);
+    final isStick = widget.source == StickSource.stick && widget.link != null;
 
     final bgColor = isAdult ? const Color(0xFFB3A2DC) : const Color(0xFFF4C3B6);
     final borderColor = isAdult ? const Color(0xFF5B35B8) : const Color(0xFFE85E45);
@@ -677,31 +911,39 @@ class _TouchPanelWidgetState extends State<_TouchPanelWidget> {
         );
 
         return Listener(
-          behavior: HitTestBehavior.opaque,
-          onPointerDown: (e) {
-            if (_activePointerId == null) {
-              _activePointerId = e.pointer;
-              widget.onPointerActiveChange(true);
-              widget.session.feedPanel(widget.side, e.localPosition.dx, e.localPosition.dy);
-            }
-          },
-          onPointerMove: (e) {
-            if (e.pointer == _activePointerId) {
-              widget.session.feedPanel(widget.side, e.localPosition.dx, e.localPosition.dy);
-            }
-          },
-          onPointerUp: (e) {
-            if (e.pointer == _activePointerId) {
-              _activePointerId = null;
-              widget.onPointerActiveChange(false);
-            }
-          },
-          onPointerCancel: (e) {
-            if (e.pointer == _activePointerId) {
-              _activePointerId = null;
-              widget.onPointerActiveChange(false);
-            }
-          },
+          behavior: isStick ? HitTestBehavior.deferToChild : HitTestBehavior.opaque,
+          onPointerDown: isStick
+              ? null
+              : (e) {
+                  if (_activePointerId == null) {
+                    _activePointerId = e.pointer;
+                    widget.onPointerActiveChange(true);
+                    widget.session.feedPanel(widget.side, e.localPosition.dx, e.localPosition.dy);
+                  }
+                },
+          onPointerMove: isStick
+              ? null
+              : (e) {
+                  if (e.pointer == _activePointerId) {
+                    widget.session.feedPanel(widget.side, e.localPosition.dx, e.localPosition.dy);
+                  }
+                },
+          onPointerUp: isStick
+              ? null
+              : (e) {
+                  if (e.pointer == _activePointerId) {
+                    _activePointerId = null;
+                    widget.onPointerActiveChange(false);
+                  }
+                },
+          onPointerCancel: isStick
+              ? null
+              : (e) {
+                  if (e.pointer == _activePointerId) {
+                    _activePointerId = null;
+                    widget.onPointerActiveChange(false);
+                  }
+                },
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
@@ -711,86 +953,310 @@ class _TouchPanelWidgetState extends State<_TouchPanelWidget> {
                   ? Border.all(color: borderColor, width: 4.0)
                   : Border.all(color: Colors.transparent, width: 4.0),
             ),
-            padding: const EdgeInsets.all(14),
-            child: Stack(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Textos descriptivos
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          copy.title,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF2B2536),
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          copy.body,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF3A3449),
-                            height: 1.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                            color: Color(0x402B2536),
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        copy.mapping,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF3A3449),
-                          height: 1.2,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Punto táctil visual
-                if (dot != null)
-                  Positioned(
-                    left: dot.x - dotSize / 2,
-                    top: dot.y - dotSize / 2,
-                    child: Container(
-                      width: dotSize,
-                      height: dotSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: dotColor,
-                        border: Border.all(color: Colors.white, width: 2.0),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x33000000),
-                            blurRadius: 6,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                    ),
+                // Cabecera: Título y Selector segmentado de fuente
+                Text(
+                  copy.title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2B2536),
                   ),
+                ),
+                const SizedBox(height: 6),
+                _buildSourceSelector(),
+                const SizedBox(height: 8),
+
+                // Contenido central del panel
+                Expanded(
+                  child: isStick
+                      ? _buildStickTelemetry(widget.link!)
+                      : _buildTouchArea(copy, dotSize, dotColor),
+                ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  /// Selector segmentado de fuente: Dedo · Automático · Stick
+  Widget _buildSourceSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Row(
+        children: [
+          _buildSourceOption('Dedo', StickSource.dedo),
+          _buildSourceOption('Auto', StickSource.auto),
+          _buildSourceOption('Stick', StickSource.stick),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSourceOption(String label, StickSource src) {
+    final selected = widget.source == src;
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => widget.onSourceSelected(src),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF2B2536) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+              color: selected ? Colors.white : const Color(0xFF2B2536),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Vista normal táctil (Dedo o Automático)
+  Widget _buildTouchArea(
+    ({String body, String mapping, String title}) copy,
+    double dotSize,
+    Color dotColor,
+  ) {
+    final dot = widget.session.dotFor(widget.side);
+
+    return Stack(
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              copy.body,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: Color(0xFF3A3449),
+                height: 1.2,
+              ),
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: Color(0x402B2536),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                copy.mapping,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF3A3449),
+                  height: 1.15,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        // Punto táctil visual
+        if (dot != null)
+          Positioned(
+            left: dot.x - dotSize / 2,
+            top: dot.y - dotSize / 2,
+            child: Container(
+              width: dotSize,
+              height: dotSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: dotColor,
+                border: Border.all(color: Colors.white, width: 2.0),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Vista de telemetría en vivo cuando la fuente es "Stick"
+  Widget _buildStickTelemetry(BleStickLink link) {
+    final reader = link.reader;
+    final bias = reader.biasDps;
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Estado de conexión grande
+          Text(
+            link.statusText,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF2B2536),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Barras en vivo: ω, vel01, amp
+          _buildMiniBar('ω', '${reader.omegaDps.toStringAsFixed(0)} °/s', (reader.omegaDps / reader.tuning.omegaMaxDps).clamp(0.0, 1.0)),
+          const SizedBox(height: 4),
+          _buildMiniBar('vel', '${(reader.vel01 * 100).toStringAsFixed(0)} %', reader.vel01),
+          const SizedBox(height: 4),
+          _buildMiniBar('amp', '${(reader.amp * 100).toStringAsFixed(0)} %', reader.amp),
+          const SizedBox(height: 6),
+
+          // Chips indicadores
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              _buildMiniChip(
+                reader.active ? 'ACTIVO' : 'QUIETO',
+                reader.active ? const Color(0xFF7A8B34) : Colors.black12,
+                textColor: reader.active ? Colors.white : const Color(0xFF2B2536),
+              ),
+              _buildMiniChip(
+                reader.shake ? 'SHAKE' : 'CALMO',
+                reader.shake ? const Color(0xFFF2E44A) : Colors.black12,
+                textColor: const Color(0xFF2B2536),
+              ),
+              _buildMiniChip(
+                'Eje ${reader.dominantAxis == 0 ? "X" : reader.dominantAxis == 1 ? "Y" : "Z"}',
+                const Color(0xFF5B35B8),
+                textColor: Colors.white,
+              ),
+              _buildMiniChip(
+                'dx:${reader.dx >= 0 ? "+${reader.dx}" : reader.dx} dy:${reader.dy >= 0 ? "+${reader.dy}" : reader.dy}',
+                Colors.black12,
+                textColor: const Color(0xFF2B2536),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          // Bias
+          Text(
+            'Bias: (${bias.x.toStringAsFixed(1)}, ${bias.y.toStringAsFixed(1)}, ${bias.z.toStringAsFixed(1)}) °/s',
+            style: const TextStyle(
+              fontSize: 10,
+              fontFamily: 'monospace',
+              color: Color(0xFF3A3449),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Botones de acción del stick
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: link.recalibrate,
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.6),
+                    foregroundColor: const Color(0xFF2B2536),
+                    side: const BorderSide(color: Color(0x332B2536)),
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Recalibrar', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: widget.onRebind,
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.6),
+                    foregroundColor: const Color(0xFF2B2536),
+                    side: const BorderSide(color: Color(0x332B2536)),
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Vincular', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniBar(String label, String valueText, double fraction) {
+    final clamped = fraction.clamp(0.0, 1.0);
+    return Row(
+      children: [
+        SizedBox(
+          width: 28,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF3A3449)),
+          ),
+        ),
+        Expanded(
+          child: Container(
+            height: 6,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: FractionallySizedBox(
+              widthFactor: clamped,
+              alignment: Alignment.centerLeft,
+              child: Container(color: const Color(0xFF2B2536)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        SizedBox(
+          width: 48,
+          child: Text(
+            valueText,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF2B2536)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMiniChip(String text, Color bg, {Color textColor = Colors.white}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(5),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: textColor),
+      ),
     );
   }
 }
@@ -800,7 +1266,7 @@ class _TouchPanelWidgetState extends State<_TouchPanelWidget> {
 /// Refleja la luz difusa en el interior del objeto físico:
 /// - Franjas difusas superior e inferior moduladas por [EjeGlow].
 /// - Destellos radiales efímeros de notas ([EjeFlash]).
-/// - Dos mitades de pantalla transparentes con entrada multitoque.
+/// - Dos mitades de pantalla transparentes con entrada multitoque (omitida si el rol es Stick).
 class _EjeModeOverlay extends StatefulWidget {
   const _EjeModeOverlay({
     required this.session,
@@ -823,6 +1289,11 @@ class _EjeModeOverlayState extends State<_EjeModeOverlay> {
     final glow = widget.session.ejeGlow;
     final nowMs = widget.session.nowMs;
     final glowColor = glow.hidden ? const Color(0xFFF2E44A) : const Color(0xFF7B5FCB);
+
+    final leftRole = widget.session.sides[PanelSide.left]!;
+    final rightRole = widget.session.sides[PanelSide.right]!;
+    final leftIsExternal = widget.session.isExternal(leftRole);
+    final rightIsExternal = widget.session.isExternal(rightRole);
 
     return Scaffold(
       backgroundColor: const Color(0xFF1D1927),
@@ -892,6 +1363,7 @@ class _EjeModeOverlayState extends State<_EjeModeOverlay> {
                     child: Listener(
                       behavior: HitTestBehavior.opaque,
                       onPointerDown: (e) {
+                        if (leftIsExternal) return;
                         if (_leftPointer == null) {
                           _leftPointer = e.pointer;
                           widget.session.setPanelSize(PanelSide.left, w / 2, h);
@@ -899,6 +1371,7 @@ class _EjeModeOverlayState extends State<_EjeModeOverlay> {
                         }
                       },
                       onPointerMove: (e) {
+                        if (leftIsExternal) return;
                         if (e.pointer == _leftPointer) {
                           widget.session.feedPanel(PanelSide.left, e.localPosition.dx, e.localPosition.dy);
                         }
@@ -915,6 +1388,7 @@ class _EjeModeOverlayState extends State<_EjeModeOverlay> {
                     child: Listener(
                       behavior: HitTestBehavior.opaque,
                       onPointerDown: (e) {
+                        if (rightIsExternal) return;
                         if (_rightPointer == null) {
                           _rightPointer = e.pointer;
                           widget.session.setPanelSize(PanelSide.right, w / 2, h);
@@ -922,6 +1396,7 @@ class _EjeModeOverlayState extends State<_EjeModeOverlay> {
                         }
                       },
                       onPointerMove: (e) {
+                        if (rightIsExternal) return;
                         if (e.pointer == _rightPointer) {
                           widget.session.feedPanel(PanelSide.right, e.localPosition.dx, e.localPosition.dy);
                         }

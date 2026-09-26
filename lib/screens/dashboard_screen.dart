@@ -10,6 +10,7 @@ import 'package:esp32_ble_telemetry/widgets/metric_card.dart';
 import 'package:esp32_ble_telemetry/widgets/oscilloscope_painter.dart';
 import 'package:esp32_ble_telemetry/widgets/radar_cartesian_painter.dart';
 import 'package:esp32_ble_telemetry/widgets/telemetry_console.dart';
+import 'package:esp32_ble_telemetry/widgets/ble_scan_modal.dart';
 import 'package:esp32_ble_telemetry/balancin/screens/audio_test_screen.dart';
 
 /// Pantalla principal telemétrica del sistema dual ESP32 MPU-6050.
@@ -158,7 +159,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => _ModalEscaneoBLE(
+      builder: (ctx) => BleScanModal(
         controller: controller,
         onSeleccionado: (dev) async {
           Navigator.pop(ctx);
@@ -584,183 +585,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Modal de escaneo BLE para emparejar una placa específica.
-class _ModalEscaneoBLE extends StatefulWidget {
-  final EspDeviceController controller;
-  final ValueChanged<BluetoothDevice> onSeleccionado;
-
-  const _ModalEscaneoBLE({
-    required this.controller,
-    required this.onSeleccionado,
-  });
-
-  @override
-  State<_ModalEscaneoBLE> createState() => _ModalEscaneoBLEState();
-}
-
-class _ModalEscaneoBLEState extends State<_ModalEscaneoBLE> {
-  final List<ScanResult> _resultados = [];
-  StreamSubscription<List<ScanResult>>? _subScan;
-  bool _escaneando = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _iniciarEscaneo();
-  }
-
-  Future<void> _iniciarEscaneo() async {
-    setState(() {
-      _escaneando = true;
-      _resultados.clear();
-    });
-
-    _subScan = FlutterBluePlus.scanResults.listen((results) {
-      if (!mounted) return;
-      setState(() {
-        _resultados.clear();
-        for (final r in results) {
-          // Filtrar por dispositivos con nombre o con prefijo ESP32
-          if (r.device.platformName.isNotEmpty) {
-            _resultados.add(r);
-          }
-        }
-      });
-    });
-
-    try {
-      await FlutterBluePlus.startScan(
-        timeout: const Duration(seconds: 8),
-      );
-    } catch (_) {}
-
-    if (mounted) {
-      setState(() {
-        _escaneando = false;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _subScan?.cancel();
-    FlutterBluePlus.stopScan();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      height: 380,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Vincular ESP ${widget.controller.etiqueta}',
-                style: TextStyle(
-                  color: widget.controller.color,
-                  fontSize: 16.0,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              if (_escaneando)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.white70),
-                  onPressed: _iniciarEscaneo,
-                ),
-            ],
-          ),
-          const SizedBox(height: 4.0),
-          Text(
-            'Buscando dispositivos BLE cercanos (esperado: ${widget.controller.nombreEsperado})...',
-            style: const TextStyle(color: Colors.white54, fontSize: 12.0),
-          ),
-          const Divider(color: Color(0xFF333333)),
-          Expanded(
-            child: _resultados.isEmpty
-                ? Center(
-                    child: Text(
-                      _escaneando
-                          ? 'Escaneando señales BLE...'
-                          : 'No se encontraron dispositivos cercanos.',
-                      style: const TextStyle(color: Colors.white38),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _resultados.length,
-                    itemBuilder: (context, index) {
-                      final r = _resultados[index];
-                      final String nombre = r.device.platformName.isNotEmpty
-                          ? r.device.platformName
-                          : 'Dispositivo Desconocido';
-                      final bool coincide =
-                          nombre.startsWith(widget.controller.nombreEsperado);
-
-                      return ListTile(
-                        leading: Icon(
-                          Icons.bluetooth,
-                          color: coincide
-                              ? widget.controller.color
-                              : Colors.white60,
-                        ),
-                        title: Text(
-                          nombre,
-                          style: TextStyle(
-                            color: coincide ? Colors.white : Colors.white70,
-                            fontWeight:
-                                coincide ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'MAC: ${r.device.remoteId.str} | RSSI: ${r.rssi} dBm',
-                          style: const TextStyle(
-                            color: Colors.white38,
-                            fontSize: 11.5,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        trailing: coincide
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: widget.controller.color
-                                      .withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'RECOMENDADO',
-                                  style: TextStyle(
-                                    color: widget.controller.color,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              )
-                            : null,
-                        onTap: () => widget.onSeleccionado(r.device),
-                      );
-                    },
-                  ),
           ),
         ],
       ),

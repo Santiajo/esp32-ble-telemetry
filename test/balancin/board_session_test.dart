@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 
+import 'package:esp32_ble_telemetry/balancin/core/ble/imu_frame_parser.dart';
 import 'package:esp32_ble_telemetry/balancin/core/constants.dart';
 import 'package:esp32_ble_telemetry/balancin/core/engine/balancin_engine.dart';
 import 'package:esp32_ble_telemetry/balancin/core/engine/sound_command.dart';
+import 'package:esp32_ble_telemetry/balancin/core/gesture/imu_gesture_reader.dart';
 import 'package:esp32_ble_telemetry/balancin/core/gesture/synthetic_motion.dart';
 import 'package:esp32_ble_telemetry/balancin/session/board_session.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -157,5 +159,61 @@ void main() {
       'eventos del niño',
       'timbres ocultos',
     ]);
+  });
+
+  group('Stick real (lector IMU conectado al rol del niño)', () {
+    /// Simula el stick B: bias real en X y rotación [gz] (°/s) en Z, a 100 Hz,
+    /// con un tick del tablero por muestra.
+    void feedImu(Harness h, ImuGestureReader imu, double ms, double Function(double s) gz) {
+      final end = h.now + ms;
+      while (h.now < end) {
+        h.now += 10;
+        imu.addSample(
+          ImuSample(
+            tMs: h.now.toInt(),
+            ax: 0,
+            ay: 0,
+            az: 4096,
+            gx: (41.6 * ImuFrameParser.gyroLsbPerDps).round(),
+            gy: 0,
+            gz: (gz(h.now / 1000) * ImuFrameParser.gyroLsbPerDps).round(),
+          ),
+          h.now,
+        );
+        h.session.tick();
+      }
+    }
+
+    test('stick B solo: silencio; con adulto automático: suena', () {
+      final h = Harness();
+      final imu = ImuGestureReader();
+      h.session.attachReader(StickRole.child, imu);
+      expect(h.session.isExternal(StickRole.child), isTrue);
+      expect(h.session.engine.child, same(imu));
+
+      feedImu(h, imu, 1000, (s) => 0); // calibración en reposo
+      expect(imu.calibrated, isTrue);
+
+      feedImu(h, imu, 3000, (s) => 200 * math.sin(2 * math.pi * 1.5 * s));
+      expect(h.session.state, BalancinState.silencio);
+      expect(h.sounds, isEmpty, reason: 'criterio 1 con el stick real');
+
+      h.session.setAutoAdult(true);
+      feedImu(h, imu, 4000, (s) => 200 * math.sin(2 * math.pi * 1.5 * s));
+      expect(h.session.state, BalancinState.activo);
+      expect(h.sounds.whereType<NoteOn>(), isNotEmpty);
+      expect(h.session.panelMoving(PanelSide.right), isTrue);
+    });
+
+    test('attachReader(null) devuelve el rol al dedo y conserva la calibración', () {
+      final h = Harness();
+      final imu = ImuGestureReader();
+      h.session.attachReader(StickRole.child, imu);
+      feedImu(h, imu, 1000, (s) => 0);
+      h.session.attachReader(StickRole.child, null);
+      expect(h.session.isExternal(StickRole.child), isFalse);
+      expect(h.session.engine.child, same(h.session.childTouch));
+      expect(imu.calibrated, isTrue);
+    });
   });
 }

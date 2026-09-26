@@ -226,6 +226,37 @@ class BoardSession extends ChangeNotifier {
 
   bool panelMoving(PanelSide side) => readerFor(sides[side]!).moving;
 
+  // ---------------------------------------------------------------------------
+  // Fuentes externas (stick BLE real)
+  // ---------------------------------------------------------------------------
+
+  final Map<StickRole, GestureReader> _external = {};
+
+  /// Conecta un lector externo (p. ej. `ImuGestureReader` del stick real) al
+  /// rol [role]. Con `null` el rol vuelve al dedo. El lector se reinicia, pero
+  /// un `ImuGestureReader` conserva su calibración.
+  void attachReader(StickRole role, GestureReader? reader) {
+    if (reader == null) {
+      _external.remove(role);
+    } else {
+      _external[role] = reader;
+    }
+    final r = reader ?? touchFor(role);
+    r.reset();
+    if (role == StickRole.adult) {
+      engine.adult = r;
+    } else {
+      engine.child = r;
+    }
+    notifyListeners();
+  }
+
+  /// El rol [role] lo mueve un lector externo (stick real), no el dedo.
+  bool isExternal(StickRole role) => _external.containsKey(role);
+
+  /// Lector externo del rol, si hay.
+  GestureReader? externalReader(StickRole role) => _external[role];
+
   /// Tarjetas de telemetría en vivo (tablero), en el orden del prototipo.
   List<({String value, String label})> get telemetryCards {
     final m = engine.metrics;

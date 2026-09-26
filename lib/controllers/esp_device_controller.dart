@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:esp32_ble_telemetry/balancin/core/ble/imu_frame_parser.dart';
 import 'package:esp32_ble_telemetry/core/ble/ble_constants.dart';
 import 'package:esp32_ble_telemetry/core/physics/physics_engine.dart';
 import 'package:esp32_ble_telemetry/services/storage_service.dart';
@@ -57,6 +59,16 @@ class EspDeviceController extends ChangeNotifier {
 
   // Callback opcional para escribir líneas en la consola telemétrica
   void Function(String mensaje)? onLog;
+
+  /// Balancín (protocolo v2): se llama con cada muestra IMU válida recibida.
+  /// Se invoca desde el stream BLE, fuera del ciclo de repintado.
+  void Function(ImuSample muestra)? onImuSample;
+
+  /// Muestras v2 válidas recibidas desde la última conexión.
+  int muestrasV2 = 0;
+
+  /// Líneas v2 descartadas (mezcladas o incompletas).
+  int lineasV2Invalidas = 0;
 
   EspDeviceController({
     required this.etiqueta,
@@ -165,6 +177,18 @@ class EspDeviceController extends ChangeNotifier {
       _subNotificaciones = charTx.onValueReceived.listen(_procesarChunkBytes);
 
       _bufferStream = '';
+      muestrasV2 = 0;
+      lineasV2Invalidas = 0;
+
+      // Balancín: intervalo de conexión BLE mínimo para bajar la latencia gesto → sonido.
+      if (Platform.isAndroid) {
+        try {
+          await _dispositivo!.requestConnectionPriority(
+            connectionPriorityRequest: ConnectionPriority.high,
+          );
+        } catch (_) {}
+      }
+
       _actualizarEstado(EstadoConexion.conectado);
       _log('¡Conexión establecida con ESP $etiqueta!');
       return true;
@@ -219,6 +243,25 @@ class EspDeviceController extends ChangeNotifier {
       _bufferStream = _bufferStream.substring(salto + 1);
 
       if (linea.isEmpty) continue;
+
+      // Balancín: protocolo v2 "v2,t_ms,ax,ay,az,gx,gy,gz" (ver docs/PLAN_BALANCIN.md §3).
+      if (ImuFrameParser.isV2(linea)) {
+        final muestra = ImuFrameParser.parse(linea);
+        if (muestra == null) {
+          lineasV2Invalidas++;
+          continue;
+        }
+        muestrasV2++;
+        ultimaLineaRaw = linea;
+        onImuSample?.call(muestra);
+        // Diagnóstico: el plano sigue funcionando con v2 (±8 g → escala ±2 g del motor físico).
+        ultimoRawX = muestra.ax * 4;
+        ultimoRawY = muestra.ay * 4;
+        fisica.procesarLectura(ultimoRawX, ultimoRawY);
+        // A 100 Hz no se registra cada línea: una por segundo en la consola.
+        if (muestrasV2 % 100 == 1) _log('[$etiqueta] $linea');
+        continue;
+      }
 
       final partes = linea.split(',');
       if (partes.length >= 2) {
