@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../screens/dashboard_screen.dart';
 import '../platform/audio_engine.dart';
 import '../platform/stick_hub.dart';
+import 'archive_screen.dart';
 import 'audio_test_screen.dart';
 import 'board_screen.dart';
 import 'experience/insert_screen.dart';
@@ -17,10 +18,12 @@ import 'onboarding/onboarding_screen.dart';
 /// Inicializa el motor [AudioEngine] y el controlador central [StickHub] una única
 /// vez al arrancar, reconecta sticks guardados si hay permisos y provee acceso a:
 /// 1. "Comenzar" (Onboarding o directo a BoardScreen si ya fue completado)
-/// 2. "Tablero de validación" (`BoardScreen`)
-/// 3. "Prueba de audio" (`AudioTestScreen`)
-/// 4. "Diagnóstico BLE" (`DashboardScreen`)
-/// 5. Enlace "Repetir onboarding"
+/// 2. Configuración de vista durante el juego ("Solo luz" / "Tablero")
+/// 3. Modo estudio y sesiones archivadas
+/// 4. "Tablero de validación" (`BoardScreen`)
+/// 5. "Prueba de audio" (`AudioTestScreen`)
+/// 6. "Diagnóstico BLE" (`DashboardScreen`)
+/// 7. Enlace "Repetir onboarding"
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -33,6 +36,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late final StickHub _hub;
   bool _loading = true;
   String? _error;
+  String _playView = 'eje';
+  bool _studyMode = false;
 
   @override
   void initState() {
@@ -41,6 +46,29 @@ class _HomeScreenState extends State<HomeScreen> {
     _hub = StickHub();
     _iniciarMotor();
     _reconnectIfPermitted();
+    _cargarPreferencias();
+  }
+
+  Future<void> _cargarPreferencias() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _playView = prefs.getString('balancin_play_view') ?? 'eje';
+        _studyMode = prefs.getBool('balancin_study_mode') ?? false;
+      });
+    }
+  }
+
+  Future<void> _setPlayView(String view) async {
+    setState(() => _playView = view);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('balancin_play_view', view);
+  }
+
+  Future<void> _setStudyMode(bool value) async {
+    setState(() => _studyMode = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('balancin_study_mode', value);
   }
 
   Future<void> _iniciarMotor() async {
@@ -204,207 +232,364 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMainView() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Spacer(),
-        Center(child: _buildBrandDots(size: 26)),
-        const SizedBox(height: 20),
-        const Text(
-          'Balancín',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 38,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFF2B2536),
-            letterSpacing: -0.8,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Instrumento sonoro de balanceo compartido:\nadulto + niño (2–5 años)',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF5A536B),
-            height: 1.3,
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // Píldora de estado de audio
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFF7A8B34),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Audio listo · render: ${_audioEngine.renderTimeMs} ms · carga: ${_audioEngine.loadTimeMs} ms',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF2B2536),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const Spacer(),
-
-        // Botón 0: Comenzar (Onboarding o juego)
-        ElevatedButton(
-          onPressed: _onComenzar,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2B2536),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            elevation: 0,
-          ),
-          child: const Text(
-            'Comenzar',
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 12),
+          Center(child: _buildBrandDots(size: 26)),
+          const SizedBox(height: 16),
+          const Text(
+            'Balancín',
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 38,
               fontWeight: FontWeight.w900,
+              color: Color(0xFF2B2536),
+              letterSpacing: -0.8,
             ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 6),
+          const Text(
+            'Instrumento sonoro de balanceo compartido:\nadulto + niño (2–5 años)',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF5A536B),
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 16),
 
-        // Botón 1: Tablero de validación
-        OutlinedButton(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => BoardScreen(
-                  audioEngine: _audioEngine,
-                  hub: _hub,
+          // Píldora de estado de audio
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF7A8B34),
+                  ),
                 ),
-              ),
-            );
-          },
-          style: OutlinedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF2B2536),
-            side: const BorderSide(color: Color(0x402B2536), width: 1.5),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+                const SizedBox(width: 8),
+                Text(
+                  'Audio listo · render: ${_audioEngine.renderTimeMs} ms · carga: ${_audioEngine.loadTimeMs} ms',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF2B2536),
+                  ),
+                ),
+              ],
             ),
           ),
-          child: const Text(
-            'Tablero de validación',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 20),
 
-        // Botón 2: Prueba de audio
-        OutlinedButton(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => AudioTestScreen(audioEngine: _audioEngine),
+          // Botón 0: Comenzar (Onboarding o juego)
+          ElevatedButton(
+            onPressed: _onComenzar,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2B2536),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
               ),
-            );
-          },
-          style: OutlinedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF2B2536),
-            side: const BorderSide(color: Color(0x402B2536), width: 1.5),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+              elevation: 0,
             ),
-          ),
-          child: const Text(
-            'Prueba de audio',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Botón 3: Diagnóstico BLE
-        OutlinedButton(
-          onPressed: () {
-            // Liberar conexiones del hub antes de abrir diagnóstico
-            _hub.releaseAll();
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const DashboardScreen(),
+            child: const Text(
+              'Comenzar',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
               ),
-            );
-          },
-          style: OutlinedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF2B2536),
-            side: const BorderSide(color: Color(0x402B2536), width: 1.5),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
             ),
           ),
-          child: const Text(
-            'Diagnóstico BLE',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-        // Enlace chico: Repetir onboarding
-        Center(
-          child: TextButton(
+          // Selector "Durante el juego mostrar": "Solo luz" | "Tablero"
+          _buildPlayViewSelector(),
+          const SizedBox(height: 10),
+
+          // Interruptor "Sesión de estudio"
+          _buildStudyModeSwitch(),
+          const SizedBox(height: 10),
+
+          // Botón "Sesiones guardadas"
+          OutlinedButton.icon(
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => OnboardingScreen(
+                  builder: (_) => const ArchiveScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.folder_outlined, size: 20),
+            label: const Text('Sesiones guardadas'),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF2B2536),
+              side: const BorderSide(color: Color(0x402B2536), width: 1.5),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          const Divider(color: Color(0x202B2536), height: 1),
+          const SizedBox(height: 16),
+
+          // Botón 1: Tablero de validación
+          OutlinedButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => BoardScreen(
                     audioEngine: _audioEngine,
                     hub: _hub,
                   ),
                 ),
               );
             },
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF2B2536),
+              side: const BorderSide(color: Color(0x402B2536), width: 1.5),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
             child: const Text(
-              'Repetir onboarding',
+              'Tablero de validación',
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF5A536B),
-                decoration: TextDecoration.underline,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
-        ),
-        const Spacer(),
-      ],
+          const SizedBox(height: 12),
+
+          // Botón 2: Prueba de audio
+          OutlinedButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AudioTestScreen(audioEngine: _audioEngine),
+                ),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF2B2536),
+              side: const BorderSide(color: Color(0x402B2536), width: 1.5),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            child: const Text(
+              'Prueba de audio',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Botón 3: Diagnóstico BLE
+          OutlinedButton(
+            onPressed: () {
+              // Liberar conexiones del hub antes de abrir diagnóstico
+              _hub.releaseAll();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const DashboardScreen(),
+                ),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF2B2536),
+              side: const BorderSide(color: Color(0x402B2536), width: 1.5),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            child: const Text(
+              'Diagnóstico BLE',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Enlace chico: Repetir onboarding
+          Center(
+            child: TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => OnboardingScreen(
+                      audioEngine: _audioEngine,
+                      hub: _hub,
+                    ),
+                  ),
+                );
+              },
+              child: const Text(
+                'Repetir onboarding',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF5A536B),
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayViewSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Durante el juego mostrar',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF2B2536),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFECE4),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.all(4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _setPlayView('eje'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _playView == 'eje' ? const Color(0xFF2B2536) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Solo luz',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: _playView == 'eje' ? Colors.white : const Color(0xFF5A536B),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _setPlayView('tablero'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _playView == 'tablero' ? const Color(0xFF2B2536) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Tablero',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: _playView == 'tablero' ? Colors.white : const Color(0xFF5A536B),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudyModeSwitch() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sesión de estudio',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF2B2536),
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Guarda la telemetría de cada partida en este teléfono. Sin audio, imagen ni datos personales.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF5A536B),
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch(
+            value: _studyMode,
+            activeTrackColor: const Color(0xFF5B35B8),
+            onChanged: _setStudyMode,
+          ),
+        ],
+      ),
     );
   }
 

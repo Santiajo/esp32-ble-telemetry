@@ -18,16 +18,26 @@ class EjeLightView extends StatefulWidget {
     super.key,
     required this.session,
     required this.onExit,
+    this.onToggleBoard,
     this.enableTouchHalves = true,
     this.exitHoldDuration,
+    this.showBoardHoldDuration,
+    this.hiddenCorners = false,
   });
 
   final BoardSession session;
   final VoidCallback onExit;
+  final VoidCallback? onToggleBoard;
   final bool enableTouchHalves;
 
   /// Duración requerida de pulsación sostenida para salir. Si es null, un toque simple basta.
   final Duration? exitHoldDuration;
+
+  /// Duración requerida de pulsación sostenida para mostrar el tablero.
+  final Duration? showBoardHoldDuration;
+
+  /// Si es true, usa esquinas completamente ocultas sin texto ni íconos visibles en reposo.
+  final bool hiddenCorners;
 
   @override
   State<EjeLightView> createState() => _EjeLightViewState();
@@ -37,26 +47,45 @@ class _EjeLightViewState extends State<EjeLightView> {
   int? _leftPointer;
   int? _rightPointer;
 
-  // Estado para la salida sostenida (exitHoldDuration)
-  Timer? _holdTimer;
-  Timer? _progressTimer;
-  double _holdProgress = 0.0;
-  DateTime? _holdStartTime;
+  // Estado para la salida sostenida (abajo-derecha)
+  Timer? _exitHoldTimer;
+  Timer? _exitProgressTimer;
+  double _exitHoldProgress = 0.0;
+  DateTime? _exitHoldStartTime;
+
+  // Estado para mostrar tablero (arriba-izquierda)
+  Timer? _boardHoldTimer;
+  Timer? _boardProgressTimer;
+  double _boardHoldProgress = 0.0;
+  DateTime? _boardHoldStartTime;
 
   @override
   void dispose() {
-    _cancelHold();
+    _cancelExitHold();
+    _cancelBoardHold();
     super.dispose();
   }
 
-  void _cancelHold() {
-    _holdTimer?.cancel();
-    _holdTimer = null;
-    _progressTimer?.cancel();
-    _progressTimer = null;
-    if (_holdProgress != 0.0) {
+  void _cancelExitHold() {
+    _exitHoldTimer?.cancel();
+    _exitHoldTimer = null;
+    _exitProgressTimer?.cancel();
+    _exitProgressTimer = null;
+    if (_exitHoldProgress != 0.0) {
       setState(() {
-        _holdProgress = 0.0;
+        _exitHoldProgress = 0.0;
+      });
+    }
+  }
+
+  void _cancelBoardHold() {
+    _boardHoldTimer?.cancel();
+    _boardHoldTimer = null;
+    _boardProgressTimer?.cancel();
+    _boardProgressTimer = null;
+    if (_boardHoldProgress != 0.0) {
+      setState(() {
+        _boardHoldProgress = 0.0;
       });
     }
   }
@@ -68,21 +97,21 @@ class _EjeLightViewState extends State<EjeLightView> {
       return;
     }
 
-    _cancelHold();
-    _holdStartTime = DateTime.now();
-    _holdProgress = 0.0;
+    _cancelExitHold();
+    _exitHoldStartTime = DateTime.now();
+    _exitHoldProgress = 0.0;
 
-    _holdTimer = Timer(dur, () {
-      _cancelHold();
+    _exitHoldTimer = Timer(dur, () {
+      _cancelExitHold();
       widget.onExit();
     });
 
     final totalMs = dur.inMilliseconds.toDouble();
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
-      if (!mounted || _holdStartTime == null) return;
-      final elapsed = DateTime.now().difference(_holdStartTime!).inMilliseconds;
+    _exitProgressTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
+      if (!mounted || _exitHoldStartTime == null) return;
+      final elapsed = DateTime.now().difference(_exitHoldStartTime!).inMilliseconds;
       setState(() {
-        _holdProgress = (elapsed / totalMs).clamp(0.0, 1.0);
+        _exitHoldProgress = (elapsed / totalMs).clamp(0.0, 1.0);
       });
     });
     setState(() {});
@@ -90,14 +119,46 @@ class _EjeLightViewState extends State<EjeLightView> {
 
   void _onExitPointerUp(PointerUpEvent event) {
     if (widget.exitHoldDuration != null) {
-      _cancelHold();
+      _cancelExitHold();
     }
   }
 
   void _onExitPointerCancel(PointerCancelEvent event) {
     if (widget.exitHoldDuration != null) {
-      _cancelHold();
+      _cancelExitHold();
     }
+  }
+
+  void _onBoardPointerDown(PointerDownEvent event) {
+    if (widget.onToggleBoard == null) return;
+    final dur = widget.showBoardHoldDuration ?? const Duration(seconds: 2);
+
+    _cancelBoardHold();
+    _boardHoldStartTime = DateTime.now();
+    _boardHoldProgress = 0.0;
+
+    _boardHoldTimer = Timer(dur, () {
+      _cancelBoardHold();
+      widget.onToggleBoard?.call();
+    });
+
+    final totalMs = dur.inMilliseconds.toDouble();
+    _boardProgressTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
+      if (!mounted || _boardHoldStartTime == null) return;
+      final elapsed = DateTime.now().difference(_boardHoldStartTime!).inMilliseconds;
+      setState(() {
+        _boardHoldProgress = (elapsed / totalMs).clamp(0.0, 1.0);
+      });
+    });
+    setState(() {});
+  }
+
+  void _onBoardPointerUp(PointerUpEvent event) {
+    _cancelBoardHold();
+  }
+
+  void _onBoardPointerCancel(PointerCancelEvent event) {
+    _cancelBoardHold();
   }
 
   @override
@@ -245,11 +306,87 @@ class _EjeLightViewState extends State<EjeLightView> {
                   ],
                 ),
 
-              // Botón o esquina de salida
-              _buildExitWidget(),
+              // Botón o esquinas de salida
+              // Las dos esquinas van ARRIBA: abajo, Android usa el borde para su
+              // gesto de sistema (en modo inmersivo) y puede cancelar la pulsación.
+              // Íconos tenues (sin texto) para que el operador sepa dónde están;
+              // dentro del eje la pantalla mira hacia adentro y la díada no los ve.
+              if (widget.hiddenCorners) ...[
+                if (widget.onToggleBoard != null)
+                  Positioned(
+                    top: 24,
+                    left: 20,
+                    child: _buildHiddenCornerWidget(
+                      progress: _boardHoldProgress,
+                      icon: Icons.grid_view_rounded,
+                      onPointerDown: _onBoardPointerDown,
+                      onPointerUp: _onBoardPointerUp,
+                      onPointerCancel: _onBoardPointerCancel,
+                    ),
+                  ),
+                Positioned(
+                  top: 24,
+                  right: 20,
+                  child: _buildHiddenCornerWidget(
+                    progress: _exitHoldProgress,
+                    icon: Icons.close_rounded,
+                    onPointerDown: _onExitPointerDown,
+                    onPointerUp: _onExitPointerUp,
+                    onPointerCancel: _onExitPointerCancel,
+                  ),
+                ),
+              ] else
+                _buildExitWidget(),
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildHiddenCornerWidget({
+    required double progress,
+    required IconData icon,
+    required void Function(PointerDownEvent) onPointerDown,
+    required void Function(PointerUpEvent) onPointerUp,
+    required void Function(PointerCancelEvent) onPointerCancel,
+  }) {
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: onPointerDown,
+      onPointerUp: onPointerUp,
+      onPointerCancel: onPointerCancel,
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: progress > 0
+              ? Colors.white.withValues(alpha: 0.18)
+              : Colors.white.withValues(alpha: 0.001),
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (progress > 0)
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 3.5,
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF2E44A)),
+                  backgroundColor: Colors.white12,
+                ),
+              ),
+            Icon(
+              icon,
+              size: 22,
+              color: Colors.white.withValues(alpha: progress > 0 ? 0.85 : 0.18),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -294,22 +431,22 @@ class _EjeLightViewState extends State<EjeLightView> {
           width: 54,
           height: 54,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: _holdProgress > 0 ? 0.22 : 0.08),
+            color: Colors.white.withValues(alpha: _exitHoldProgress > 0 ? 0.22 : 0.08),
             shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.white.withValues(alpha: _holdProgress > 0 ? 0.35 : 0.12),
+              color: Colors.white.withValues(alpha: _exitHoldProgress > 0 ? 0.35 : 0.12),
               width: 1.5,
             ),
           ),
           child: Stack(
             alignment: Alignment.center,
             children: [
-              if (_holdProgress > 0)
+              if (_exitHoldProgress > 0)
                 SizedBox(
                   width: 48,
                   height: 48,
                   child: CircularProgressIndicator(
-                    value: _holdProgress,
+                    value: _exitHoldProgress,
                     strokeWidth: 3.5,
                     valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF2E44A)),
                     backgroundColor: Colors.white12,
@@ -317,7 +454,7 @@ class _EjeLightViewState extends State<EjeLightView> {
                 ),
               Icon(
                 Icons.close,
-                color: Colors.white.withValues(alpha: _holdProgress > 0 ? 0.9 : 0.4),
+                color: Colors.white.withValues(alpha: _exitHoldProgress > 0 ? 0.9 : 0.4),
                 size: 22,
               ),
             ],

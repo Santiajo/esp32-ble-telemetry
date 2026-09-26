@@ -4,19 +4,23 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../widgets/ble_scan_modal.dart';
 import '../core/constants.dart';
 import '../core/gesture/synthetic_motion.dart';
+import '../platform/archive_location.dart';
 import '../platform/audio_engine.dart';
 import '../platform/ble_stick_link.dart';
 import '../platform/stick_hub.dart';
 import '../session/board_session.dart';
 import '../session/loss_monitor.dart';
 import 'closed_screen.dart';
+import 'experience/memory_screen.dart';
 import 'lost_screen.dart';
 import 'tuning_panel.dart';
 import '../widgets/eje_light_view.dart';
@@ -31,11 +35,15 @@ class BoardScreen extends StatefulWidget {
     required this.audioEngine,
     required this.hub,
     this.initialSources,
+    this.userMode = false,
+    this.startInEje = false,
   });
 
   final AudioEngine audioEngine;
   final StickHub hub;
   final Map<StickRole, StickSource>? initialSources;
+  final bool userMode;
+  final bool startInEje;
 
   @override
   State<BoardScreen> createState() => _BoardScreenState();
@@ -66,6 +74,13 @@ class _BoardScreenState extends State<BoardScreen>
     _session = BoardSession(onSound: widget.audioEngine.handle);
     _session.start();
 
+    if (widget.startInEje) {
+      _session.setEjeMode(true);
+      if (widget.userMode) {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      }
+    }
+
     _cachedTelemetry = _session.telemetryCards;
     _ticker = createTicker(_onTick)..start();
 
@@ -77,6 +92,14 @@ class _BoardScreenState extends State<BoardScreen>
         if (!_navigatedToLost && mounted) {
           _navigatedToLost = true;
           _session.loseStick(ev.role, LossCause.alcance);
+
+          if (widget.userMode) {
+            SystemChrome.setEnabledSystemUIMode(
+              SystemUiMode.manual,
+              overlays: SystemUiOverlay.values,
+            );
+          }
+
           Navigator.of(context).push<String>(
             MaterialPageRoute(
               builder: (_) => LostScreen(
@@ -89,6 +112,9 @@ class _BoardScreenState extends State<BoardScreen>
             ),
           ).then((res) {
             _navigatedToLost = false;
+            if (mounted && widget.userMode && _session.ejeMode) {
+              SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+            }
             if (res == 'end') {
               _session.end();
             }
@@ -144,6 +170,62 @@ class _BoardScreenState extends State<BoardScreen>
 
     if (_session.closed && !_navigatedToClosed) {
       _navigatedToClosed = true;
+      _cerrarSesion();
+    }
+  }
+
+  void _setEjeMode(bool enabled) {
+    _session.setEjeMode(enabled);
+    if (widget.userMode) {
+      if (enabled) {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      } else {
+        SystemChrome.setEnabledSystemUIMode(
+          SystemUiMode.manual,
+          overlays: SystemUiOverlay.values,
+        );
+      }
+    }
+  }
+
+  Future<void> _cerrarSesion() async {
+    // Si balancin_study_mode está activo, guardar reporte en el archivo
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final studyMode = prefs.getBool('balancin_study_mode') ?? false;
+      if (studyMode) {
+        final archive = await openDefaultArchive();
+        await archive.save(_session.report());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudo guardar la sesión de estudio: $e'),
+            backgroundColor: const Color(0xFFE85E45),
+          ),
+        );
+      }
+    }
+
+    if (!mounted) return;
+
+    if (widget.userMode) {
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: SystemUiOverlay.values,
+      );
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => MemoryScreen(
+            report: _session.report(),
+            audioEngine: widget.audioEngine,
+            hub: widget.hub,
+            session: _session,
+          ),
+        ),
+      );
+    } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => ClosedScreen(
@@ -301,6 +383,12 @@ class _BoardScreenState extends State<BoardScreen>
         _session.attachReader(role, null);
       }
     }
+    if (widget.userMode) {
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: SystemUiOverlay.values,
+      );
+    }
     super.dispose();
   }
 
@@ -413,8 +501,12 @@ class _BoardScreenState extends State<BoardScreen>
                 Positioned.fill(
                   child: EjeLightView(
                     session: _session,
-                    onExit: () => _session.setEjeMode(false),
-                    enableTouchHalves: true,
+                    onExit: widget.userMode ? _session.end : () => _setEjeMode(false),
+                    onToggleBoard: widget.userMode ? () => _setEjeMode(false) : null,
+                    enableTouchHalves: !widget.userMode,
+                    exitHoldDuration: widget.userMode ? const Duration(seconds: 2) : null,
+                    showBoardHoldDuration: widget.userMode ? const Duration(seconds: 2) : null,
+                    hiddenCorners: widget.userMode,
                   ),
                 ),
             ],
@@ -718,7 +810,7 @@ class _BoardScreenState extends State<BoardScreen>
 
             // Modo eje: solo luz
             OutlinedButton(
-              onPressed: () => _session.setEjeMode(true),
+              onPressed: () => _setEjeMode(true),
               style: _controlButtonStyle(),
               child: const Text('Modo eje: solo luz'),
             ),

@@ -38,6 +38,9 @@ void main() {
 
     expect(find.text('¡Sonaron juntos!'), findsOneWidget);
     expect(find.text('3 pausas, 2 regresos'), findsOneWidget);
+    expect(find.text('Guardar este recuerdo'), findsOneWidget);
+    expect(find.text('Detalle técnico'), findsOneWidget);
+    expect(find.byType(RepaintBoundary), findsWidgets);
 
     hub.dispose();
   });

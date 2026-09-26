@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../platform/audio_engine.dart';
 import '../../platform/stick_hub.dart';
-import 'eje_experience_screen.dart';
+import '../../session/board_session.dart';
+import '../board_screen.dart';
 
 /// Pantalla de inserción en el eje (#insert del prototipo web).
 ///
@@ -57,16 +60,35 @@ class _InsertScreenState extends State<InsertScreen>
     super.dispose();
   }
 
-  void _irAEje() {
+  Future<void> _irAEje() async {
     if (_navigated) return;
     _navigated = true;
     _countdownTimer?.cancel();
 
+    final prefs = await SharedPreferences.getInstance();
+    final playView = prefs.getString('balancin_play_view') ?? 'eje';
+    final startInEje = playView == 'eje';
+
+    final childSource = widget.hub.isConnected(StickRole.child)
+        ? StickSource.stick
+        : StickSource.auto;
+    final adultSource = widget.hub.isConnected(StickRole.adult)
+        ? StickSource.stick
+        : StickSource.auto;
+
+    if (!mounted) return;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => EjeExperienceScreen(
+        builder: (_) => BoardScreen(
           audioEngine: widget.audioEngine,
           hub: widget.hub,
+          userMode: true,
+          startInEje: startInEje,
+          initialSources: {
+            StickRole.child: childSource,
+            StickRole.adult: adultSource,
+          },
         ),
       ),
     );

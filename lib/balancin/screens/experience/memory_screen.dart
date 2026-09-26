@@ -1,8 +1,12 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:gal/gal.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../platform/audio_engine.dart';
 import '../../platform/stick_hub.dart';
-import '../../platform/telemetry_exporter.dart';
 import '../../session/board_session.dart';
 import '../../session/session_memory.dart';
 import '../closed_screen.dart';
@@ -17,8 +21,9 @@ import 'insert_screen.dart';
 /// - Cinta proporcional de regímenes de juego y su leyenda.
 /// - Tres tarjetas destacadas (pausas/regresos, coincidencias, alturas recorridas).
 /// - Nota filosófica de la experiencia.
-/// - Opciones: "Jugar otra vez", "Guardar este recuerdo" y enlace discreto a "Detalle técnico".
-class MemoryScreen extends StatelessWidget {
+/// - Opciones: "Jugar otra vez", "Guardar este recuerdo" (captura PNG en galería o compartir)
+///   y enlace discreto a "Detalle técnico" (para el investigador).
+class MemoryScreen extends StatefulWidget {
   const MemoryScreen({
     super.key,
     required this.report,
@@ -32,27 +37,94 @@ class MemoryScreen extends StatelessWidget {
   final StickHub hub;
   final BoardSession? session;
 
-  Future<void> _exportarRecuerdo(BuildContext context) async {
-    final shared = await TelemetryExporter.exportJson(report);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            shared
-                ? 'Recuerdo de telemetría compartido con éxito'
-                : 'JSON de telemetría copiado al portapapeles',
-            style: const TextStyle(fontWeight: FontWeight.w700),
+  @override
+  State<MemoryScreen> createState() => _MemoryScreenState();
+}
+
+class _MemoryScreenState extends State<MemoryScreen> {
+  final GlobalKey _boundaryKey = GlobalKey();
+  bool _saving = false;
+
+  Future<void> _guardarRecuerdo(BuildContext context) async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    try {
+      final boundary = _boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw StateError('No se encontró el elemento visual para capturar');
+      }
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw StateError('No se pudo codificar la imagen en PNG');
+      }
+      final bytes = byteData.buffer.asUint8List();
+
+      bool savedInGallery = false;
+      try {
+        final hasAccess = await Gal.hasAccess(toAlbum: true);
+        final granted = hasAccess || await Gal.requestAccess(toAlbum: true);
+        if (granted) {
+          await Gal.putImageBytes(
+            bytes,
+            album: 'Balancín',
+            name: 'balancin-recuerdo-${DateTime.now().millisecondsSinceEpoch}',
+          );
+          savedInGallery = true;
+        }
+      } catch (_) {
+        // Fallback a share_plus si gal no está disponible o falla
+      }
+
+      if (!context.mounted) return;
+
+      if (savedInGallery) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Recuerdo guardado en la galería',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            backgroundColor: Color(0xFF2B2536),
+            behavior: SnackBarBehavior.floating,
           ),
-          backgroundColor: const Color(0xFF2B2536),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+        );
+      } else {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [
+              XFile.fromData(
+                bytes,
+                name: 'balancin-recuerdo.png',
+                mimeType: 'image/png',
+              ),
+            ],
+            text: 'Recuerdo de juego · Balancín',
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudo guardar el recuerdo: $e'),
+            backgroundColor: const Color(0xFFE85E45),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final mem = SessionMemory.fromReport(report);
+    final mem = SessionMemory.fromReport(widget.report);
 
     return Scaffold(
       backgroundColor: const Color(0xFFEFECE4),
@@ -65,65 +137,78 @@ class MemoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Marca de 4 formas
-                  _buildBrandHeader(),
-                  const SizedBox(height: 18),
+                  // Contenido visual del recuerdo envuelto en RepaintBoundary
+                  RepaintBoundary(
+                    key: _boundaryKey,
+                    child: Container(
+                      color: const Color(0xFFEFECE4),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Marca de 4 formas
+                          _buildBrandHeader(),
+                          const SizedBox(height: 18),
 
-                  // Título principal
-                  Text(
-                    mem.title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF2B2536),
-                      letterSpacing: -0.8,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                          // Título principal
+                          Text(
+                            mem.title,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 34,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2B2536),
+                              letterSpacing: -0.8,
+                              height: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
 
-                  // Subtítulo
-                  Text(
-                    mem.subtitle,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF4A445A),
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+                          // Subtítulo
+                          Text(
+                            mem.subtitle,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF4A445A),
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
 
-                  // Cinta de regímenes (.ribbon)
-                  _buildRibbon(mem),
-                  const SizedBox(height: 14),
+                          // Cinta de regímenes (.ribbon)
+                          _buildRibbon(mem),
+                          const SizedBox(height: 14),
 
-                  // Leyenda de la cinta (.legend)
-                  if (mem.legend.isNotEmpty) ...[
-                    _buildLegend(mem),
-                    const SizedBox(height: 22),
-                  ] else
-                    const SizedBox(height: 10),
+                          // Leyenda de la cinta (.legend)
+                          if (mem.legend.isNotEmpty) ...[
+                            _buildLegend(mem),
+                            const SizedBox(height: 22),
+                          ] else
+                            const SizedBox(height: 10),
 
-                  // 3 Tarjetas del recuerdo (.hl .c)
-                  for (final card in mem.cards) ...[
-                    _buildCard(card),
-                    const SizedBox(height: 12),
-                  ],
-                  const SizedBox(height: 12),
+                          // 3 Tarjetas del recuerdo (.hl .c)
+                          for (final card in mem.cards) ...[
+                            _buildCard(card),
+                            const SizedBox(height: 12),
+                          ],
+                          const SizedBox(height: 12),
 
-                  // Nota final (SessionMemory.note)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      SessionMemory.note,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF5A536B),
-                        height: 1.35,
+                          // Nota final (SessionMemory.note)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              SessionMemory.note,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF5A536B),
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -135,8 +220,8 @@ class MemoryScreen extends StatelessWidget {
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
                           builder: (_) => InsertScreen(
-                            audioEngine: audioEngine,
-                            hub: hub,
+                            audioEngine: widget.audioEngine,
+                            hub: widget.hub,
                           ),
                         ),
                       );
@@ -161,7 +246,7 @@ class MemoryScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   OutlinedButton(
-                    onPressed: () => _exportarRecuerdo(context),
+                    onPressed: _saving ? null : () => _guardarRecuerdo(context),
                     style: OutlinedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF2B2536),
@@ -171,13 +256,22 @@ class MemoryScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text(
-                      'Guardar este recuerdo',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2B2536)),
+                            ),
+                          )
+                        : const Text(
+                            'Guardar este recuerdo',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 14),
 
@@ -188,10 +282,10 @@ class MemoryScreen extends StatelessWidget {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => ClosedScreen(
-                              report: report,
-                              session: session,
-                              audioEngine: audioEngine,
-                              hub: hub,
+                              report: widget.report,
+                              session: widget.session,
+                              audioEngine: widget.audioEngine,
+                              hub: widget.hub,
                             ),
                           ),
                         );
