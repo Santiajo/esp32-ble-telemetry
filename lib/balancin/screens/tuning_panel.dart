@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -25,6 +26,24 @@ class TuningPanel extends StatefulWidget {
 class _TuningPanelState extends State<TuningPanel> {
   ImuTuning get _tuning => widget.link.reader.tuning;
   ImuGestureReader get _reader => widget.link.reader;
+
+  /// Las lecturas del stick cambian a 100 Hz sin notificar: se redibuja a ~15 Hz
+  /// para que los valores en vivo no queden congelados mientras se mueve el stick.
+  Timer? _refresco;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresco = Timer.periodic(const Duration(milliseconds: 66), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _refresco?.cancel();
+    super.dispose();
+  }
 
   void _restaurarValores() {
     setState(() {
