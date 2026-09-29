@@ -56,3 +56,6 @@ app.*.map.json
 # Agent local customizations
 .agents/
 skills-lock.json
+
+# Entregables
+entregable/
