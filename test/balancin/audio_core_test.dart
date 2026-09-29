@@ -45,8 +45,11 @@ void main() {
       expect(hz, closeTo(440, 5));
     });
 
-    test('envolvente: ataque de 4 ms al pico y caída exponencial hasta ~0,0001', () {
-      final s = SynthRenderer.renderTones(const [ToneSpec(midi: 69, timbre: pureSine)]);
+    test('envolvente del prototipo: ataque de 4 ms al pico y caída exponencial hasta ~0,0001', () {
+      final s = SynthRenderer.renderTones(
+        const [ToneSpec(midi: 69, timbre: pureSine)],
+        voicing: SynthVoicing.prototipo,
+      );
       var peak = 0.0;
       for (var i = 0; i < 441; i++) {
         if (s[i].abs() > peak) peak = s[i].abs();
@@ -64,6 +67,41 @@ void main() {
         if (s[i].abs() > end) end = s[i].abs();
       }
       expect(end, lessThan(0.00015));
+    });
+
+    test('voz suave (por defecto): sin golpe inicial, pico a los 12 ms y misma caída', () {
+      expect(SynthRenderer.defaultVoicing.name, 'suave');
+      final suave = SynthRenderer.renderTones(const [ToneSpec(midi: 69, timbre: pureSine)]);
+      final proto = SynthRenderer.renderTones(
+        const [ToneSpec(midi: 69, timbre: pureSine)],
+        voicing: SynthVoicing.prototipo,
+      );
+      double maxAbs(Float64List x, int from, int to) {
+        var m = 0.0;
+        for (var i = from; i < to; i++) {
+          if (x[i].abs() > m) m = x[i].abs();
+        }
+        return m;
+      }
+
+      // En los primeros 4 ms el prototipo ya llegó al pico; la voz suave va por ~1/4.
+      expect(maxAbs(proto, 0, 176), greaterThan(0.9));
+      expect(maxAbs(suave, 0, 176), lessThan(0.3));
+      // A los 30 ms ambas están en el pico (el filtro apenas toca 440 Hz).
+      expect(maxAbs(suave, 0, 1323), closeTo(0.988, 0.01));
+      // La caída es la misma: a 0,5 s ~0,01.
+      expect(maxAbs(suave, 22050 - 200, 22050 + 200), closeTo(0.01, 0.003));
+    });
+
+    test('pasa-bajos de la voz suave: −3 dB en 2,8 kHz, transparente en graves', () {
+      const v = SynthVoicing.suave;
+      expect(v.partialGain(2800), closeTo(0.7071, 1e-3));
+      expect(v.partialGain(100), greaterThan(0.999));
+      expect(SynthVoicing.prototipo.partialGain(8000), 1);
+      // El glockenspiel más agudo suena más redondo (menos pico) con la voz suave.
+      final suaveWav = SynthRenderer.renderNoteWav(TimbreFamily.glock, 24);
+      final protoWav = SynthRenderer.renderNoteWav(TimbreFamily.glock, 24, voicing: SynthVoicing.prototipo);
+      expect(maxAbsInt16(suaveWav), lessThan(maxAbsInt16(protoWav)));
     });
 
     test('ninguna nota de ninguna familia satura el WAV', () {

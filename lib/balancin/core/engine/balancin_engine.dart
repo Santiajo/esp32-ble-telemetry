@@ -127,6 +127,30 @@ class BalancinEngine {
   /// Familia tímbrica vigente.
   TimbreFamily get family => _familyAt(_now);
 
+  double? _smoothedGain;
+
+  /// Familia principal y, cerca de un límite de registro, la familia vecina con
+  /// su proporción (0–0,5) para mezclar ambas.
+  ({TimbreFamily main, TimbreFamily? blend, double amount}) _familyBlendAt(double now) {
+    final main = _familyAt(now);
+    const w = BalancinConst.timbreCrossfadeWidth;
+    if (main == TimbreFamily.oculto || w <= 0) return (main: main, blend: null, amount: 0.0);
+    const bounds = [
+      (at: BalancinConst.marimbaMaxCenter, low: TimbreFamily.marimba, high: TimbreFamily.mixta),
+      (at: BalancinConst.mixtaMaxCenter, low: TimbreFamily.mixta, high: TimbreFamily.glock),
+    ];
+    for (final b in bounds) {
+      final d = field.center - b.at;
+      if (d.abs() < w) {
+        final t = (d + w) / (2 * w); // 0 = lado grave del límite, 1 = lado agudo
+        final other = main == b.low ? b.high : b.low;
+        final amount = t < 0.5 ? t : 1 - t;
+        return (main: main, blend: other, amount: amount);
+      }
+    }
+    return (main: main, blend: null, amount: 0.0);
+  }
+
   TimbreFamily _familyAt(double now) {
     if (now < field.hiddenUntil) return TimbreFamily.oculto;
     if (field.center < BalancinConst.marimbaMaxCenter) return TimbreFamily.marimba;
@@ -143,6 +167,7 @@ class BalancinEngine {
   List<SoundCommand> start(double now, {DateTime? wallClock}) {
     metrics = SessionMetrics();
     _evTimes.clear();
+    _smoothedGain = null;
     adult.reset();
     child.reset();
     field.reset();
@@ -326,16 +351,24 @@ class BalancinEngine {
         if (step == 0) step = 1;
         f.pos = ((f.pos + step) % f.count + f.count) % f.count;
         final idx = f.lo + f.pos;
-        final gain = (BalancinConst.noteGainBase + BalancinConst.noteGainSpan * ch.amp) *
+        final target = (BalancinConst.noteGainBase + BalancinConst.noteGainSpan * ch.amp) *
             BalancinConst.noteGainScale;
+        // Suavizado entre notas consecutivas: evita saltos bruscos de intensidad.
+        final prevGain = _smoothedGain;
+        const keep = BalancinConst.noteGainSmoothingKeep;
+        final gain = prevGain == null ? target : prevGain * keep + target * (1 - keep);
+        _smoothedGain = gain;
+        final fb = _familyBlendAt(now);
         out.add(NoteOn(
           index: idx,
           midi: kNotes[idx],
-          family: _familyAt(now),
+          family: fb.main,
           gain: gain,
           hidden: hidden,
           fieldLo: f.lo,
           fieldCount: f.count,
+          blendFamily: fb.blend,
+          blendAmount: fb.amount,
         ));
         metrics.events++;
         _evTimes.add(now);

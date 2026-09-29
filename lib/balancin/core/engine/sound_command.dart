@@ -19,6 +19,8 @@ final class NoteOn extends SoundCommand {
     required this.hidden,
     required this.fieldLo,
     required this.fieldCount,
+    this.blendFamily,
+    this.blendAmount = 0,
   });
 
   /// Índice en la escala de 25 alturas (0–24).
@@ -35,6 +37,14 @@ final class NoteOn extends SoundCommand {
   /// Campo vigente al emitir la nota (para destellos en UI y para tests).
   final int fieldLo;
   final int fieldCount;
+
+  /// Cerca del límite entre dos familias (marimba|mixta o mixta|glock), la nota
+  /// suena mezclada con la familia vecina para que el cambio de timbre sea
+  /// gradual. null = sin mezcla.
+  final TimbreFamily? blendFamily;
+
+  /// Proporción de [blendFamily] (0–0,5). La principal suena con el resto.
+  final double blendAmount;
 
   @override
   String toString() => 'NoteOn(idx=$index, midi=$midi, $family, gain=${gain.toStringAsFixed(3)})';

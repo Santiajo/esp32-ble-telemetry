@@ -191,6 +191,26 @@ void main() {
       expect(fast, greaterThan(slow + 12));
     });
 
+    test('Suavizado: cerca de un límite de registro el timbre se mezcla con la familia vecina', () {
+      final s = Sim();
+      // Adulto rápido: el registro sube de ~12 a ~21 y cruza el límite mixta|glock (16,67).
+      s.run(frameMs, 12000, (now) {
+        s.moveAdult(now, speed: 7);
+        s.moveChild(now);
+      });
+      final blended = s.notes().where((n) => n.blendFamily != null).toList();
+      expect(blended, isNotEmpty);
+      for (final n in blended) {
+        expect(n.blendAmount, inInclusiveRange(0, 0.5));
+        expect({n.family, n.blendFamily}, anyOf(
+          equals({TimbreFamily.marimba, TimbreFamily.mixta}),
+          equals({TimbreFamily.mixta, TimbreFamily.glock}),
+        ));
+      }
+      // Lejos de los límites no hay mezcla.
+      expect(s.notes().where((n) => n.blendFamily == null), isNotEmpty);
+    });
+
     test('Timbre oculto: ambos sacuden a la vez → 6 s de timbre oculto', () {
       final s = Sim();
       s.run(frameMs, 9000, (now) {

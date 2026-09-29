@@ -16,6 +16,50 @@ import '../scale.dart';
 
 enum Waveform { sine, triangle }
 
+/// Carácter del sonido.
+///
+/// - [prototipo]: réplica exacta del prototipo web (ataque exponencial de 4 ms,
+///   sin filtro). Punzante en los agudos y con un "clic" al inicio de cada nota.
+/// - [suave] (por defecto, pedido del usuario el 28-09-2026): ataque de 12 ms con
+///   curva de coseno (sin clic) y un pasa-bajos de 1.er orden sobre cada parcial
+///   (−3 dB en 2,8 kHz, −6 dB por octava) que redondea los agudos.
+class SynthVoicing {
+  const SynthVoicing({
+    required this.name,
+    required this.attackS,
+    required this.smoothAttack,
+    this.lowpassHz,
+  });
+
+  final String name;
+  final double attackS;
+
+  /// true = subida con medio coseno (suave); false = exponencial (prototipo).
+  final bool smoothAttack;
+
+  /// Frecuencia de corte del pasa-bajos por parcial, o null sin filtro.
+  final double? lowpassHz;
+
+  static const prototipo = SynthVoicing(name: 'prototipo', attackS: 0.004, smoothAttack: false);
+  static const suave = SynthVoicing(name: 'suave', attackS: 0.012, smoothAttack: true, lowpassHz: 2800);
+
+  /// Ganancia de un parcial de [hz] tras el pasa-bajos (1 sin filtro).
+  double partialGain(double hz) {
+    final fc = lowpassHz;
+    if (fc == null) return 1;
+    final r = hz / fc;
+    return 1 / math.sqrt(1 + r * r);
+  }
+
+  /// Envolvente de subida en [t] segundos (0 → [peak]).
+  double attackEnvelope(double t, double peak, double floor) {
+    if (t <= 0) return smoothAttack ? 0 : floor;
+    if (t >= attackS) return peak;
+    if (smoothAttack) return peak * 0.5 * (1 - math.cos(math.pi * t / attackS));
+    return floor * math.pow(peak / floor, t / attackS).toDouble();
+  }
+}
+
 /// Parcial: [ratio] de frecuencia, [gain] relativa y [dur] (duración relativa al decay).
 class Partial {
   const Partial(this.ratio, this.gain, this.dur);
@@ -176,6 +220,11 @@ ToneSpec noteTone(TimbreFamily family, int index) =>
 
 abstract final class SynthRenderer {
   static const int sampleRate = 44100;
+
+  /// Carácter por defecto (constante: los Isolates ven el mismo valor).
+  static const SynthVoicing defaultVoicing = SynthVoicing.suave;
+
+  /// Ataque del prototipo (4 ms). El ataque en uso es `voicing.attackS`.
   static const double attackS = 0.004;
   static const double floorGain = 0.0001;
   static const double tailS = 0.05;
@@ -194,29 +243,33 @@ abstract final class SynthRenderer {
   static const double bakedVolume = 1 / renderScale;
 
   /// Renderiza una lista de notas a muestras flotantes (escala real, sin [renderScale]).
-  static Float64List renderTones(List<ToneSpec> tones, {int sr = sampleRate}) {
+  static Float64List renderTones(
+    List<ToneSpec> tones, {
+    int sr = sampleRate,
+    SynthVoicing voicing = defaultVoicing,
+  }) {
     var endS = 0.0;
     for (final t in tones) {
       endS = math.max(endS, t.endS);
     }
     final out = Float64List((endS * sr).ceil() + 1);
     for (final t in tones) {
-      _addTone(out, t, sr);
+      _addTone(out, t, sr, voicing);
     }
     return out;
   }
 
-  static void _addTone(Float64List out, ToneSpec t, int sr) {
+  static void _addTone(Float64List out, ToneSpec t, int sr, SynthVoicing v) {
     final f0 = midiToHz(t.midi);
     final start = (t.offsetS * sr).round();
     for (final p in t.timbre.partials) {
       final freq = f0 * p.ratio;
       if (freq >= maxPartialHz(sr)) continue;
-      final peak = math.max(0.0002, t.gain * p.gain);
+      final peak = math.max(0.0002, t.gain * p.gain * v.partialGain(freq));
       final endT = t.effectiveDecay * p.dur; // fin de la caída (s)
       final stopT = endT + tailS; // el oscilador se detiene aquí
-      final attackN = (attackS * sr).round();
-      final decayN = math.max(1, ((endT - attackS) * sr).round());
+      final attackN = math.max(1, (v.attackS * sr).round());
+      final decayN = math.max(1, ((endT - v.attackS) * sr).round());
       final stopN = (stopT * sr).round();
       // Multiplicadores por muestra de las rampas exponenciales.
       final upStep = math.pow(peak / floorGain, 1 / attackN).toDouble();
@@ -225,17 +278,24 @@ abstract final class SynthRenderer {
       final harmonics = t.timbre.wave == Waveform.triangle
           ? _triangleHarmonics(freq, sr)
           : const <int>[];
-      var env = floorGain;
+      var env = v.smoothAttack ? 0.0 : floorGain;
       for (var n = 0; n < stopN; n++) {
         final idx = start + n;
         if (idx >= out.length) break;
+        if (v.smoothAttack && n < attackN) {
+          env = peak * 0.5 * (1 - math.cos(math.pi * n / attackN));
+        }
         final phase = w * n;
         final s = t.timbre.wave == Waveform.sine
             ? math.sin(phase)
             : _triangle(phase, harmonics);
         out[idx] += s * env;
         if (n < attackN) {
-          env *= upStep;
+          if (v.smoothAttack) {
+            if (n == attackN - 1) env = peak;
+          } else {
+            env *= upStep;
+          }
         } else if (n < attackN + decayN) {
           env *= downStep;
         } else {
@@ -295,8 +355,9 @@ abstract final class SynthRenderer {
   }
 
   /// Nota del niño a ganancia 1 (reproducir con `volumeFor(noteOn.gain)`).
-  static Uint8List renderNoteWav(TimbreFamily family, int index) =>
-      toWav(renderTones([noteTone(family, index)]));
+  static Uint8List renderNoteWav(TimbreFamily family, int index,
+          {SynthVoicing voicing = defaultVoicing}) =>
+      toWav(renderTones([noteTone(family, index)], voicing: voicing));
 
   /// Una nota de resonancia de campo con la ganancia incorporada (reproducir con [bakedVolume]).
   static Uint8List renderToneWav(ToneSpec tone) =>

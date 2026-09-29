@@ -46,6 +46,15 @@ abstract final class BalancinConst {
   static const double marimbaMaxCenter = 8.33;
   static const double mixtaMaxCenter = 16.67;
 
+  // ---------------- Suavizado (pedido del usuario, 28-09-2026; no está en el prototipo) ----------------
+  /// Semiancho (en alturas del registro) de la zona donde el timbre se mezcla
+  /// con la familia vecina en vez de cambiar de golpe. 0 = cambio brusco (prototipo).
+  static const double timbreCrossfadeWidth = 1.5;
+
+  /// Suavizado de la intensidad entre notas consecutivas del niño:
+  /// ganancia = anterior*keep + nueva*(1-keep). 0 = sin suavizado (prototipo).
+  static const double noteGainSmoothingKeep = 0.5;
+
   // ---------------- Timbre oculto ----------------
   static const double hiddenDurationMs = 6000;
 

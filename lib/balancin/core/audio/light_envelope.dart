@@ -70,11 +70,13 @@ class LightEnvelope {
     final freq = midiToHz(tone.midi) * p.ratio;
     if (freq >= SynthRenderer.maxPartialHz(SynthRenderer.sampleRate)) return 0;
     const floor = SynthRenderer.floorGain;
-    const attack = SynthRenderer.attackS;
-    final peak = math.max(0.0002, tone.gain * p.gain);
+    const v = SynthRenderer.defaultVoicing;
+    final peak = math.max(0.0002, tone.gain * p.gain * v.partialGain(freq));
     final end = tone.effectiveDecay * p.dur;
-    if (t < attack) return floor * math.pow(peak / floor, t / attack);
-    if (t < end) return peak * math.pow(floor / peak, (t - attack) / (end - attack));
+    if (t < v.attackS) return v.attackEnvelope(t, peak, floor);
+    if (t < end) {
+      return peak * math.pow(floor / peak, (t - v.attackS) / (end - v.attackS)).toDouble();
+    }
     return 0;
   }
 }

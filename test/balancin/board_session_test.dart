@@ -36,6 +36,19 @@ class Harness {
 }
 
 void main() {
+  test('cada sesión nueva restaura el volumen del bus (aunque la anterior terminara tras una pérdida)', () {
+    final h = Harness();
+    final fade = h.sounds.whereType<BusFade>().first;
+    expect(fade.to, BalancinConst.busGain);
+
+    // Pérdida → terminar sin reanudar → el bus quedó en 0 → nueva sesión lo sube.
+    h.session.loseStick(StickRole.child, LossCause.alcance);
+    h.session.end();
+    expect(h.sounds.whereType<BusFade>().last.to, 0);
+    h.session.start();
+    expect(h.sounds.whereType<BusFade>().last.to, BalancinConst.busGain);
+  });
+
   test('arranca en REPOSO con el campo cerrado', () {
     final h = Harness();
     h.session.tick();
@@ -73,7 +86,7 @@ void main() {
     h.session.setAutoChild(true);
     h.runFor(5000);
     expect(h.session.state, BalancinState.silencio);
-    expect(h.sounds, isEmpty);
+    expect(h.sounds.where((c) => c is! BusFade), isEmpty);
     expect(h.session.lightLevel, 0);
   });
 
@@ -196,7 +209,7 @@ void main() {
 
       feedImu(h, imu, 3000, (s) => 200 * math.sin(2 * math.pi * 1.5 * s));
       expect(h.session.state, BalancinState.silencio);
-      expect(h.sounds, isEmpty, reason: 'criterio 1 con el stick real');
+      expect(h.sounds.where((c) => c is! BusFade), isEmpty, reason: 'criterio 1 con el stick real');
 
       h.session.setAutoAdult(true);
       feedImu(h, imu, 4000, (s) => 200 * math.sin(2 * math.pi * 1.5 * s));

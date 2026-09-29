@@ -323,7 +323,12 @@ class BoardSession extends ChangeNotifier {
     _bus = BalancinConst.busGain;
     _lostRole = null;
     _lostCause = null;
-    _emit(engine.start(now, wallClock: DateTime.now()), now);
+    // Restaura el volumen del bus: si la sesión anterior terminó durante una
+    // pérdida de stick (bus en 0, sin reanudar), la nueva quedaría muda.
+    _emit([
+      const BusFade(to: BalancinConst.busGain, seconds: 0.3),
+      ...engine.start(now, wallClock: DateTime.now()),
+    ], now);
     notifyListeners();
   }
 
