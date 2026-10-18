@@ -21,8 +21,11 @@ import '../core/sync_engine.dart';
 ///   en un Isolate con [SynthV2]. Las notas sueltas se guardan a ganancia 1 y la
 ///   ganancia (con la atenuación por polifonía del prototipo) se aplica al tocar.
 /// - **Mezcla**: volumen global 0,6 (bus 0,8 × master 0,75 del prototipo) y, como
-///   filtros globales, reverb → compresor → limitador. La EQ no es un filtro: va
-///   incorporada en cada seno ([eqGain]), sin latencia.
+///   filtros globales, compresor → limitador. La EQ va incorporada en cada seno
+///   ([eqGain]) y la reverb en cada WAV (`applyReverb`): el `FreeverbFilter` de
+///   SoLoud solo admite estéreo y en mono suena a ruido (prueba del 18-10-2026).
+/// - **Diagnóstico**: cada capa se puede silenciar ([muteAdult], [muteRelation],
+///   [muteChild], [mutePad]) y el compresor se puede apagar ([compressorOn]).
 ///
 /// Convive con el `AudioEngine` de v1 durante la transición: si SoLoud ya está
 /// iniciado lo reutiliza, y al [release] deja los filtros globales como estaban
@@ -30,6 +33,24 @@ import '../core/sync_engine.dart';
 class AudioEngineV2 with WidgetsBindingObserver {
   static const double globalVolume = 0.8 * 0.75;
   static const int bufferSize = 512;
+
+  bool muteAdult = false;
+  bool muteRelation = false;
+  bool muteChild = false;
+  bool mutePad = false;
+  bool _compressorOn = true;
+  bool get compressorOn => _compressorOn;
+  set compressorOn(bool on) {
+    _compressorOn = on;
+    try {
+      final c = SoLoud.instance.filters.compressorFilter;
+      if (on && !c.isActive) {
+        _configureFilters();
+      } else if (!on && c.isActive) {
+        c.deactivate();
+      }
+    } catch (_) {}
+  }
 
   bool _ready = false;
   bool get isReady => _ready;
@@ -118,18 +139,18 @@ class AudioEngineV2 with WidgetsBindingObserver {
   void _configureFilters() {
     final f = SoLoud.instance.filters;
     try {
-      // El orden de activación es el orden de la cadena: reverb → compresor → limitador.
-      f.limiterFilter.deactivate();
-      f.freeverbFilter.activate();
-      f.freeverbFilter.wet.value = 0.2;
-      f.freeverbFilter.roomSize.value = 0.75;
-      f.freeverbFilter.damp.value = 0.6;
-      f.compressorFilter.activate();
-      f.compressorFilter.threshold.value = -22;
-      f.compressorFilter.ratio.value = 2.5;
-      f.compressorFilter.kneeWidth.value = 24;
-      f.compressorFilter.attackTime.value = 12;
-      f.compressorFilter.releaseTime.value = 350;
+      // El orden de activación es el orden de la cadena: compresor → limitador.
+      if (f.freeverbFilter.isActive) f.freeverbFilter.deactivate(); // solo estéreo: nunca en mono
+      if (f.limiterFilter.isActive) f.limiterFilter.deactivate();
+      if (f.compressorFilter.isActive) f.compressorFilter.deactivate();
+      if (_compressorOn) {
+        f.compressorFilter.activate();
+        f.compressorFilter.threshold.value = -22;
+        f.compressorFilter.ratio.value = 2.5;
+        f.compressorFilter.kneeWidth.value = 24;
+        f.compressorFilter.attackTime.value = 12; // ms
+        f.compressorFilter.releaseTime.value = 350; // ms
+      }
       f.limiterFilter.activate();
       f.limiterFilter.threshold.value = -4;
       f.limiterFilter.outputCeiling.value = -1;
@@ -166,8 +187,7 @@ class AudioEngineV2 with WidgetsBindingObserver {
     }
     try {
       final f = s.filters;
-      f.freeverbFilter.deactivate();
-      f.compressorFilter.deactivate();
+      if (f.compressorFilter.isActive) f.compressorFilter.deactivate();
       f.limiterFilter.threshold.value = -3;
       f.limiterFilter.outputCeiling.value = -1;
       s.setGlobalVolume(0.8);
@@ -205,11 +225,12 @@ class AudioEngineV2 with WidgetsBindingObserver {
     final s = SoLoud.instance;
     if (!s.isInitialized) return;
     final v = layers.voices;
+    final mute = [muteAdult, muteAdult, muteRelation, muteRelation, muteRelation];
     final fade = Duration(microseconds: (dt.clamp(0.008, 0.05) * 1e6).round());
     try {
       for (var i = 0; i < 5; i++) {
         s.setWaveformFreq(_waveSources[i], v[i].hz);
-        final amp = v[i].amp;
+        final amp = mute[i] ? 0.0 : v[i].amp;
         if ((amp - _lastAmp[i]).abs() > 1e-5) {
           s.fadeVolume(_waveHandles[i], amp, fade);
           _lastAmp[i] = amp;
@@ -231,6 +252,7 @@ class AudioEngineV2 with WidgetsBindingObserver {
 
   /// Nota del niño o del pad, con la polifonía del prototipo.
   void note(NoteCmd n, double now) {
+    if (n.family == NoteFamily.marimba ? muteChild : mutePad) return;
     final tone = n.family == NoteFamily.marimba ? childNoteTone(n.midi) : padTone(n.midi);
     final voices = _activePartials(now);
     if (voices > maxPartialVoices) return;

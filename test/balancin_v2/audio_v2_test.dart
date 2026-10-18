@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:esp32_ble_telemetry/balancin/core/audio/synth_renderer.dart' show Partial;
 import 'package:esp32_ble_telemetry/balancin_v2/core/audio/eq.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/audio/layers.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/core/audio/reverb.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/audio/synth_v2.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/levels.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/sync_engine.dart';
@@ -82,6 +83,39 @@ void main() {
       final w = SynthV2.wav(chimeTones());
       expect(String.fromCharCodes(w.sublist(0, 4)), 'RIFF');
       expect(ByteData.sublistView(w).getUint16(22, Endian.little), 1);
+    });
+  });
+
+  group('reverb incorporada (la de SoLoud no sirve en mono)', () {
+    test('un impulso deja una cola que decae y se apaga', () {
+      final dry = Float64List(441)..[0] = 1;
+      final wet = applyReverb(dry);
+      expect(wet.length, 441 + 66150, reason: '1,5 s de cola');
+      expect(wet.every((v) => v.isFinite), isTrue);
+      double rms(double a, double b) {
+        var e = 0.0;
+        var n = 0;
+        for (var i = (a * 44100).round(); i < (b * 44100).round(); i++) {
+          e += wet[i] * wet[i];
+          n++;
+        }
+        return math.sqrt(e / n);
+      }
+
+      final early = rms(0.05, 0.25), late = rms(1.2, 1.5);
+      expect(early, greaterThan(0));
+      expect(late, lessThan(early * 0.1), reason: 'al menos −20 dB en ~1,2 s');
+    });
+
+    test('sin retorno no cambia nada', () {
+      final dry = Float64List.fromList([0.1, -0.2, 0.3]);
+      expect(applyReverb(dry, s: ReverbSettings.off), same(dry));
+    });
+
+    test('la canción completa con reverb no satura el WAV', () {
+      final s = applyReverb(SynthV2.render(songTones([for (final l in levels) l.id])));
+      final m = s.fold(0.0, (a, b) => math.max(a, b.abs()));
+      expect(m, lessThan(2));
     });
   });
 

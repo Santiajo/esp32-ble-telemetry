@@ -4,7 +4,8 @@
 /// exponencial con constante `decay·dur/4,5` (`setTargetAtTime`), cortado a
 /// `decay·dur + 0,25 s`. Pico = `gain·g·(0,6 si f > 3 kHz)`; parciales sobre
 /// 9 kHz se omiten. Además cada parcial se multiplica por la respuesta de la
-/// EQ del prototipo en su frecuencia ([eqGain]).
+/// EQ del prototipo en su frecuencia ([eqGain]). La reverb también va
+/// incorporada en el WAV ([applyReverb]): la de SoLoud no sirve en mono.
 ///
 /// La atenuación por polifonía del prototipo (`1/√(1 + 0,35·voces)`) depende
 /// de cuántas voces suenan en ese momento: la aplica el motor de plataforma al
@@ -19,6 +20,7 @@ import 'dart:typed_data';
 import '../../../balancin/core/audio/synth_renderer.dart' show Partial, SynthRenderer;
 import '../levels.dart';
 import 'eq.dart';
+import 'reverb.dart';
 
 class TimbreV2 {
   const TimbreV2(this.name, this.decay, this.partials);
@@ -111,8 +113,10 @@ abstract final class SynthV2 {
     }
   }
 
-  /// WAV PCM 16-bit mono (a media escala, como v1: reproducir con [SynthRenderer.volumeFor]).
-  static Uint8List wav(List<ToneV2> tones) => SynthRenderer.toWav(render(tones));
+  /// WAV PCM 16-bit mono con la reverb incorporada (a media escala, como v1:
+  /// reproducir con [SynthRenderer.volumeFor]).
+  static Uint8List wav(List<ToneV2> tones, {ReverbSettings reverb = ReverbSettings.prototype}) =>
+      SynthRenderer.toWav(applyReverb(render(tones), s: reverb));
 }
 
 // ---------------------------------------------------------------------------
