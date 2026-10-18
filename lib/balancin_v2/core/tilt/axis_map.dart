@@ -7,7 +7,7 @@
 ///
 /// Por defecto (§10.1): el stick se sostiene vertical y mover la muñeca hacia
 /// los lados mueve el eje X del sensor, así que `right` = X. El eje vertical
-/// del stick es Z (medido en el stick A el 17-10-2026: con el stick vertical,
+/// del stick es Z (medido en el stick B el 17-10-2026: con el stick vertical,
 /// |az| ≈ 0,92–0,95 de |a|). El signo se resuelve con la primera lectura. Con
 /// Z vertical y X a la derecha, «arriba/adelante» queda en el eje Y. El
 /// asistente ([AxisWizard]) puede reemplazarlo todo.

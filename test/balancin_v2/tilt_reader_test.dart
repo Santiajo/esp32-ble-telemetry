@@ -6,7 +6,7 @@
 // el stick rota un ángulo θ(t) alrededor de un eje fijo del cuerpo `k`; un
 // vector fijo en el mundo, visto desde el sensor, gira −θ alrededor de `k`.
 //
-// Montaje real (stick A, 17-10-2026): con el stick vertical la gravedad cae en
+// Montaje real (stick B, 17-10-2026): con el stick vertical la gravedad cae en
 // +Z. Inclinar a la derecha (θ > 0) = girar alrededor de −Y (la gravedad pasa a
 // +X); inclinar hacia adelante/arriba = girar alrededor de +X (pasa a +Y).
 
@@ -322,8 +322,8 @@ void main() {
     });
   });
 
-  group('traza real del stick A (Thonny, 5 Hz, 17-10-2026)', () {
-    final trace = ImuTrace.decode(File('test/balancin_v2/golden/stick_a_vertical_thonny_5hz.trace').readAsStringSync());
+  group('traza real del stick B (Thonny, 5 Hz, 17-10-2026)', () {
+    final trace = ImuTrace.decode(File('test/balancin_v2/golden/stick_b_vertical_thonny_5hz.trace').readAsStringSync());
 
     test('vertical = +Z: el mapa por defecto lo toma y los ángulos salen de la gravedad', () {
       expect(trace.length, 182);
@@ -342,7 +342,7 @@ void main() {
       expect(xs[xs.length ~/ 2], inInclusiveRange(18, 24), reason: 'descanso ladeado ~21° hacia X');
     });
 
-    test('el giroscopio en X marca ~41 °/s quieto (bias, igual que el stick B)', () {
+    test('el giroscopio en X marca ~41 °/s quieto (bias del stick B, como en septiembre)', () {
       final gx = trace.map((s) => s.sample.gxDps).toList()..sort();
       expect(gx[gx.length ~/ 2], closeTo(41, 1.5));
     });

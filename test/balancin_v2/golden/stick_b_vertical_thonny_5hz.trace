@@ -1,4 +1,4 @@
-# Stick A (ESP32-BAL-A), sostenido vertical en la mano. Consola de Thonny sin teléfono (5 Hz).
+# Stick B (ESP32-BAL-B; el usuario lo anunció como A y lo corrigió), sostenido vertical en la mano. Consola de Thonny sin teléfono (5 Hz).
 # Registrado por el usuario el 17-10-2026. Llegada = t_ms (no hubo BLE).
 1973.0	v2,1973,1403,-195,4540,1318,-19,-92
 2173.0	v2,2173,1432,-160,4570,1390,13,-105
