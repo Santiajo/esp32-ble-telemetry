@@ -7,8 +7,10 @@
 ///
 /// Por defecto (§10.1): el stick se sostiene vertical y mover la muñeca hacia
 /// los lados mueve el eje X del sensor, así que `right` = X. El eje vertical
-/// del stick se supone Y (sin signo: se resuelve con la primera lectura en
-/// reposo). El asistente ([AxisWizard]) puede reemplazarlo todo.
+/// del stick es Z (medido en el stick A el 17-10-2026: con el stick vertical,
+/// |az| ≈ 0,92–0,95 de |a|). El signo se resuelve con la primera lectura. Con
+/// Z vertical y X a la derecha, «arriba/adelante» queda en el eje Y. El
+/// asistente ([AxisWizard]) puede reemplazarlo todo.
 library;
 
 import 'dart:math' as math;
@@ -40,7 +42,7 @@ class AxisMap {
   /// `g0` = ±[uprightAxis] según el signo medido; `right` = X del sensor.
   /// Si el stick no estaba vertical, igual usa el eje supuesto (la calibración de
   /// la sesión centra cualquier inclinación de descanso).
-  static AxisMap defaultFor(V3 measured, {int uprightAxis = 1, int rightAxis = 0}) {
+  static AxisMap defaultFor(V3 measured, {int uprightAxis = 2, int rightAxis = 0}) {
     final a = V3.axis(uprightAxis);
     final g0 = measured.dot(a) < 0 ? -a : a;
     return fromRight(g0, V3.axis(rightAxis))!;

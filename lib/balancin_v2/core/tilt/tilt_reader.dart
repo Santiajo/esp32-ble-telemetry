@@ -36,7 +36,7 @@ class _Still {
 }
 
 class TiltReader {
-  TiltReader({SyncParams? params, AxisMap? axes, this.uprightAxis = 1, this.rightAxis = 0})
+  TiltReader({SyncParams? params, AxisMap? axes, this.uprightAxis = 2, this.rightAxis = 0})
       : params = params ?? SyncParams(),
         _axes = axes,
         _axesFromDefault = axes == null;
@@ -44,7 +44,7 @@ class TiltReader {
   /// `kAccel` y `accelGate` (ajustables en el banco).
   final SyncParams params;
 
-  /// Ejes por defecto (§10.1): vertical = Y, derecha = X.
+  /// Ejes por defecto (§10.1): vertical = Z, derecha = X.
   final int uprightAxis, rightAxis;
 
   static const double stillStdDps = 3;

@@ -5,7 +5,12 @@
 // vuelta de `ticks_ms`) a partir de una orientación conocida. Convención:
 // el stick rota un ángulo θ(t) alrededor de un eje fijo del cuerpo `k`; un
 // vector fijo en el mundo, visto desde el sensor, gira −θ alrededor de `k`.
+//
+// Montaje real (stick A, 17-10-2026): con el stick vertical la gravedad cae en
+// +Z. Inclinar a la derecha (θ > 0) = girar alrededor de −Y (la gravedad pasa a
+// +X); inclinar hacia adelante/arriba = girar alrededor de +X (pasa a +Y).
 
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:esp32_ble_telemetry/balancin/core/ble/imu_frame_parser.dart';
@@ -19,6 +24,8 @@ import 'package:esp32_ble_telemetry/balancin_v2/core/tilt/vec3.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const deg = math.pi / 180;
+const kSide = V3(0, -1, 0);
+const kFwd = V3.ex;
 
 /// Rampa suave de 0 a 1 entre [t0] y [t1] (s).
 double smooth(double t, double t0, double t1) {
@@ -30,7 +37,7 @@ double smooth(double t, double t0, double t1) {
 
 class StickSim {
   StickSim({
-    this.upright = V3.ey,
+    this.upright = V3.ez,
     this.bias = const V3(41.6, 0, 0), // stick B real
     this.accelScale = 1.0,
     this.accelNoiseG = 0.01,
@@ -57,7 +64,7 @@ class StickSim {
   List<TraceSample> run(
     double t0,
     double seconds, {
-    V3 k = V3.ez,
+    V3 k = kSide,
     double Function(double t)? theta,
     V3 Function(double t)? lin,
     bool Function(double t)? skip,
@@ -121,26 +128,26 @@ void main() {
       expect(r.tiltX.abs(), lessThan(1));
     });
 
-    test('montado al revés (vertical = −Y): el neutro toma el signo medido', () {
+    test('montado al revés (vertical = −Z): el neutro toma el signo medido', () {
       final r = TiltReader();
-      feed(r, StickSim(upright: -V3.ey).run(0, 3));
-      expect(r.axes!.g0.y, -1);
+      feed(r, StickSim(upright: -V3.ez).run(0, 3));
+      expect(r.axes!.g0.z, -1);
       expect(r.tiltX.abs(), lessThan(1));
       expect(r.tiltY.abs(), lessThan(1));
     });
   });
 
-  group('inclinación (ejes por defecto §10.1: derecha = X, vertical = Y)', () {
+  group('inclinación (ejes por defecto §10.1: derecha = X, vertical = Z)', () {
     test('muñeca hacia los lados 30° → tiltX ≈ 30°, tiltY ≈ 0', () {
       final r = TiltReader();
-      final out = feed(r, StickSim().run(0, 6, k: V3.ez, theta: (t) => 30 * deg * smooth(t, 2, 3)));
+      final out = feed(r, StickSim().run(0, 6, k: kSide, theta: (t) => 30 * deg * smooth(t, 2, 3)));
       expect(out.last.x, closeTo(30, 1));
       expect(out.last.y.abs(), lessThan(1));
     });
 
     test('hacia adelante 30° → tiltY ≈ 30°, tiltX ≈ 0', () {
       final r = TiltReader();
-      final out = feed(r, StickSim().run(0, 6, k: V3.ex, theta: (t) => 30 * deg * smooth(t, 2, 3)));
+      final out = feed(r, StickSim().run(0, 6, k: kFwd, theta: (t) => 30 * deg * smooth(t, 2, 3)));
       expect(out.last.y, closeTo(30, 1));
       expect(out.last.x.abs(), lessThan(1));
     });
@@ -148,7 +155,7 @@ void main() {
     test('giro rápido (60° en 0,3 s): el giroscopio sigue el gesto', () {
       final r = TiltReader();
       double th(double t) => 60 * deg * smooth(t, 2, 2.3);
-      final out = feed(r, StickSim().run(0, 5, k: V3.ez, theta: th));
+      final out = feed(r, StickSim().run(0, 5, k: kSide, theta: th));
       final during = out.where((p) => p.t >= 2 && p.t <= 2.6);
       final err = during.map((p) => (p.x - th(p.t) / deg).abs()).reduce(math.max);
       expect(err, lessThan(3), reason: 'error durante el giro $err°');
@@ -170,7 +177,7 @@ void main() {
       final out = feed(
         r,
         StickSim().run(0, 8,
-            k: V3.ez,
+            k: kSide,
             theta: (t) => 20 * deg * smooth(t, 1.5, 2),
             lin: (t) => t < 3 ? V3.zero : V3.ey * (2.5 * math.sin(2 * math.pi * 4 * t))),
       );
@@ -181,7 +188,7 @@ void main() {
     test('balanceo continuo de ±25° a 0,8 Hz (nivel 1): sigue la curva', () {
       final r = TiltReader();
       double th(double t) => t < 2 ? 0 : 25 * deg * math.sin(2 * math.pi * 0.8 * (t - 2));
-      final out = feed(r, StickSim().run(0, 20, k: V3.ex, theta: th));
+      final out = feed(r, StickSim().run(0, 20, k: kFwd, theta: th));
       final err = out.where((p) => p.t > 3).map((p) => (p.y - th(p.t) / deg).abs()).reduce(math.max);
       expect(err, lessThan(2), reason: 'error máximo $err°');
     });
@@ -190,15 +197,15 @@ void main() {
   group('robustez', () {
     test('un giro lento y constante no se confunde con el bias', () {
       final r = TiltReader();
-      feed(r, StickSim().run(0, 5, k: V3.ez, theta: (t) => t < 2 ? 0 : 20 * deg * (t - 2))); // 20 °/s por 3 s
+      feed(r, StickSim().run(0, 5, k: kSide, theta: (t) => t < 2 ? 0 : 20 * deg * (t - 2))); // 20 °/s por 3 s
       expect(r.biasDps.x, closeTo(41.6, 1));
-      expect(r.biasDps.z.abs(), lessThan(1), reason: 'el giro de 20 °/s en Z no debe entrar al bias');
+      expect(r.biasDps.y.abs(), lessThan(1), reason: 'el giro de 20 °/s no debe entrar al bias');
     });
 
     test('sin quietud inicial usa el acelerómetro y no deriva', () {
       final r = TiltReader();
       double th(double t) => 30 * deg * math.sin(t * 0.7) + 5 * deg * math.sin(t * 5);
-      final out = feed(r, StickSim().run(0, 6, k: V3.ez, theta: th));
+      final out = feed(r, StickSim().run(0, 6, k: kSide, theta: th));
       expect(r.calibrated, isFalse);
       final err = out.map((p) => (p.x - th(p.t) / deg).abs()).reduce(math.max);
       expect(err, lessThan(3));
@@ -207,7 +214,7 @@ void main() {
     test('vuelta del reloj del ESP32 (2^30 ms) sin saltos', () {
       final r = TiltReader();
       final sim = StickSim(startTicks: ImuFrameParser.ticksPeriod - 2500);
-      final out = feed(r, sim.run(0, 6, k: V3.ez, theta: (t) => 15 * deg * smooth(t, 3, 4)));
+      final out = feed(r, sim.run(0, 6, k: kSide, theta: (t) => 15 * deg * smooth(t, 3, 4)));
       expect(out.last.x, closeTo(15, 1));
     });
 
@@ -215,7 +222,7 @@ void main() {
       final r = TiltReader();
       final out = feed(
         r,
-        StickSim().run(0, 6, k: V3.ez, theta: (t) => 30 * deg * smooth(t, 2, 3), skip: (t) => t > 2.4 && t < 2.7),
+        StickSim().run(0, 6, k: kSide, theta: (t) => 30 * deg * smooth(t, 2, 3), skip: (t) => t > 2.4 && t < 2.7),
       );
       expect(out.last.x, closeTo(30, 1.5));
       expect(out.every((p) => p.x.isFinite && p.y.isFinite), isTrue);
@@ -233,12 +240,12 @@ void main() {
 
   group('montaje distinto y asistente de ejes (§5.3)', () {
     test('si «derecha» es otro eje del sensor, un mapa propio da los mismos ángulos', () {
-      // Placa girada 90°: inclinar a la derecha rota alrededor del X del sensor.
-      final trace = StickSim().run(0, 6, k: V3.ex, theta: (t) => 30 * deg * smooth(t, 2, 3));
+      // Placa girada 90° alrededor de la vertical: inclinar a la derecha mueve la gravedad hacia +Y.
+      final trace = StickSim().run(0, 6, k: kFwd, theta: (t) => 30 * deg * smooth(t, 2, 3));
       final porDefecto = TiltReader();
       final out1 = feed(porDefecto, trace);
       expect(out1.last.y, closeTo(30, 1), reason: 'con el mapa por defecto aparece como «arriba»');
-      final propio = TiltReader(axes: AxisMap.fromRight(V3.ey, -V3.ez));
+      final propio = TiltReader(axes: AxisMap.fromRight(V3.ez, V3.ey));
       final out2 = feed(propio, trace);
       expect(out2.last.x, closeTo(30, 1));
       expect(out2.last.y.abs(), lessThan(1));
@@ -258,13 +265,13 @@ void main() {
       phase(sim.run(0, 2));
       expect(w.next(), isTrue);
       // Cada paso: inclinar y volver a reposo (un stick real no salta de una pose a otra).
-      phase(sim.run(2, 2, k: V3.ex, theta: (t) => 25 * deg * (smooth(t, 2.2, 2.7) - smooth(t, 3.2, 3.7)))); // arriba
+      phase(sim.run(2, 2, k: kFwd, theta: (t) => 25 * deg * (smooth(t, 2.2, 2.7) - smooth(t, 3.2, 3.7)))); // arriba
       expect(w.next(), isTrue);
-      phase(sim.run(4, 2, k: V3.ez, theta: (t) => 25 * deg * (smooth(t, 4.2, 4.7) - smooth(t, 5.2, 5.7)))); // derecha
+      phase(sim.run(4, 2, k: kSide, theta: (t) => 25 * deg * (smooth(t, 4.2, 4.7) - smooth(t, 5.2, 5.7)))); // derecha
       expect(w.next(), isTrue);
       expect(w.step, WizardStep.done);
       final m = w.result!;
-      final def = AxisMap.defaultFor(V3.ey);
+      final def = AxisMap.defaultFor(V3.ez);
       expect(m.g0.angleTo(def.g0) / deg, lessThan(2));
       expect(m.right.angleTo(def.right) / deg, lessThan(3));
       expect(m.up.angleTo(def.up) / deg, lessThan(3));
@@ -303,7 +310,7 @@ void main() {
       final st = StickState(Role.child);
       final p = SyncParams();
       var t = 0.0;
-      for (final s in StickSim().run(0, 5, k: V3.ez, theta: (t) => 90 * deg * smooth(t, 2, 3))) {
+      for (final s in StickSim().run(0, 5, k: kSide, theta: (t) => 90 * deg * smooth(t, 2, 3))) {
         r.addSample(s.sample, s.arrivalMs);
         st.feedTilt(r.tiltX, r.tiltY, p);
         st.update(t += 10, 0.01, p);
@@ -312,6 +319,32 @@ void main() {
       expect(r.tiltX, closeTo(90, 2));
       expect(st.raw.x, planeLimit);
       expect(st.atEdge, isTrue);
+    });
+  });
+
+  group('traza real del stick A (Thonny, 5 Hz, 17-10-2026)', () {
+    final trace = ImuTrace.decode(File('test/balancin_v2/golden/stick_a_vertical_thonny_5hz.trace').readAsStringSync());
+
+    test('vertical = +Z: el mapa por defecto lo toma y los ángulos salen de la gravedad', () {
+      expect(trace.length, 182);
+      final r = TiltReader();
+      for (final s in trace) {
+        r.addSample(s.sample, s.arrivalMs);
+        // A 5 Hz nunca hay 0,5 s con 20 muestras: queda en modo solo acelerómetro (exacto).
+        final x = math.atan2(s.sample.axG, s.sample.azG) / deg;
+        expect(r.tiltX, closeTo(x, 1.5));
+      }
+      expect(r.calibrated, isFalse);
+      expect(r.axes!.g0.z, 1);
+      expect(r.axes!.right.x, 1);
+      expect(r.axes!.up.y, 1, reason: 'con Z vertical y X a la derecha, adelante = +Y');
+      final xs = trace.map((s) => math.atan2(s.sample.axG, s.sample.azG) / deg).toList()..sort();
+      expect(xs[xs.length ~/ 2], inInclusiveRange(18, 24), reason: 'descanso ladeado ~21° hacia X');
+    });
+
+    test('el giroscopio en X marca ~41 °/s quieto (bias, igual que el stick B)', () {
+      final gx = trace.map((s) => s.sample.gxDps).toList()..sort();
+      expect(gx[gx.length ~/ 2], closeTo(41, 1.5));
     });
   });
 
