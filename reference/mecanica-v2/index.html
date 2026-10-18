@@ -1,0 +1,3252 @@
+<!DOCTYPE html>
+<!--
+  BALANCÍN · prototipo HTML · mecánica v2 (niveles de movimientos coordinados)
+  Taller de Título · Escuela de Diseño UDP · Joaquín Muñoz Quiroz
+
+  Un solo archivo, sin dependencias (HTML + CSS + JS vanilla + Web Audio + Web Speech como placeholder de voz).
+  Simula en el navegador lo que la app Flutter hará con los sticks reales:
+   · Los sticks se leen por INCLINACIÓN normalizada al rango de cada persona → un punto en un plano de −6 a 6.
+     Aquí la inclinación viene del dedo/ratón en cada mitad de pantalla (fuente táctil) o de una fuente sintética.
+   · Cada nivel pide una RELACIÓN entre los dos puntos (juntos, espejo, iguales, sube y baja, mismo pulso, sígueme).
+     El motor calcula la distancia d a esa relación, la sincronía con histéresis y el progreso acumulado.
+   · Retroalimentación: audio en tres capas (voz del adulto, notas del niño, tono de relación con batido),
+     luz en dos mitades (lila adulto, coral niño) que se funden en oliva, y vibración (simulada en el tablero).
+   · Siete niveles; cada uno suma una frase; el séptimo completa la canción.
+  Modos: Libre (sin consigna; el tono de relación busca la relación más cercana) y Niveles.
+
+  Enlaces por hash:
+   (vacío) o #app → flujo del usuario desde el inicio de sesión
+   #app=home|modo|niveles|antes&lv=N|insert|eje&lv=N&demo=cycle|final|perdida → una pantalla concreta
+   #banco[&lv=N][&demo=sync|cerca|lejos|cycle] → banco de prueba del equipo (plano, d en vivo, ajustes, telemetría)
+-->
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#EFECE4">
+  <title>Balancín · mecánica v2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Base ===== */
+    * {
+      box-sizing: border-box;
+      margin: 0
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      font-family: Nunito, ui-rounded, "Segoe UI", system-ui, sans-serif;
+      color: #2B2536;
+      background: #EFECE4;
+      line-height: 1.35;
+      -webkit-text-size-adjust: 100%;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      overscroll-behavior: none
+    }
+
+    body.lock {
+      overflow: hidden
+    }
+
+    a {
+      color: #5B35B8
+    }
+
+    a:hover {
+      color: #2B2536
+    }
+
+    .screen {
+      display: none
+    }
+
+    .screen.active {
+      display: block
+    }
+
+    button {
+      font: inherit;
+      font-weight: 800;
+      color: #2B2536;
+      border: 1.5px solid rgba(43, 37, 54, .25);
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px 20px;
+      min-height: 52px;
+      min-width: 52px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .08s
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(2px)
+    }
+
+    button.primary {
+      background: #2B2536;
+      color: #fff;
+      border-color: #2B2536
+    }
+
+    :focus-visible {
+      outline: 3px solid #5B35B8;
+      outline-offset: 3px
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: -.02em;
+      line-height: 1.05
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -.01em
+    }
+
+    p {
+      text-wrap: pretty
+    }
+
+    .small {
+      font-size: 13px;
+      color: #5a536b
+    }
+
+    .sub {
+      font-size: 15px;
+      color: #4a445a;
+      font-weight: 600;
+      margin-top: 6px
+    }
+
+    .full {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 22px 28px
+    }
+
+    .link {
+      background: none;
+      border: 0;
+      text-decoration: underline;
+      font-size: 14px;
+      color: #5a536b;
+      min-height: 44px;
+      font-weight: 700
+    }
+
+    #backBtn {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 6;
+      height: 40px;
+      min-height: 40px;
+      min-width: 0;
+      padding: 0 14px 0 12px;
+      border-radius: 999px;
+      background: #fff;
+      border: 0;
+      display: none;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 2px 10px rgba(43, 37, 54, .1)
+    }
+
+    #backBtn::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-left: 2.5px solid #2B2536;
+      border-bottom: 2.5px solid #2B2536;
+      transform: translateX(2px) rotate(45deg)
+    }
+
+    body.has-back .full,
+    body.has-back .prep {
+      padding-top: 66px
+    }
+
+    #audioNotice {
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      top: 10px;
+      background: #E85E45;
+      color: #fff;
+      border-radius: 14px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      z-index: 9;
+      display: none
+    }
+
+    /* ===== Inicio de sesión ===== */
+    .login {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 14px
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 18px
+    }
+
+    .brand i {
+      display: block;
+      width: 34px;
+      height: 34px
+    }
+
+    .brand i:nth-child(1) {
+      background: #B3A2DC;
+      border-radius: 10px
+    }
+
+    .brand i:nth-child(2) {
+      background: #E85E45;
+      border-radius: 50%
+    }
+
+    .brand i:nth-child(3) {
+      background: #F2E44A;
+      border-radius: 50%
+    }
+
+    .brand i:nth-child(4) {
+      background: #7A8B34;
+      clip-path: polygon(50% 4%, 100% 100%, 0 100%)
+    }
+
+    .login h1 {
+      font-size: 44px
+    }
+
+    .login .tag {
+      font-size: 16px;
+      color: #4a445a;
+      font-weight: 600;
+      max-width: 300px
+    }
+
+    .gbtn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 340px;
+      min-height: 58px;
+      font-size: 16px;
+      margin-top: 30px
+    }
+
+    .gbtn .g {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #2B2536;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 15px
+    }
+
+    .gbtn.busy {
+      opacity: .6;
+      pointer-events: none
+    }
+
+    .login .priv {
+      font-size: 12px;
+      color: #5a536b;
+      max-width: 300px;
+      margin-top: 8px
+    }
+
+    /* ===== Onboarding ===== */
+    .prep {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 16px 18px 20px;
+      gap: 14px
+    }
+
+    .prog {
+      list-style: none;
+      display: flex;
+      gap: 5px;
+      width: 140px;
+      padding: 0;
+      margin: 0 auto
+    }
+
+    .prog li {
+      flex: 1;
+      height: 5px;
+      border-radius: 3px;
+      background: #dcd8cf
+    }
+
+    .prog li.cur {
+      background: #2B2536
+    }
+
+    .prog li.done {
+      background: #7A8B34
+    }
+
+    .st {
+      display: none
+    }
+
+    .st.cur {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      gap: 16px
+    }
+
+    .fig {
+      flex: 1;
+      min-height: 250px;
+      background: #fff;
+      border-radius: 28px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: hidden;
+      padding: 24px
+    }
+
+    .figin {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px
+    }
+
+    .txt .k {
+      font-size: 13px;
+      font-weight: 800;
+      color: #5a536b
+    }
+
+    .txt h2 {
+      font-size: 26px;
+      margin: 4px 0 8px;
+      line-height: 1.1
+    }
+
+    .txt p {
+      font-size: 15px;
+      color: #4a445a
+    }
+
+    .act {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px
+    }
+
+    .act .primary {
+      flex: 1 1 100%;
+      min-height: 58px;
+      font-size: 17px
+    }
+
+    .phone {
+      width: 112px;
+      height: 210px;
+      border-radius: 26px;
+      background: #2B2536;
+      position: relative
+    }
+
+    .phone::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 10px;
+      width: 38px;
+      height: 6px;
+      border-radius: 3px;
+      background: #5a536b;
+      transform: translateX(-50%)
+    }
+
+    .badge {
+      position: absolute;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 13px
+    }
+
+    .badge.bt {
+      background: #B3A2DC;
+      right: -26px;
+      top: 22px
+    }
+
+    .badge.dnd {
+      background: #F2E44A;
+      right: -26px;
+      top: 92px
+    }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center
+    }
+
+    .chip {
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800
+    }
+
+    .chip.lav {
+      background: #B3A2DC
+    }
+
+    .chip.yel {
+      background: #F2E44A
+    }
+
+    .chip.cor {
+      background: #F4C3B6
+    }
+
+    .moon {
+      position: absolute;
+      left: 18px;
+      top: 60px;
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: #F2E44A;
+      overflow: hidden
+    }
+
+    .moon::after {
+      content: "";
+      position: absolute;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #2B2536;
+      left: 26px;
+      top: -12px
+    }
+
+    .arrow {
+      width: 0;
+      height: 0;
+      border-left: 18px solid transparent;
+      border-right: 18px solid transparent;
+      border-top: 22px solid #2B2536
+    }
+
+    .ejefig {
+      width: min(280px, 80vw);
+      height: 124px;
+      border-radius: 48px;
+      background: #d9d5ce;
+      position: relative
+    }
+
+    .ejefig .slot {
+      position: absolute;
+      left: 50%;
+      top: -10px;
+      width: 70%;
+      height: 72px;
+      transform: translateX(-50%);
+      border-radius: 16px;
+      background: #2B2536
+    }
+
+    .ejefig .lt {
+      position: absolute;
+      bottom: 16px;
+      width: 60px;
+      height: 22px;
+      border-radius: 11px
+    }
+
+    .ejefig .lt.a {
+      left: 22px;
+      background: #B3A2DC
+    }
+
+    .ejefig .lt.c {
+      right: 22px;
+      background: #E85E45
+    }
+
+    .sticks {
+      display: flex;
+      align-items: flex-end;
+      gap: 56px
+    }
+
+    .stick {
+      border-radius: 999px;
+      position: relative
+    }
+
+    .stick.big {
+      width: 62px;
+      height: 220px;
+      background: #B3A2DC
+    }
+
+    .stick.sm {
+      width: 44px;
+      height: 150px;
+      background: #E85E45
+    }
+
+    .stick .sled {
+      position: absolute;
+      left: 50%;
+      top: 18px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      background: rgba(43, 37, 54, .25)
+    }
+
+    .stick .sled.lit {
+      background: #F2E44A;
+      box-shadow: 0 0 14px 4px rgba(242, 228, 74, .7)
+    }
+
+    .who {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 56px;
+      text-align: center;
+      font-weight: 800;
+      font-size: 14px
+    }
+
+    .hold {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+      padding: 12px 18px;
+      min-height: 60px;
+      flex: 1 1 150px;
+      text-align: left
+    }
+
+    .hold .led {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #e2ded6;
+      flex: none
+    }
+
+    .hold .led.lit {
+      background: #F2E44A
+    }
+
+    .hold .bar {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 7px;
+      width: 100%
+    }
+
+    .hold .bar i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: #B3A2DC
+    }
+
+    .hold.done {
+      border-color: rgba(122, 139, 52, .5);
+      background: #f3f5e8
+    }
+
+    .hold.done .lab {
+      color: #5c6a25
+    }
+
+    .hold.done .bar i {
+      background: #7A8B34
+    }
+
+    /* ===== Barra de la canción (7 partes) ===== */
+    .song {
+      display: flex;
+      gap: 4px
+    }
+
+    .song i {
+      flex: 1;
+      height: 10px;
+      border-radius: 5px;
+      background: #dcd8cf
+    }
+
+    .song i.on {
+      background: #7A8B34
+    }
+
+    .song i.new {
+      box-shadow: 0 0 0 2px #EFECE4, 0 0 0 4px #7A8B34
+    }
+
+    .songLbl {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #5a536b;
+      margin-bottom: 8px
+    }
+
+    /* ===== Pictogramas de sticks (cápsula lila = adulto, coral = niño; sin figuras humanas) ===== */
+    .pict {
+      --k: 1;
+      position: relative;
+      width: calc(90px*var(--k));
+      height: calc(104px*var(--k));
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: calc(22px*var(--k));
+      padding-bottom: calc(4px*var(--k));
+      flex: none
+    }
+
+    .pict .sa,
+    .pict .sc {
+      position: relative;
+      display: block;
+      border-radius: 999px;
+      transform-origin: 50% 100%
+    }
+
+    .pict .sa {
+      width: calc(14px*var(--k));
+      height: calc(64px*var(--k));
+      background: #B3A2DC
+    }
+
+    .pict .sa::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: calc(-4px*var(--k));
+      width: calc(24px*var(--k));
+      height: calc(28px*var(--k));
+      border-radius: calc(12px*var(--k));
+      background: #B3A2DC;
+      transform: translateX(-50%)
+    }
+
+    .pict .sc {
+      width: calc(10px*var(--k));
+      height: calc(42px*var(--k));
+      background: #E85E45
+    }
+
+    .pict .sc::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: calc(-3px*var(--k));
+      width: calc(17px*var(--k));
+      height: calc(19px*var(--k));
+      border-radius: calc(9px*var(--k));
+      background: #E85E45;
+      transform: translateX(-50%)
+    }
+
+    .pict .nt {
+      position: absolute;
+      left: 8%;
+      top: calc(4px*var(--k));
+      width: calc(20px*var(--k));
+      height: calc(15px*var(--k));
+      border-radius: 50%;
+      background: #7A8B34;
+      transform: rotate(-18deg)
+    }
+
+    .pict .nt::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: calc(8px*var(--k));
+      width: calc(3px*var(--k));
+      height: calc(28px*var(--k));
+      background: #7A8B34;
+      border-radius: 2px
+    }
+
+    @keyframes pUp {
+
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+
+      50% {
+        transform: translateY(calc(-16px*var(--k)))
+      }
+    }
+
+    @keyframes pTilt {
+
+      0%,
+      100% {
+        transform: rotate(-16deg)
+      }
+
+      50% {
+        transform: rotate(16deg)
+      }
+    }
+
+    @keyframes pFol {
+
+      0%,
+      100% {
+        transform: rotate(-14deg)
+      }
+
+      25% {
+        transform: rotate(10deg) translateY(calc(-10px*var(--k)))
+      }
+
+      50% {
+        transform: rotate(18deg)
+      }
+
+      75% {
+        transform: rotate(-4deg) translateY(calc(-14px*var(--k)))
+      }
+    }
+
+    .pict.anim.r-together .sa,
+    .pict.anim.r-together .sc,
+    .pict.anim.r-song .sa,
+    .pict.anim.r-song .sc {
+      animation: pUp 2s ease-in-out infinite
+    }
+
+    .pict.anim.r-seesaw .sa {
+      animation: pUp 2s ease-in-out infinite
+    }
+
+    .pict.anim.r-seesaw .sc {
+      animation: pUp 2s ease-in-out -1s infinite
+    }
+
+    .pict.anim.r-mirror .sa,
+    .pict.anim.r-mirror .sc {
+      animation: pTilt 2.2s ease-in-out infinite
+    }
+
+    .pict.anim.r-same .sa {
+      animation: pTilt 2.2s ease-in-out infinite
+    }
+
+    .pict.anim.r-same .sc {
+      animation: pTilt 2.2s ease-in-out -1.1s infinite
+    }
+
+    .pict.anim.r-pulse .sa,
+    .pict.anim.r-pulse .sc {
+      animation: pTilt 1.1s ease-in-out infinite
+    }
+
+    .pict.anim.r-follow .sa {
+      animation: pFol 3s ease-in-out infinite
+    }
+
+    .pict.anim.r-follow .sc {
+      animation: pFol 3s ease-in-out .5s infinite
+    }
+
+    .pict.anim.r-follow.g-child .sa {
+      animation-delay: .5s
+    }
+
+    .pict.anim.r-follow.g-child .sc {
+      animation-delay: 0s
+    }
+
+    .pict.still.r-together .sa,
+    .pict.still.r-together .sc {
+      transform: translateY(calc(-10px*var(--k)))
+    }
+
+    .pict.still.r-seesaw .sa {
+      transform: translateY(calc(-14px*var(--k)))
+    }
+
+    .pict.still.r-seesaw .sc {
+      transform: translateY(calc(4px*var(--k)))
+    }
+
+    .pict.still.r-mirror .sa,
+    .pict.still.r-mirror .sc {
+      transform: rotate(16deg)
+    }
+
+    .pict.still.r-same .sa {
+      transform: rotate(16deg)
+    }
+
+    .pict.still.r-same .sc {
+      transform: rotate(-16deg)
+    }
+
+    .pict.still.r-pulse .sa,
+    .pict.still.r-pulse .sc {
+      transform: rotate(-12deg)
+    }
+
+    .pict.still.r-follow .sa {
+      transform: rotate(16deg)
+    }
+
+    .pict.still.r-follow .sc {
+      transform: rotate(6deg)
+    }
+
+    .pict.still.r-song .sa,
+    .pict.still.r-song .sc {
+      display: none
+    }
+
+    .pict.still.r-song .nt {
+      left: 34%;
+      top: calc(42px*var(--k));
+      transform: scale(1.7) rotate(-18deg)
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+
+      .pict.anim .sa,
+      .pict.anim .sc {
+        animation: none !important
+      }
+    }
+
+    /* ===== Home ===== */
+    .hb {
+      justify-content: flex-start;
+      align-items: center;
+      text-align: center;
+      gap: 18px
+    }
+
+    .batts {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .bt {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #fff;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+      font-weight: 800
+    }
+
+    .bt i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%
+    }
+
+    .bt.a i {
+      background: #B3A2DC
+    }
+
+    .bt.c i {
+      background: #E85E45
+    }
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: calc(75vh - 60px);
+      min-height: calc(75dvh - 60px)
+    }
+
+    .hbPlay {
+      position: relative;
+      width: min(230px, 62vw);
+      height: min(230px, 62vw);
+      border-radius: 50%;
+      background: transparent;
+      border: 0;
+      font-size: 32px;
+      font-weight: 900;
+      display: grid;
+      place-items: center;
+      isolation: isolate
+    }
+
+    .hbPlay .sph {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #B3A2DC;
+      z-index: -1;
+      isolation: isolate
+    }
+
+    .hbPlay .gas {
+      position: absolute;
+      left: -20%;
+      top: -20%;
+      width: 140%;
+      height: 140%;
+      border-radius: 50%;
+      pointer-events: none
+    }
+
+    .hbPlay .g1 {
+      background: radial-gradient(circle, rgba(214, 204, 238, .95) 0, rgba(214, 204, 238, 0) 55%);
+      animation: ga 9s ease-in-out infinite
+    }
+
+    .hbPlay .g2 {
+      background: radial-gradient(circle, rgba(244, 195, 182, .95) 0, rgba(244, 195, 182, 0) 50%);
+      animation: gb 10.5s ease-in-out infinite
+    }
+
+    .hbPlay .g3 {
+      background: radial-gradient(circle, rgba(242, 228, 74, .7) 0, rgba(242, 228, 74, 0) 46%);
+      animation: gc 13s ease-in-out infinite
+    }
+
+    .hbPlay .g4 {
+      background: radial-gradient(circle, rgba(232, 94, 69, .55) 0, rgba(232, 94, 69, 0) 44%);
+      animation: gd 14s ease-in-out infinite
+    }
+
+    .hbPlay .g5 {
+      background: radial-gradient(circle, rgba(123, 95, 203, .8) 0, rgba(123, 95, 203, 0) 52%);
+      animation: ge 10s ease-in-out infinite
+    }
+
+    .hbPlay .lbl {
+      position: relative;
+      color: #fff;
+      text-shadow: 0 1px 10px rgba(43, 37, 54, .25)
+    }
+
+    @keyframes ga {
+
+      0%,
+      100% {
+        transform: translate(-24%, -20%) scale(1)
+      }
+
+      33% {
+        transform: translate(22%, -12%) scale(1.2)
+      }
+
+      66% {
+        transform: translate(4%, 26%) scale(.9)
+      }
+    }
+
+    @keyframes gb {
+
+      0%,
+      100% {
+        transform: translate(24%, 18%) scale(.9)
+      }
+
+      30% {
+        transform: translate(-18%, 24%) scale(1.15)
+      }
+
+      65% {
+        transform: translate(-8%, -26%) scale(1)
+      }
+    }
+
+    @keyframes gc {
+
+      0%,
+      100% {
+        transform: translate(10%, -26%) scale(1)
+      }
+
+      40% {
+        transform: translate(-26%, 4%) scale(.85)
+      }
+
+      75% {
+        transform: translate(20%, 20%) scale(1.2)
+      }
+    }
+
+    @keyframes gd {
+
+      0%,
+      100% {
+        transform: translate(-18%, 24%) scale(1.1)
+      }
+
+      50% {
+        transform: translate(26%, -6%) scale(.8)
+      }
+    }
+
+    @keyframes ge {
+
+      0%,
+      100% {
+        transform: translate(0, 0) scale(.8)
+      }
+
+      25% {
+        transform: translate(-22%, -8%) scale(1.1)
+      }
+
+      50% {
+        transform: translate(14%, -22%) scale(.9)
+      }
+
+      75% {
+        transform: translate(18%, 16%) scale(1.15)
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+      .hbPlay .gas {
+        animation: none
+      }
+    }
+
+    .hbHint {
+      font-size: 14px;
+      color: #4a445a;
+      font-weight: 600;
+      margin-top: 44px
+    }
+
+    .hbSec {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left
+    }
+
+    .hbSec h2 {
+      font-size: 18px
+    }
+
+    .hbList {
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .hbS {
+      background: #fff;
+      border-radius: 16px;
+      padding: 10px 10px 10px 14px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      cursor: pointer
+    }
+
+    .hbS .info {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-width: 0
+    }
+
+    .hbS .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap
+    }
+
+    .hbS .top span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .hbS .top span:last-child {
+      color: #5a536b;
+      font-weight: 700
+    }
+
+    .hbS .song i {
+      height: 8px
+    }
+
+    .sbar {
+      display: block;
+      height: 8px;
+      border-radius: 4px;
+      background: #EFECE4;
+      overflow: hidden
+    }
+
+    .sbar i {
+      display: block;
+      height: 100%;
+      background: #7A8B34
+    }
+
+    .shareBtn {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+      padding: 0;
+      border-radius: 50%;
+      border: 0;
+      background: #EFECE4
+    }
+
+    .shareBtn::before {
+      content: "";
+      position: absolute;
+      left: 12px;
+      bottom: 10px;
+      width: 12px;
+      height: 8px;
+      border: 2px solid #2B2536;
+      border-top: 0;
+      border-radius: 0 0 3px 3px
+    }
+
+    .shareBtn i {
+      position: absolute;
+      left: 19px;
+      top: 10px;
+      width: 2px;
+      height: 13px;
+      background: #2B2536;
+      border-radius: 1px
+    }
+
+    .shareBtn i::before {
+      content: "";
+      position: absolute;
+      left: -3px;
+      top: 0;
+      width: 6px;
+      height: 6px;
+      border-left: 2px solid #2B2536;
+      border-top: 2px solid #2B2536;
+      transform: rotate(45deg)
+    }
+
+    .idea {
+      width: 100%;
+      max-width: 440px;
+      text-align: left;
+      background: #F2E44A;
+      border-radius: 22px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px
+    }
+
+    .idea small {
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .02em
+    }
+
+    .idea p {
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.3
+    }
+
+    .idea button {
+      align-self: flex-start;
+      background: none;
+      border: 0;
+      padding: 0;
+      min-height: 36px;
+      font-size: 13px;
+      text-decoration: underline
+    }
+
+    /* ===== Modo de juego ===== */
+    .md {
+      gap: 16px
+    }
+
+    .md h1 {
+      text-align: center
+    }
+
+    .mdList {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1
+    }
+
+    .mdc {
+      flex: 1;
+      background: #fff;
+      border: 0;
+      border-radius: 28px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: stretch;
+      text-align: left;
+      min-height: 0;
+      width: 100%
+    }
+
+    .mdc h2 {
+      font-size: 26px;
+      line-height: 1
+    }
+
+    .mdc p {
+      font-size: 14px;
+      color: #4a445a;
+      font-weight: 600;
+      margin-top: 6px
+    }
+
+    .mdArt {
+      position: relative;
+      height: 96px
+    }
+
+    .mdArt.free i {
+      position: absolute;
+      display: block
+    }
+
+    .mdArt.free .a {
+      left: 6%;
+      top: 14px;
+      width: 22px;
+      height: 70px;
+      border-radius: 999px;
+      background: #B3A2DC;
+      transform: rotate(-14deg)
+    }
+
+    .mdArt.free .c {
+      left: 24%;
+      top: 36px;
+      width: 16px;
+      height: 50px;
+      border-radius: 999px;
+      background: #E85E45;
+      transform: rotate(18deg)
+    }
+
+    .mdArt.free .w {
+      left: 42%;
+      top: 30px;
+      width: 52%;
+      height: 36px;
+      border-top: 3px dashed rgba(43, 37, 54, .25);
+      border-radius: 50% 50% 0 0
+    }
+
+    .mdArt.lv {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px
+    }
+
+    .mdArt.lv i {
+      flex: 1;
+      max-width: 36px;
+      border-radius: 10px 10px 5px 5px;
+      background: #dcd8cf;
+      display: block
+    }
+
+    .mdArt.lv i.on {
+      background: #7A8B34
+    }
+
+    /* ===== Selector de niveles ===== */
+    .lv {
+      gap: 14px
+    }
+
+    .lv h1 {
+      text-align: center
+    }
+
+    .lv .sub {
+      text-align: center;
+      margin-bottom: 6px
+    }
+
+    .lvList {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px
+    }
+
+    .lvc {
+      background: #fff;
+      border: 0;
+      border-radius: 22px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+      text-align: left;
+      min-height: 0;
+      width: 100%
+    }
+
+    .lvc.wide {
+      grid-column: 1/-1;
+      flex-direction: row;
+      align-items: center;
+      gap: 14px
+    }
+
+    .lvc.sug {
+      box-shadow: inset 0 0 0 2.5px #2B2536
+    }
+
+    .lvc .ill {
+      width: 84px;
+      height: 70px;
+      display: block;
+      flex: none
+    }
+
+    .lvc.lock {
+      opacity: .5;
+      cursor: default
+    }
+
+    .lvc.lock .ill {
+      filter: grayscale(1)
+    }
+
+    .tag.lk {
+      background: #dcd8cf;
+      color: #4a445a
+    }
+
+    .lvc .tx {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0
+    }
+
+    .lvc b {
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1.1
+    }
+
+    .lvc .h {
+      font-size: 12.5px;
+      color: #4a445a;
+      font-weight: 600;
+      line-height: 1.3
+    }
+
+    .lvc .dif {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #5a536b;
+      flex-wrap: wrap
+    }
+
+    .lvc .dif i {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #dcd8cf;
+      display: block
+    }
+
+    .lvc .dif i.on {
+      background: #2B2536
+    }
+
+    .lvc .dif em {
+      font-style: normal;
+      margin-left: 3px
+    }
+
+    .tag {
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 10.5px;
+      margin-left: 4px
+    }
+
+    .tag.ok {
+      background: #7A8B34;
+      color: #fff
+    }
+
+    .tag.sg {
+      background: #2B2536;
+      color: #fff
+    }
+
+    /* ===== Antes de cada nivel ===== */
+    .pre {
+      gap: 18px;
+      justify-content: center
+    }
+
+    .preArt {
+      background: #fff;
+      border-radius: 28px;
+      flex: 1;
+      min-height: 260px;
+      max-height: 46vh;
+      display: grid;
+      place-items: center;
+      overflow: hidden
+    }
+
+    .preArt .ill {
+      width: min(320px, 82%);
+      height: auto;
+      display: block
+    }
+
+    .pre .k {
+      font-size: 13px;
+      font-weight: 800;
+      color: #5a536b
+    }
+
+    .pre h2 {
+      font-size: 28px;
+      margin: 4px 0 6px
+    }
+
+    .pre p {
+      font-size: 15px;
+      color: #4a445a
+    }
+
+    .guide {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 14px;
+      font-weight: 800
+    }
+
+    .guide i {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%
+    }
+
+    .guide.adult {
+      background: #B3A2DC
+    }
+
+    .guide.adult i {
+      background: #2B2536
+    }
+
+    .guide.child {
+      background: #F4C3B6
+    }
+
+    .guide.child i {
+      background: #E85E45
+    }
+
+    .guide.both {
+      background: #fff
+    }
+
+    .guide.both i {
+      background: linear-gradient(90deg, #B3A2DC 50%, #E85E45 50%)
+    }
+
+    .pre .primary {
+      min-height: 58px;
+      font-size: 17px
+    }
+
+    /* ===== Colocar en el eje ===== */
+    .insert {
+      gap: 16px;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 16px
+    }
+
+    .insert>div:not(.fig) {
+      max-width: 300px
+    }
+
+    .insert .fig {
+      flex: 0 1 auto;
+      width: 100%;
+      max-height: 44vh;
+      min-height: 0
+    }
+
+    .insscene {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      transform: scale(min(1, calc((100vw - 64px)/300)))
+    }
+
+    .insscene .ejefig {
+      position: absolute;
+      left: 10px;
+      bottom: 40px
+    }
+
+    .insscene .fone {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 176px;
+      height: 56px;
+      border-radius: 14px;
+      background: #5a536b;
+      transform: translateX(-50%);
+      animation: ins 2.6s ease-in-out infinite;
+      z-index: 1
+    }
+
+    .insscene .ejefig .lt {
+      opacity: 0;
+      animation: lt 2.6s ease-in-out infinite
+    }
+
+    @keyframes ins {
+
+      0%,
+      15% {
+        transform: translate(-50%, 0)
+      }
+
+      55%,
+      100% {
+        transform: translate(-50%, 130px)
+      }
+    }
+
+    @keyframes lt {
+
+      0%,
+      55% {
+        opacity: 0
+      }
+
+      75%,
+      100% {
+        opacity: 1
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+      .insscene .fone {
+        animation: none;
+        transform: translate(-50%, 130px)
+      }
+
+      .insscene .ejefig .lt {
+        animation: none;
+        opacity: 1
+      }
+    }
+
+    .insert h2 {
+      font-size: 24px;
+      line-height: 1.1;
+      margin-bottom: 6px
+    }
+
+    .insert p {
+      font-size: 15px;
+      color: #4a445a
+    }
+
+    .load {
+      width: 100%;
+      max-width: 300px;
+      height: 8px;
+      border-radius: 4px;
+      background: #dcd8cf;
+      overflow: hidden
+    }
+
+    .load i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: #2B2536;
+      border-radius: 4px
+    }
+
+    #iris {
+      position: fixed;
+      inset: 0;
+      background: #1d1927;
+      z-index: 20;
+      pointer-events: none;
+      visibility: hidden;
+      clip-path: circle(0% at 50% 50%)
+    }
+
+    #iris.on {
+      visibility: visible;
+      animation: iris .8s cubic-bezier(.65, 0, .35, 1) forwards
+    }
+
+    #iris.out {
+      opacity: 0;
+      transition: opacity .4s ease
+    }
+
+    @keyframes iris {
+      to {
+        clip-path: circle(80% at 50% 50%)
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+      #iris.on {
+        animation: none;
+        clip-path: circle(80% at 50% 50%)
+      }
+    }
+
+    /* ===== Dentro del eje: solo luz en dos mitades ===== */
+    #ejeView {
+      position: fixed;
+      inset: 0;
+      background: #1d1927;
+      display: none;
+      overflow: hidden
+    }
+
+    body.modo-eje #ejeView {
+      display: block
+    }
+
+    .half {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 42%;
+      opacity: .14;
+      transition: opacity .15s
+    }
+
+    #hT {
+      top: 0;
+      --c: 179, 162, 220;
+      background: linear-gradient(to bottom, rgb(var(--c)) 0%, rgb(var(--c)) 22%, rgba(var(--c), 0) 100%)
+    }
+
+    #hB {
+      bottom: 0;
+      --c: 232, 94, 69;
+      background: linear-gradient(to top, rgb(var(--c)) 0%, rgb(var(--c)) 22%, rgba(var(--c), 0) 100%)
+    }
+
+    #flash {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle, rgba(143, 163, 62, .35) 0, rgba(143, 163, 62, .9) 100%)
+    }
+
+    #flash.on {
+      animation: fl 1.6s ease-out forwards
+    }
+
+    #flash.long {
+      animation: fl 4s ease-out forwards
+    }
+
+    @keyframes fl {
+      0% {
+        opacity: 0
+      }
+
+      15% {
+        opacity: .9
+      }
+
+      100% {
+        opacity: 0
+      }
+    }
+
+    #ejeCenter {
+      display: none;
+      position: fixed;
+      z-index: 3;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%) rotate(-90deg);
+      width: min(78vh, 420px);
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      text-align: center;
+      color: #fff
+    }
+
+    body.modo-eje #ejeCenter {
+      display: flex
+    }
+
+    #ejeCenter .box {
+      border: 1.5px dashed rgba(255, 255, 255, .28);
+      border-radius: 22px;
+      padding: 22px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      width: 100%
+    }
+
+    #ejeCenter strong {
+      font-size: 18px;
+      font-weight: 900
+    }
+
+    #ejeCenter p {
+      font-size: 12.5px;
+      color: rgba(255, 255, 255, .6);
+      font-weight: 600
+    }
+
+    #ejeExit {
+      background: rgba(255, 255, 255, .14);
+      color: #fff;
+      border: 0;
+      min-height: 52px;
+      padding: 12px 22px;
+      font-size: 14px
+    }
+
+    /* ===== Banco de prueba (equipo): plano, d en vivo, ajustes, telemetría ===== */
+    .stage {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto minmax(38vh, 1fr);
+      grid-template-areas: "pill pill" "axis axis" "L R";
+      gap: 10px;
+      padding: 10px
+    }
+
+    @media(min-width:820px) {
+      .stage {
+        grid-template-columns: 1fr 1.2fr 1fr;
+        grid-template-rows: auto 1fr;
+        grid-template-areas: "pill pill pill" "L axis R";
+        gap: 14px;
+        padding: 14px;
+        max-width: 1200px;
+        margin: 0 auto;
+        min-height: 0;
+        height: min(100vh, 760px)
+      }
+    }
+
+    .pill {
+      grid-area: pill;
+      background: #2B2536;
+      color: #fff;
+      border-radius: 18px;
+      padding: 10px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px 12px;
+      align-items: baseline;
+      font-size: 13px
+    }
+
+    .pill strong {
+      font-size: 16px;
+      font-weight: 900;
+      color: #F2E44A
+    }
+
+    .axis {
+      grid-area: axis;
+      background: #fff;
+      border-radius: 22px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      min-height: 0
+    }
+
+    #plane {
+      width: 100%;
+      max-width: 360px;
+      aspect-ratio: 1;
+      display: block
+    }
+
+    .meters {
+      width: 100%;
+      max-width: 360px;
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700
+    }
+
+    .mr {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px 10px;
+      flex-wrap: wrap
+    }
+
+    .mr.s {
+      font-size: 12px;
+      color: #5a536b
+    }
+
+    .pbar {
+      height: 10px;
+      border-radius: 5px;
+      background: #EFECE4;
+      overflow: hidden
+    }
+
+    .pbar i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: #7A8B34
+    }
+
+    .syncTag {
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-weight: 900;
+      font-size: 12px;
+      background: #EFECE4
+    }
+
+    .syncTag.on {
+      background: #7A8B34;
+      color: #fff
+    }
+
+    .panel {
+      position: relative;
+      border-radius: 22px;
+      touch-action: none;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px;
+      min-height: 200px
+    }
+
+    .panel>* {
+      pointer-events: none
+    }
+
+    .panel[data-role="adult"] {
+      grid-area: L;
+      background: #B3A2DC
+    }
+
+    .panel[data-role="child"] {
+      grid-area: R;
+      background: #F4C3B6
+    }
+
+    .panel h3 {
+      font-size: 15px;
+      font-weight: 900
+    }
+
+    .panel p {
+      font-size: 12px;
+      color: #3a3449;
+      margin-top: 2px;
+      font-weight: 600
+    }
+
+    .panel .vb {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-size: 11px;
+      font-weight: 900;
+      background: #2B2536;
+      color: #fff;
+      border-radius: 999px;
+      padding: 3px 8px;
+      opacity: 0
+    }
+
+    .panel.vib {
+      animation: shk .08s linear 4
+    }
+
+    .panel.vib .vb {
+      animation: vbf .6s ease-out
+    }
+
+    @keyframes shk {
+
+      0%,
+      100% {
+        transform: translateX(0)
+      }
+
+      50% {
+        transform: translateX(2px)
+      }
+    }
+
+    @keyframes vbf {
+      0% {
+        opacity: 1
+      }
+
+      100% {
+        opacity: 0
+      }
+    }
+
+    .panel .act2 {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #3a3449
+    }
+
+    .dot {
+      position: absolute;
+      left: 0;
+      top: 0;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      display: none
+    }
+
+    .panel[data-role="adult"] .dot {
+      width: 46px;
+      height: 46px;
+      background: #7B5FCB
+    }
+
+    .panel[data-role="child"] .dot {
+      width: 30px;
+      height: 30px;
+      background: #E85E45
+    }
+
+    .below {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 10px 10px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px
+    }
+
+    .ctrls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center
+    }
+
+    .ctrls button {
+      min-height: 44px;
+      padding: 8px 14px;
+      font-size: 13.5px
+    }
+
+    .ctrls select {
+      font: inherit;
+      font-weight: 800;
+      min-height: 44px;
+      border-radius: 14px;
+      border: 1.5px solid rgba(43, 37, 54, .25);
+      padding: 6px 10px;
+      background: #fff;
+      color: #2B2536
+    }
+
+    .box2 {
+      background: #fff;
+      border-radius: 18px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .box2 .hd {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap
+    }
+
+    .box2 .hd h2 {
+      font-size: 18px
+    }
+
+    .box2 .hd div {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .box2 .hd button {
+      min-height: 40px;
+      font-size: 12.5px;
+      padding: 6px 12px
+    }
+
+    .tr {
+      display: grid;
+      grid-template-columns: minmax(0, 180px) 1fr 70px;
+      gap: 12px;
+      align-items: center;
+      font-size: 13.5px;
+      font-weight: 700
+    }
+
+    .tr input {
+      width: 100%;
+      accent-color: #5B35B8;
+      height: 30px
+    }
+
+    .tr b {
+      text-align: right;
+      font-weight: 900
+    }
+
+    .lt {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px
+    }
+
+    .lt th {
+      text-align: left;
+      color: #5a536b;
+      font-weight: 800;
+      padding: 6px 6px;
+      border-bottom: 1px solid #EFECE4
+    }
+
+    .lt td {
+      padding: 6px;
+      border-bottom: 1px solid #EFECE4;
+      font-weight: 700
+    }
+
+    .kbd {
+      font-size: 12.5px;
+      color: #5a536b
+    }
+
+    @media(hover:none) and (pointer:coarse) {
+      .kbd {
+        display: none
+      }
+    }
+
+    body.modo-eje .stage {
+      position: relative;
+      z-index: 1;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr;
+      grid-template-areas: "L R";
+      padding: 0;
+      gap: 0;
+      height: 100vh;
+      height: 100dvh;
+      max-width: none
+    }
+
+    body.modo-eje .pill,
+    body.modo-eje .axis,
+    body.modo-eje .below {
+      display: none
+    }
+
+    body.modo-eje .panel {
+      background: transparent;
+      border-radius: 0;
+      animation: none
+    }
+
+    body.modo-eje .panel>* {
+      visibility: hidden
+    }
+
+    /* ===== Pérdida de conexión ===== */
+    .lost {
+      gap: 16px;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px
+    }
+
+    .lost .fig {
+      width: 100%;
+      max-height: 40vh;
+      min-height: 240px;
+      flex: 0 1 auto
+    }
+
+    .lost .stickwrap {
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding: 26px
+    }
+
+    .lost .stick {
+      background: #cfc9d8
+    }
+
+    .lost .ring {
+      position: absolute;
+      inset: 0;
+      border: 2.5px dashed #E85E45;
+      border-radius: 999px;
+      animation: ring 1.6s ease-in-out infinite
+    }
+
+    @keyframes ring {
+
+      0%,
+      100% {
+        opacity: .35;
+        transform: scale(.97)
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1)
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+      .lost .ring {
+        animation: none
+      }
+    }
+
+    .lost .cause {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #F4C3B6;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 800
+    }
+
+    .lost .cause b {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #E85E45
+    }
+
+    .lost h2 {
+      font-size: 24px;
+      line-height: 1.1;
+      margin: 8px 0 6px
+    }
+
+    .lost p {
+      font-size: 15px;
+      color: #4a445a;
+      max-width: 300px
+    }
+
+    .lost .hold {
+      flex: 0 1 auto;
+      width: 100%;
+      max-width: 320px;
+      justify-content: center;
+      text-align: center
+    }
+
+    .lost .hold .lab {
+      flex: 1
+    }
+
+    /* ===== Final: el recuerdo ===== */
+    .fin {
+      gap: 16px;
+      padding-bottom: 0
+    }
+
+    .fin .hd {
+      text-align: center
+    }
+
+    .memo {
+      background: #fff;
+      border-radius: 28px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px
+    }
+
+    .memo svg {
+      width: 100%;
+      max-width: 400px;
+      aspect-ratio: 1;
+      display: block
+    }
+
+    .memo .lg {
+      display: flex;
+      gap: 14px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #4a445a
+    }
+
+    .memo .lg span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    .memo .lg i {
+      width: 18px;
+      height: 4px;
+      border-radius: 2px
+    }
+
+    .fLead {
+      font-size: 14px;
+      color: #4a445a;
+      font-weight: 700;
+      text-align: center
+    }
+
+    .fin .acts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: auto -22px 0;
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      padding: 14px 22px 18px;
+      background: #fff;
+      box-shadow: 0 -1px 0 rgba(43, 37, 54, .1)
+    }
+
+    .fin .acts button {
+      min-height: 56px;
+      font-size: 15px;
+      padding: 10px 12px;
+      line-height: 1.15
+    }
+
+    #fDl {
+      grid-column: 1/-1;
+      min-height: 44px;
+      font-size: 13px
+    }
+  </style>
+</head>
+
+<body>
+  <div id="ejeView">
+    <div class="half" id="hT"></div>
+    <div class="half" id="hB"></div>
+  </div>
+  <div id="ejeCenter">
+    <div class="box"><strong>Experiencia activa</strong>
+      <p id="ecLv">Esta zona queda cubierta por el eje.</p><button id="ejeExit">Terminar</button>
+    </div>
+  </div>
+  <button id="backBtn" aria-label="Atrás">Atrás</button>
+  <div id="iris"></div>
+  <div id="flash"></div>
+  <div id="audioNotice">El audio está en pausa. En iPhone, revisa el interruptor de silencio; luego toca la pantalla
+    para reanudar.</div>
+
+  <section id="login" class="screen">
+    <div class="full login">
+      <div class="brand"><i></i><i></i><i></i><i></i></div>
+      <h1>Branding</h1>
+      <p class="tag">Un instrumento para sonar juntos: un adulto, un niño y ninguna pantalla a la vista.</p>
+      <button class="gbtn" id="gbtn"><span class="g">G</span><span class="glab">Continuar con Google</span></button>
+      <p class="priv">Tu cuenta solo guarda tus sesiones de juego. Nunca registramos audio, imagen ni datos del niño.
+      </p>
+      <button class="link" id="guest">Probar sin cuenta</button>
+    </div>
+  </section>
+
+  <section id="prep" class="screen">
+    <div class="prep">
+      <ol class="prog">
+        <li class="cur"></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+      </ol>
+      <article class="st cur">
+        <div class="fig">
+          <div class="figin">
+            <div class="phone">
+              <div class="badge bt">BT</div>
+              <div class="badge dnd">zz</div>
+            </div>
+            <div class="chips"><span class="chip lav">Bluetooth</span><span class="chip yel">No molestar</span></div>
+          </div>
+        </div>
+        <div class="txt"><span class="k">Paso 1 de 5</span>
+          <h2>Permisos de Bluetooth y No Molestar</h2>
+          <p>El teléfono necesita hablar con los dos sticks y silenciarse mientras dure el juego.</p>
+        </div>
+        <div class="act"><button id="b1" class="primary">Conceder permisos</button></div>
+      </article>
+      <article class="st">
+        <div class="fig">
+          <div class="figin">
+            <div class="phone">
+              <div class="moon"></div>
+            </div>
+            <div class="chips"><span class="chip yel">Sin sonido</span><span class="chip yel">Sin vibración</span><span
+                class="chip yel">Sin notificaciones</span></div>
+          </div>
+        </div>
+        <div class="txt"><span class="k">Paso 2 de 5 · activado</span>
+          <h2>No Molestar y bloqueo de notificaciones</h2>
+          <p>Durante el juego el teléfono no suena ni vibra. Quedó activado al conceder los permisos.</p>
+        </div>
+        <div class="act"><button id="b2" class="primary">Continuar</button></div>
+      </article>
+      <article class="st">
+        <div class="fig">
+          <div class="figin">
+            <div class="arrow"></div>
+            <div class="ejefig">
+              <div class="slot"></div>
+              <div class="lt a"></div>
+              <div class="lt c"></div>
+            </div>
+            <div class="chips"><span class="chip lav">Pantalla hacia adentro</span><span class="chip yel">Sonido y
+                luz</span></div>
+          </div>
+        </div>
+        <div class="txt"><span class="k">Paso 3 de 5</span>
+          <h2>Así va el celular en el eje</h2>
+          <p>Pantalla hacia el interior. Desde ahí solo salen el sonido y la luz en dos mitades.</p>
+        </div>
+        <div class="act"><button id="b3" class="primary">Entendido</button></div>
+      </article>
+      <article class="st">
+        <div class="fig">
+          <div class="figin">
+            <div class="sticks">
+              <div class="stick big">
+                <div class="sled" id="fl1"></div>
+              </div>
+              <div class="stick sm">
+                <div class="sled" id="fl2"></div>
+              </div>
+            </div>
+            <div class="chips"><span class="chip lav">Stick grande</span><span class="chip cor">Stick pequeño</span>
+            </div>
+          </div>
+        </div>
+        <div class="txt"><span class="k">Paso 4 de 5</span>
+          <h2>Vincula los dos sticks</h2>
+          <p>Mantén pulsado tres segundos cada botón. El LED parpadea mientras se vincula y queda fijo al terminar.</p>
+        </div>
+        <div class="act">
+          <button class="hold" id="h1" data-fig="#fl1" data-done="Stick grande vinculado"><span class="led"></span><span
+              class="lab">Mantener · stick grande</span><span class="bar"><i></i></span></button>
+          <button class="hold" id="h2" data-fig="#fl2" data-done="Stick pequeño vinculado"><span
+              class="led"></span><span class="lab">Mantener · stick pequeño</span><span
+              class="bar"><i></i></span></button>
+        </div>
+      </article>
+      <article class="st">
+        <div class="fig">
+          <div class="figin">
+            <div class="sticks">
+              <div class="stick big">
+                <div class="sled lit"></div>
+              </div>
+              <div class="stick sm">
+                <div class="sled lit"></div>
+              </div>
+            </div>
+            <div class="who"><span>Grande<br>adulto</span><span>Pequeño<br>niño</span></div>
+          </div>
+        </div>
+        <div class="txt"><span class="k">Paso 5 de 5</span>
+          <h2>El stick pequeño es del niño; el grande, del adulto</h2>
+          <p>Cada stick se ajusta al gesto de quien lo usa: un gesto pequeño del adulto llega tan lejos como uno amplio
+            del niño.</p>
+        </div>
+        <div class="act"><button class="primary" id="b5">Comenzar</button></div>
+      </article>
+    </div>
+  </section>
+
+  <section id="home" class="screen">
+    <div class="full hb">
+      <div class="hero"><button class="hbPlay" id="homePlay"><span class="sph"><span class="gas g1"></span><span
+              class="gas g2"></span><span class="gas g3"></span><span class="gas g4"></span><span
+              class="gas g5"></span></span><span class="lbl">Jugar</span></button>
+        <p class="hbHint">Elijan un nivel y coloquen el celular en el eje</p>
+      </div>
+      <section class="hbSec">
+        <h2>Sesiones pasadas</h2>
+        <div id="hbList" class="hbList"></div>
+      </section>
+      <div class="idea"><small>IDEA PARA HOY</small>
+        <p id="tip"></p><button id="tipNext">Otra idea</button>
+      </div>
+      <button class="link" id="homeGuide">Repasar la preparación</button>
+    </div>
+  </section>
+
+  <section id="mode" class="screen">
+    <div class="full md">
+      <h1>¿Cómo quieren jugar?</h1>
+      <div class="mdList">
+        <button class="mdc" id="mdFree"><span class="mdArt free"><i class="a"></i><i class="c"></i><i
+              class="w"></i></span><span>
+            <h2>Libre</h2>
+            <p>Sin consignas. El sonido se afina cuando encuentran un movimiento en común.</p>
+          </span></button>
+        <button class="mdc" id="mdLv"><span class="mdArt lv" id="mdArt"></span><span>
+            <h2>Niveles</h2>
+            <p>Siete movimientos en pareja. Cada uno suma una parte de la canción.</p><span class="small" id="mdProg"
+              style="display:block;margin-top:8px;font-weight:800"></span>
+          </span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="levels" class="screen">
+    <div class="full lv">
+      <div>
+        <h1>¿Qué van a jugar hoy?</h1>
+        <p class="sub">Terminen la canción juntos, nivel a nivel.</p>
+      </div>
+      <div>
+        <div class="songLbl"><span>La canción</span><span id="lvCount"></span></div>
+        <div class="song" id="lvSong"></div>
+      </div>
+      <div class="lvList" id="lvList"></div>
+    </div>
+  </section>
+
+  <section id="pre" class="screen">
+    <div class="full pre">
+      <div class="preArt" id="preArt"></div>
+      <div><span class="k" id="preK"></span>
+        <h2 id="preN"></h2>
+        <p id="preT"></p><span class="guide" id="preG"><i></i><span></span></span>
+      </div>
+      <button class="primary" id="preGo">Insertar el teléfono y comenzar</button>
+    </div>
+  </section>
+
+  <section id="insert" class="screen">
+    <div class="full insert">
+      <div class="fig">
+        <div class="insscene">
+          <div class="fone"></div>
+          <div class="ejefig">
+            <div class="slot"></div>
+            <div class="lt a"></div>
+            <div class="lt c"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2>Coloca el celular en el eje</h2>
+        <p>Pantalla hacia adentro. Solo los bordes quedan a la vista.</p>
+        <p id="insLv" style="font-size:13px;font-weight:800;color:#5a536b;margin-top:8px"></p>
+      </div>
+      <div class="load" role="progressbar" aria-label="Preparando la experiencia"><i id="insBar"></i></div>
+    </div>
+  </section>
+
+  <section id="play" class="screen">
+    <div class="stage">
+      <div class="pill"><strong id="stName">Listo</strong><span id="stDesc"></span></div>
+      <div class="axis">
+        <canvas id="plane" aria-label="Plano de sincronía"></canvas>
+        <div class="meters">
+          <div class="mr"><span id="mD">d = –</span><span class="syncTag" id="mSync">Fuera de sincronía</span></div>
+          <div class="pbar"><i id="mProg"></i></div>
+          <div class="mr s"><span id="mLv"></span><span id="mGuide"></span></div>
+          <div class="mr s"><span id="mRhy"></span><span id="mLead"></span></div>
+        </div>
+      </div>
+      <div class="panel" data-role="adult">
+        <div>
+          <h3>Stick grande · adulto</h3>
+          <p>Inclinación → punto lila en el plano</p>
+        </div><span class="act2" id="aAct"></span><span class="vb">vibra</span>
+        <div class="dot"></div>
+      </div>
+      <div class="panel" data-role="child">
+        <div>
+          <h3>Stick pequeño · niño</h3>
+          <p>Inclinación → punto coral en el plano</p>
+        </div><span class="act2" id="cAct"></span><span class="vb">vibra</span>
+        <div class="dot"></div>
+      </div>
+    </div>
+    <div class="below">
+      <div class="ctrls">
+        <select id="bLevel" aria-label="Nivel"></select>
+        <button id="bCal">Calibrar rango</button>
+        <button id="bSyn">Fuente: táctil</button>
+        <button id="bVoice">Voz: activada</button>
+        <button id="ejeBtn">Modo eje</button>
+        <button id="bEnd">Terminar</button>
+      </div>
+      <p class="kbd">Computador: <b>W A S D</b> inclina el stick grande · <b>flechas</b> el pequeño. Con el ratón basta
+        pasar sobre un panel.</p>
+      <div class="box2">
+        <div class="hd">
+          <h2>Telemetría por nivel</h2>
+          <div><button id="bDl">Descargar JSON</button></div>
+        </div>
+        <table class="lt">
+          <thead>
+            <tr>
+              <th>Nivel</th>
+              <th>1ª sincronía</th>
+              <th>En sincronía</th>
+              <th>d prom.</th>
+              <th>Quién guía</th>
+              <th>Pausas</th>
+              <th>Completado</th>
+            </tr>
+          </thead>
+          <tbody id="ltBody"></tbody>
+        </table>
+      </div>
+      <div class="box2">
+        <div class="hd">
+          <h2>Ajuste</h2>
+          <div><button id="tCopy">Copiar valores</button><button id="tReset">Valores iniciales</button></div>
+        </div>
+        <div id="tRows" style="display:grid;gap:6px"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="lost" class="screen">
+    <div class="full lost">
+      <div class="fig">
+        <div class="stickwrap">
+          <div class="ring"></div>
+          <div class="stick sm" id="lostStick"></div>
+        </div>
+      </div>
+      <div><span class="cause"><b></b><span id="lostCause">Fuera de alcance</span></span>
+        <h2 id="lostTitle">Se perdió el stick pequeño</h2>
+        <p id="lostText"></p>
+      </div>
+      <button class="hold" id="hLost" data-done="Stick reconectado"><span class="led"></span><span class="lab">Mantener
+          3 s para reconectar</span><span class="bar"><i></i></span></button>
+      <p class="small" id="lostTips" style="max-width:300px"></p>
+      <button class="link" id="lostEnd">Terminar y ver el recuerdo</button>
+    </div>
+  </section>
+
+  <section id="final" class="screen">
+    <div class="full fin">
+      <div class="hd">
+        <h1 id="fTitle">Terminaron la canción.</h1>
+        <p class="sub" id="fSub"></p>
+      </div>
+      <div id="fSongWrap">
+        <div class="songLbl"><span>La canción</span><span id="fCount"></span></div>
+        <div class="song" id="fSong"></div>
+      </div>
+      <div class="memo">
+        <div id="fMemo" style="width:100%;display:grid;place-items:center"></div>
+        <div class="lg"><span><i style="background:#9F8AD9"></i>Adulto</span><span><i
+              style="background:#E85E45"></i>Niño</span></div>
+      </div>
+      <p class="fLead" id="fLead"></p>
+      <div class="acts"><button class="primary" id="fListen">Escuchar la canción</button><button id="fSave">Guardar el
+          recuerdo</button><button id="fDl" hidden>Descargar telemetría (JSON)</button></div>
+    </div>
+  </section>
+
+  <script>
+    (() => {
+      /* ---------- Utilidades ---------- */
+      const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+      const f1 = (v, d = 1) => (+v).toFixed(d).replace('.', ',');
+      const mean = a => a.reduce((s, v) => s + v, 0) / (a.length || 1);
+      const store = { get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }, del(k) { try { localStorage.removeItem(k); } catch (e) { } } };
+      // Pentatónica de do (MIDI). Adulto: do3–sol4 · Niño: do4–do6.
+      const NN = { do3: 48, re3: 50, mi3: 52, sol3: 55, la3: 57, do4: 60, re4: 62, mi4: 64, sol4: 67, la4: 69, do5: 72, re5: 74, mi5: 76, sol5: 79, la5: 81, do6: 84 };
+      const PA = [48, 50, 52, 55, 57, 60, 62, 64, 67], PC = [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84];
+
+      /* ---------- Parámetros (sección 13 del documento) ---------- */
+      const P_DEF = { tolScale: 1, alpha: .2, rangeA: 30, rangeC: 45, minA: 15, minC: 25, onSpeed: 2.5, hyst: 1.25, secScale: 1, idleAfter: 3, decay: .5, maxDetune: 4, followLag: .8, rhythmWin: 3, vibMs: 80, endAfter: 30 };
+      const P = Object.assign({}, P_DEF, store.get('balancin-ajuste', {}));
+
+      /* ---------- Niveles (11.1) ---------- */
+      const REL_N = { together: 'Juntos', mirror: 'Espejo', same: 'Iguales', seesaw: 'Sube y baja', pulse: 'Mismo pulso', follow: 'Sígueme' };
+      const LEVELS = [
+        { id: 1, n: 'Juntos', t: 'Suban y bajen los sticks al mismo tiempo.', rel: 'together', g: ['adult', 'child'], tol: 1.2, sec: 8, ph: ['do4', 're4', 'mi4', 'sol4'], d: 1 },
+        { id: 2, n: 'Espejo', t: 'Frente a frente, como en un espejo.', rel: 'mirror', g: ['child', 'adult'], tol: 1.2, sec: 8, ph: ['sol4', 'mi4', 're4', 'do4'], d: 1 },
+        { id: 3, n: 'Iguales', t: 'Inclínense hacia el mismo lado.', rel: 'same', g: ['adult', 'child'], tol: 1.0, sec: 8, ph: ['mi4', 'sol4', 'la4', 'sol4'], d: 2 },
+        { id: 4, n: 'Sube y baja', t: 'Uno arriba, el otro abajo. Y cambien.', rel: 'seesaw', g: ['adult', 'child'], tol: 1.0, sec: 8, ph: ['do5', 'la4', 'sol4', 'mi4'], d: 2 },
+        { id: 5, n: 'Mismo pulso', t: 'Balancéense al mismo ritmo.', rel: 'pulse', g: ['child', null], tol: .9, sec: 8, ph: ['re4', 'mi4', 'sol4', 'la4'], d: 2 },
+        { id: 6, n: 'Sígueme', t: 'Uno inventa, el otro copia. Luego cambian.', rel: 'follow', g: ['adult', 'child'], tol: 1.2, sec: 8, ph: ['la4', 'sol4', 'mi4', 're4'], d: 3 },
+        { id: 7, n: 'La canción', t: 'Todo junto, hasta terminar la canción.', rel: 'song', parts: ['together', 'mirror', 'seesaw', 'pulse'], g: ['adult', 'child', 'adult', 'child'], tol: .8, sec: 6, ph: ['do4', 'mi4', 'sol4', 'do5'], d: 3 }
+      ];
+      const GN = { adult: 'el adulto', child: 'el niño' };
+      const guideOf = L => L.rel === 'song' ? ['both', 'La voz indica quién guía'] : !L.g[1] ? [L.g[0], 'Guía ' + GN[L.g[0]]] : [L.g[0], 'Guía ' + GN[L.g[0]] + ', luego ' + GN[L.g[1]]];
+      let PROG_OVR = null, DEMO = false;
+      const getProg = () => PROG_OVR || store.get('balancin_progress', []);
+      const addProg = id => { if (PROG_OVR) { if (!PROG_OVR.includes(id)) PROG_OVR.push(id); return; } const p = store.get('balancin_progress', []); if (!p.includes(id)) { p.push(id); store.set('balancin_progress', p); } };
+      const songBar = (got, fresh = []) => LEVELS.map(L => '<i class="' + (got.includes(L.id) || fresh.includes(L.id) ? 'on' : '') + (fresh.includes(L.id) ? ' new' : '') + '"></i>').join('');
+      /* Dibujo de instrucciones (estático): stick grande lila, stick pequeño coral, flechas del color de cada uno. Sin figuras humanas. */
+      const CA = '#9F8AD9', CC = '#E85E45', CO = '#7A8B34', CK = 'rgba(43,37,54,.28)';
+      function head(x, y, ang, col) { const s = 7, p = [[x, y], [x - s * Math.cos(ang - .45), y - s * Math.sin(ang - .45)], [x - s * Math.cos(ang + .45), y - s * Math.sin(ang + .45)]]; return '<polygon points="' + p.map(q => q.map(v => v.toFixed(1)).join(',')).join(' ') + '" fill="' + col + '"/>'; }
+      function line(x1, y1, x2, y2, col, dbl) { return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + col + '" stroke-width="3" stroke-linecap="round"/>' + head(x2, y2, Math.atan2(y2 - y1, x2 - x1), col) + (dbl ? head(x1, y1, Math.atan2(y1 - y2, x1 - x2), col) : ''); }
+      function arc(x1, y1, cx, cy, x2, y2, col, dbl, dash) { return '<path d="M' + x1 + ' ' + y1 + ' Q' + cx + ' ' + cy + ' ' + x2 + ' ' + y2 + '" fill="none" stroke="' + col + '" stroke-width="3" stroke-linecap="round"' + (dash ? ' stroke-dasharray="4 5"' : '') + '/>' + head(x2, y2, Math.atan2(y2 - cy, x2 - cx), col) + (dbl ? head(x1, y1, Math.atan2(y1 - cy, x1 - cx), col) : ''); }
+      const STK = '<rect x="35" y="44" width="10" height="46" rx="5" fill="#B3A2DC"/><rect x="30" y="26" width="20" height="26" rx="10" fill="#B3A2DC"/><rect x="80.5" y="60" width="7" height="30" rx="3.5" fill="#E85E45"/><rect x="77" y="49" width="14" height="18" rx="7" fill="#E85E45"/>';
+      function wave(x, y, col, dash) { return '<path d="M' + x + ' ' + y + ' q6 -9 12 0 t12 0 t10 0" fill="none" stroke="' + col + '" stroke-width="3" stroke-linecap="round"' + (dash ? ' stroke-dasharray="4 5"' : '') + '/>' + head(x + 34, y, 0, col); }
+      function pict(L, cls) {
+        let a = '';
+        switch (L.rel) {
+          case 'together': a = line(18, 70, 18, 32, CA, 1) + line(104, 84, 104, 52, CC, 1); break;
+          case 'seesaw': a = line(18, 68, 18, 30, CA) + line(104, 54, 104, 88, CC); break;
+          case 'mirror': a = '<line x1="62" y1="10" x2="62" y2="94" stroke="' + CK + '" stroke-width="2" stroke-dasharray="3 5"/>' + arc(26, 20, 40, 6, 54, 18, CA) + arc(72, 42, 84, 30, 98, 42, CC); break;
+          case 'same': a = arc(54, 18, 40, 6, 26, 20, CA) + arc(72, 42, 84, 30, 98, 42, CC); break;
+          case 'pulse': a = arc(26, 20, 40, 6, 54, 18, CA, 1) + arc(72, 42, 84, 30, 98, 42, CC, 1) + '<path d="M62 14 L55 40 L69 40 Z" fill="none" stroke="#2B2536" stroke-width="2.2" stroke-linejoin="round"/><line x1="62" y1="36" x2="66" y2="17" stroke="#2B2536" stroke-width="2.2" stroke-linecap="round"/>'; break;
+          case 'follow': { const gc = L.g[0] === 'child'; a = wave(20, 16, CA, gc) + wave(66, 36, CC, !gc); break; }
+          case 'song': return '<svg class="ill ' + cls + '" viewBox="0 0 120 100" aria-hidden="true"><ellipse cx="52" cy="72" rx="15" ry="10.5" transform="rotate(-20 52 72)" fill="' + CO + '"/><rect x="63" y="18" width="4.5" height="52" rx="2" fill="' + CO + '"/><path d="M67.5 18 C74 26 86 30 84 46 C82 38 76 34 67.5 32 Z" fill="' + CO + '"/></svg>';
+        }
+        return '<svg class="ill ' + cls + '" viewBox="0 0 120 100" aria-hidden="true">' + STK + a + '</svg>';
+      }
+
+      /* ---------- Audio: cadena de mezcla + síntesis percusiva ---------- */
+      const FAM = {
+        marimba: { type: 'sine', decay: 1.1, p: [[1, 1, 1], [4, .16, .3], [10, .04, .12]] },
+        glock: { type: 'sine', decay: 1.9, p: [[1, 1, 1], [2.76, .22, .7], [5.4, .07, .4]] },
+        pad: { type: 'sine', decay: 1.6, p: [[1, 1, 1], [2, .12, .5]] },
+        low: { type: 'sine', decay: 3, p: [[1, 1, 1], [2, .25, .6], [3, .1, .4]] }
+      };
+      const AU = {
+        ctx: null, bus: null, touched: false,
+        ensure() {
+          this.touched = true;
+          if (!this.ctx) {
+            const Cx = window.AudioContext || window.webkitAudioContext; if (!Cx) return;
+            const c = this.ctx = new Cx({ latencyHint: 'interactive' });
+            this.bus = c.createGain(); this.bus.gain.value = .8;
+            const f = (type, fr, q) => { const n = c.createBiquadFilter(); n.type = type; n.frequency.value = fr; if (q) n.Q.value = q; return n; };
+            const hp = f('highpass', 70, .7), low = f('lowshelf', 220), mid = f('peaking', 1400, .8), high = f('highshelf', 3800), lp = f('lowpass', 8500, .5);
+            low.gain.value = 1; mid.gain.value = -2; high.gain.value = -5;
+            const rev = c.createConvolver(), len = Math.floor(c.sampleRate * 2.4), ir = c.createBuffer(2, len, c.sampleRate);
+            for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+            rev.buffer = ir; const wet = c.createGain(); wet.gain.value = .2; const revLp = f('lowpass', 3200);
+            const comp = c.createDynamicsCompressor(); comp.threshold.value = -22; comp.knee.value = 24; comp.ratio.value = 2.5; comp.attack.value = .012; comp.release.value = .35;
+            const lim = c.createDynamicsCompressor(); lim.threshold.value = -4; lim.knee.value = 2; lim.ratio.value = 20; lim.attack.value = .002; lim.release.value = .12;
+            const master = c.createGain(); master.gain.value = .75;
+            this.bus.connect(hp); hp.connect(low); low.connect(mid); mid.connect(high); high.connect(lp);
+            lp.connect(comp); lp.connect(revLp); revLp.connect(rev); rev.connect(wet); wet.connect(comp);
+            comp.connect(lim); lim.connect(master); master.connect(c.destination);
+            this.voices = 0; c.onstatechange = notice;
+          }
+          if (this.ctx.state !== 'running') this.ctx.resume().then(notice, notice);
+          notice();
+        },
+        ok() { return this.ctx && this.ctx.state === 'running'; },
+        tone(freq, fam, gain, decay, at) {
+          if (!this.ok()) return; const c = this.ctx;
+          const t = at || c.currentTime, F = typeof fam === 'string' ? FAM[fam] : fam, dec = decay || F.decay;
+          if (this.voices > 22) return;
+          const g0 = gain / Math.sqrt(1 + this.voices * .35);
+          for (const [r, g, d] of F.p) {
+            const fr = freq * r; if (fr > 9000) continue;
+            const o = c.createOscillator(); o.type = F.type; o.frequency.value = fr;
+            const e = c.createGain(), pk = Math.max(.0002, g0 * g * (fr > 3000 ? .6 : 1));
+            e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(pk, t + .012); e.gain.setTargetAtTime(0, t + .012, dec * d / 4.5);
+            o.connect(e); e.connect(this.bus); o.start(t); o.stop(t + dec * d + .25);
+            this.voices++; o.onended = () => { this.voices--; e.disconnect(); };
+          }
+        }
+      };
+      function notice() { $('#audioNotice').style.display = AU.touched && AU.ctx && AU.ctx.state !== 'running' ? 'block' : 'none'; }
+      // Solo suena el último iframe tocado (útil en el canvas con varios teléfonos).
+      const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('balancin-audio') : null, myId = Math.random();
+      if (bc) bc.onmessage = e => { if (e.data !== myId && AU.ctx) { AU.touched = false; AU.ctx.suspend(); try { speechSynthesis.cancel(); } catch (_) { } notice(); } };
+      document.addEventListener('pointerdown', () => { AU.ensure(); if (bc) bc.postMessage(myId); }, { passive: true });
+      document.addEventListener('contextmenu', e => e.preventDefault());
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { if (AU.ctx && AU.touched) AU.ctx.resume().then(notice, notice); if (running) wake(); } });
+
+      /* Capas continuas: voz del adulto (seno + 2º armónico) y tono de relación (dos senos con batido + quinta). */
+      const V = { ok: false, df: 0 };
+      function vInit() {
+        const c = AU.ctx, mk = f => { const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = f; o.start(); return o; }, g = v => { const n = c.createGain(); n.gain.value = v; return n; };
+        V.aO = mk(130); V.aH = mk(260); V.aHg = g(.22); V.aG = g(0);
+        V.aO.connect(V.aG); V.aH.connect(V.aHg); V.aHg.connect(V.aG); V.aG.connect(AU.bus);
+        V.r1 = mk(260); V.r2 = mk(260); V.r3 = mk(390); V.rG = g(0); V.fG = g(0);
+        V.r1.connect(V.rG); V.r2.connect(V.rG); V.r3.connect(V.fG); V.rG.connect(AU.bus); V.fG.connect(AU.bus); V.ok = true;
+      }
+      function vSilence() { if (!V.ok || !AU.ctx) return; const t = AU.ctx.currentTime;[V.aG, V.rG, V.fG].forEach(n => n.gain.setTargetAtTime(0, t, .3)); }
+      function detune(d, tol) { if (d <= tol) return 0; const t = clamp((d - tol) / (6 - tol), 0, 1); return .5 + (P.maxDetune - .5) * t; }
+      function playPhrase(names, step = .24, gain = .17) { if (!AU.ok()) return names.length * step + 1; const t = AU.ctx.currentTime + .05; names.forEach((n, i) => AU.tone(hz(NN[n]), 'glock', gain, 2, t + i * step)); return names.length * step + 1; }
+      function playSong(ids) { const list = (ids || LEVELS.map(L => L.id)).map(id => LEVELS[id - 1]); const step = .3; if (AU.ok()) { const t = AU.ctx.currentTime + .1; let k = 0; list.forEach(L => { AU.tone(hz(NN[L.ph[0]] - 12), 'low', .12, 2.4, t + k * step); L.ph.forEach(n => { AU.tone(hz(NN[n]), 'glock', .13, 2, t + k * step); k++; }); }); } return list.length * 4 * step + 2; }
+      let loopIv = 0, loopI = 0;
+      function loopStart() { clearInterval(loopIv); loopI = 0; loopIv = setInterval(() => { if (!running || G.mode !== 'levels' || G.state !== 'playing') return; const got = getProg(), notes = []; LEVELS.forEach(L => { if (got.includes(L.id)) L.ph.forEach(n => notes.push(NN[n])); }); if (!notes.length) return; AU.tone(hz(notes[loopI++ % notes.length]), 'pad', .03 + .004 * got.length, 1.6); }, 420); }
+
+      /* ---------- Voz (placeholder de assets/voz/nivel_N.mp3 con síntesis de voz del navegador) ---------- */
+      let voiceOn = store.get('balancin-voz', true);
+      function say(txt) { if (!voiceOn || !AU.touched || !('speechSynthesis' in window)) return; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(txt); u.lang = 'es-ES'; u.rate = .95; u.pitch = 1.05; speechSynthesis.speak(u); } catch (e) { } }
+
+      /* ---------- Wake lock ---------- */
+      let wl = null;
+      async function wake() { try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wl = await navigator.wakeLock.request('screen'); } catch (e) { } }
+      function unwake() { if (wl) { wl.release().catch(() => { }); wl = null; } }
+
+      /* ---------- Lector de gestos (Fase 3): inclinación → punto en el plano de −6 a 6 ----------
+         pos: suavizado exponencial (α) · activo: velocidad > umbral en los últimos 2 s (ignora lecturas mientras vibra)
+         h: historial de 4,5 s (Sígueme, ritmo, quién guía) · cal: centro y medio rango de esta persona */
+      class Stick {
+        constructor(role) { this.role = role; this.reset(); this.cal = null; }
+        reset() { this.tilt = { x: 0, y: 0 }; this.raw = { x: 0, y: 0 }; this.pos = { x: 0, y: 0 }; this.h = []; this.lastActive = -1e9; this.speed = 0; this.vibUntil = 0; this.has = false; this.cell = ''; this.lastNote = 0; }
+        range() { return this.cal || { cx: 0, cy: 0, hr: this.role === 'adult' ? P.rangeA : P.rangeC }; }
+        feedTilt(tx, ty) { this.has = true; this.tilt = { x: tx, y: ty }; const r = this.range(); this.raw = { x: clamp(6 * (tx - r.cx) / r.hr, -6, 6), y: clamp(6 * (ty - r.cy) / r.hr, -6, 6) }; }
+        update(t, dt) {
+          if (!this.has) return; const px = this.pos.x, py = this.pos.y, a = clamp(P.alpha * 1.6, .02, 1);
+          this.pos.x += (this.raw.x - px) * a; this.pos.y += (this.raw.y - py) * a;
+          this.speed = this.speed * .7 + Math.hypot(this.pos.x - px, this.pos.y - py) / Math.max(dt, 1e-3) * .3;
+          if (this.speed > P.onSpeed && t > this.vibUntil) this.lastActive = t;
+          this.h.push({ t, x: this.pos.x, y: this.pos.y }); while (this.h.length && t - this.h[0].t > 4500) this.h.shift();
+        }
+        active(t) { return this.has && t - this.lastActive < 2000; }
+        at(t) { const h = this.h; for (let i = h.length - 1; i >= 0; i--) if (h[i].t <= t) return h[i]; return h[0] || { x: 0, y: 0 }; }
+        rhythm(t) { // frecuencia dominante por cruces por cero del eje principal, ventana de 3 s
+          const w = P.rhythmWin * 1000, h = this.h.filter(q => t - q.t <= w); if (h.length < 12) return { f: 0, amp: 0 };
+          const mx = mean(h.map(q => q.x)), my = mean(h.map(q => q.y)); let vx = 0, vy = 0; h.forEach(q => { vx += (q.x - mx) ** 2; vy += (q.y - my) ** 2; });
+          const ax = vy >= vx ? 'y' : 'x', m = ax === 'y' ? my : mx; let cr = 0, prev = 0, mn = 1e9, mxv = -1e9;
+          for (const q of h) { const v = q[ax] - m; mn = Math.min(mn, v); mxv = Math.max(mxv, v); const s = v > .25 ? 1 : v < -.25 ? -1 : 0; if (s && prev && s !== prev) cr++; if (s) prev = s; }
+          const dur = (h[h.length - 1].t - h[0].t) / 1000 || 1; return { f: cr / 2 / dur, amp: (mxv - mn) / 2 };
+        }
+      }
+      const ST = { adult: new Stick('adult'), child: new Stick('child') }, A = ST.adult, C = ST.child;
+
+      /* ---------- Fuentes de movimiento: táctil, teclado, sintética ---------- */
+      const panels = { adult: $('.panel[data-role="adult"]'), child: $('.panel[data-role="child"]') };
+      const TILT = 60; // el ancho del panel equivale a ±60° de inclinación
+      let activePointers = 0;
+      function feedPanel(role, e) { const el = panels[role], r = el.getBoundingClientRect(); ST[role].feedTilt((clamp((e.clientX - r.left) / r.width, 0, 1) - .5) * 2 * TILT, -(clamp((e.clientY - r.top) / r.height, 0, 1) - .5) * 2 * TILT); }
+      for (const role of ['adult', 'child']) {
+        const el = panels[role]; el._pid = null;
+        el.addEventListener('pointerdown', e => { if (el._pid != null) return; el._pid = e.pointerId; el.setPointerCapture(e.pointerId); activePointers++; document.body.classList.add('lock'); feedPanel(role, e); e.preventDefault(); });
+        el.addEventListener('pointermove', e => { if (e.pointerId === el._pid || (e.pointerType === 'mouse' && el._pid == null)) feedPanel(role, e); });
+        const up = e => { if (el._pid !== e.pointerId) return; el._pid = null; activePointers = Math.max(0, activePointers - 1); if (!activePointers) document.body.classList.remove('lock'); };
+        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => el.addEventListener(ev, up));
+      }
+      const keys = new Set();
+      addEventListener('keydown', e => { if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) { keys.add(e.key); if (e.key.startsWith('Arrow')) e.preventDefault(); } });
+      addEventListener('keyup', e => keys.delete(e.key));
+      function keyDrive(dt) {
+        if (!keys.size) return;
+        const drive = (st, u, d, l, r) => { const vx = (keys.has(r) ? 1 : 0) - (keys.has(l) ? 1 : 0), vy = (keys.has(u) ? 1 : 0) - (keys.has(d) ? 1 : 0); if (!vx && !vy) return; st.feedTilt(clamp(st.tilt.x + vx * 90 * dt, -TILT, TILT), clamp(st.tilt.y + vy * 90 * dt, -TILT, TILT)); };
+        drive(A, 'w', 's', 'a', 'd'); drive(C, 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight');
+      }
+      let synth = null; const SQ = ['lejos', 'cerca', 'sync', 'sync'];
+      function feedPlane(st, x, y) { const r = st.range(); st.feedTilt(r.cx + clamp(x, -6, 6) / 6 * r.hr, r.cy + clamp(y, -6, 6) / 6 * r.hr); }
+      function synthDrive(now) { // dos sinusoides + error según calidad: sincronía, cerca, lejos o ciclo
+        const s = now / 1000; let q = synth; if (q === 'cycle') q = SQ[Math.floor(s / 5) % 4];
+        const err = q === 'sync' ? .25 : q === 'cerca' ? 1.7 : 4.2, ex = err * Math.sin(s * .83 + 1), ey = err * Math.cos(s * .71);
+        const base = u => ({ x: 3.6 * Math.sin(u * 1.05), y: 4.4 * Math.sin(u * 1.6 + .5) });
+        let a = base(s), c;
+        switch (curRel()) {
+          case 'together': c = { x: 3 * Math.sin(s * .7), y: a.y + ey }; break;
+          case 'seesaw': c = { x: 3 * Math.sin(s * .7), y: -a.y + ey }; break;
+          case 'mirror': c = { x: -a.x + ex, y: a.y + ey }; break;
+          case 'same': c = { x: a.x + ex, y: a.y + ey }; break;
+          case 'pulse': { const fr = q === 'sync' ? 1 : q === 'cerca' ? 1.15 : 1.7; a = { x: 1, y: 4 * Math.sin(2 * Math.PI * .8 * s) }; c = { x: -1, y: 4 * Math.sin(2 * Math.PI * .8 * fr * s + .4) }; break; }
+          case 'follow': { const g = base(s - .5); if (G.guide === 'child') { c = a; a = { x: g.x + ex, y: g.y + ey }; } else c = { x: g.x + ex, y: g.y + ey }; break; }
+          default: c = { x: a.x * .9 + ex, y: a.y + ey };
+        }
+        feedPlane(A, a.x, a.y); feedPlane(C, c.x, c.y);
+      }
+
+      /* ---------- Motor de sincronía (Fase 4) ---------- */
+      const G = { mode: 'levels', li: 0, part: 0, state: 'idle', prog: 0, inSync: false, d: 6, guide: 'adult', lts: [], lt: null, lastVib: 0, lagT: 0, drawT: 0, ll: null };
+      let running = false, last = 0, appMode = false, ejeMode = false;
+      const curLevel = () => G.mode === 'levels' ? LEVELS[G.li] : null;
+      const curRel = () => { const L = curLevel(); return !L ? 'free' : L.rel === 'song' ? L.parts[G.part] : L.rel; };
+      const curTol = () => (curLevel() ? curLevel().tol : 1.2) * P.tolScale;
+      const curSec = () => (curLevel() ? curLevel().sec : 8) * P.secScale;
+      // Distancia entre el punto del niño (c) y donde debería estar según el adulto (p).
+      function syncDist(rel, p, c, t) {
+        switch (rel) {
+          case 'together': return Math.abs(c.y - p.y);
+          case 'seesaw': return Math.abs(c.y + p.y);
+          case 'mirror': return Math.hypot(c.x + p.x, c.y - p.y);
+          case 'same': return Math.hypot(c.x - p.x, c.y - p.y);
+          case 'pulse': { const ra = A.rhythm(t), rc = C.rhythm(t); if (ra.amp < 1 || rc.amp < 1 || !ra.f || !rc.f) return 6; return Math.min(6, 6 * Math.abs(rc.f - ra.f) / Math.max(rc.f, ra.f)); }
+          case 'follow': { const gd = G.guide === 'child' ? C : A, fl = G.guide === 'child' ? A : C; let best = 1e9; for (let lag = 0; lag <= P.followLag + 1e-6; lag += .1) { let s = 0; for (let i = 0; i < 15; i++) { const tt = t - i * 100, f = fl.at(tt), g = gd.at(tt - lag * 1000); s += Math.hypot(f.x - g.x, f.y - g.y); } best = Math.min(best, s / 15); } return Math.min(6, best); }
+          default: return Math.min(Math.abs(c.y - p.y) + Math.abs(c.x - p.x) * .5, Math.hypot(c.x + p.x, c.y - p.y), Math.abs(c.y + p.y) + Math.abs(c.x - p.x) * .5); // Libre: la relación más cercana
+        }
+      }
+      // Dónde debería estar el niño (para el plano del banco de prueba).
+      function target(now) { const p = A.pos, c = C.pos; switch (curRel()) { case 'together': return { x: c.x, y: p.y }; case 'seesaw': return { x: c.x, y: -p.y }; case 'mirror': return { x: -p.x, y: p.y }; case 'same': return { x: p.x, y: p.y }; case 'follow': return G.guide === 'adult' ? A.at(now - 500) : null; default: return null; } }
+      // Quién guía a quién: correlación cruzada (ventana 4 s, retrasos ±1 s). lag > 0: el niño va detrás (guía el adulto).
+      function leadLag(t) {
+        if (A.h.length < 2 || t - A.h[0].t < 3800) return null;
+        const N = 40, a = [], c = []; for (let i = 0; i < N; i++) { const tt = t - 4000 + i * 100; a.push(A.at(tt)); c.push(C.at(tt)); }
+        const vx = mean(a.map(p => p.x * p.x)) - mean(a.map(p => p.x)) ** 2, vy = mean(a.map(p => p.y * p.y)) - mean(a.map(p => p.y)) ** 2, ax = vy >= vx ? 'y' : 'x';
+        const as = a.map(p => p[ax]), cs = c.map(p => p[ax]), ma = mean(as), mc = mean(cs); let best = 0, bl = 0;
+        for (let k = -10; k <= 10; k++) { let s = 0, sa = 0, sc = 0; for (let i = 0; i < N; i++) { const j = i + k; if (j < 0 || j >= N) continue; const x = as[i] - ma, y = cs[j] - mc; s += x * y; sa += x * x; sc += y * y; } const r = sa && sc ? s / Math.sqrt(sa * sc) : 0; if (Math.abs(r) > Math.abs(best)) { best = r; bl = k; } }
+        return Math.abs(best) < .3 ? null : { lag: bl / 10, r: best };
+      }
+      const newLT = id => ({ nivel: id, inicio: (performance.now() - G.t0) / 1000, primera: null, juego: 0, sinc: 0, dS: 0, dN: 0, lagS: 0, lagN: 0, adultoSigue: 0, pausas: 0, reanud: 0, completado: null });
+
+      function startSession(o) {
+        if (AU.touched) AU.ensure();
+        Object.assign(G, { mode: o.mode, li: o.li || 0, part: 0, prog: 0, inSync: false, lts: [], levelsDone: [], t0: performance.now(), T0: Date.now(), total: 0, syncT: 0, bothT: 0, traj: [], trajT: 0, idleSince: null, pausedEp: false, lastVib: 0, lagT: 0, ll: null, song: false });
+        A.reset(); C.reset(); running = true; last = performance.now(); show('play'); wake(); loopStart();
+        if (o.cal) startCal(); else beginPlay();
+        requestAnimationFrame(frame);
+      }
+      // Calibración del rango de cada persona (6 s): centro = promedio del 1er segundo; medio rango = mayor distancia entre p5 y p95.
+      function startCal() { G.state = 'calibrating'; G.calT0 = performance.now(); G.calS = { adult: [], child: [] }; A.cal = null; C.cal = null; say('Muévanse libremente unos segundos.'); $('#ecLv').textContent = 'Calibrando · muévanse libremente'; setStatus(); }
+      function finishCal() {
+        for (const role of ['adult', 'child']) {
+          const S = G.calS[role], first = S.filter(q => q.t < 1000), rest = S.filter(q => q.t >= 1000), st = ST[role];
+          if (first.length < 3 || rest.length < 10) { st.cal = null; continue; }
+          const cx = mean(first.map(q => q.x)), cy = mean(first.map(q => q.y)), pc = (arr, p) => arr[Math.min(arr.length - 1, Math.floor(p * arr.length))];
+          const xs = rest.map(q => q.x).sort((a, b) => a - b), ys = rest.map(q => q.y).sort((a, b) => a - b);
+          const hr = Math.max(Math.abs(pc(xs, .95) - cx), Math.abs(pc(xs, .05) - cx), Math.abs(pc(ys, .95) - cy), Math.abs(pc(ys, .05) - cy));
+          st.cal = { cx, cy, hr: Math.max(hr, role === 'adult' ? P.minA : P.minC) };
+        }
+        beginPlay();
+      }
+      function beginPlay() { if (G.mode === 'levels') startLevel(); else { G.state = 'playing'; G.lt = newLT('libre'); G.lts.push(G.lt); $('#ecLv').textContent = 'Modo libre'; say('Juego libre. Busquen un movimiento en común.'); setStatus(); } }
+      function startLevel() {
+        const L = curLevel(); Object.assign(G, { state: 'playing', prog: 0, part: 0, guide: L.g[0] || 'adult', guideSwitched: false, inSync: false });
+        G.lt = newLT(L.id); G.lts.push(G.lt); $('#ecLv').textContent = 'Nivel ' + L.id + ' · ' + L.n;
+        say('Nivel ' + L.id + '. ' + L.n + '. ' + L.t + ' ' + guideOf(L)[1] + '.'); setStatus();
+      }
+      function setGuide(role) { G.guide = role; say('Ahora guía ' + GN[role] + '.'); vibrate(role, P.vibMs, 2, 120); setStatus(); }
+      function partComplete() { const L = curLevel(); playPhrase([L.ph[G.part]], .24, .2); G.part++; G.prog = 0; G.inSync = false; G.guide = L.g[G.part]; say('Ahora, ' + REL_N[L.parts[G.part]] + '. Guía ' + GN[G.guide] + '.'); vibrate(G.guide, P.vibMs, 2, 120); setStatus(); }
+      function levelComplete(now) {
+        const L = curLevel(); G.state = 'levelComplete'; G.lt.completado = +((now - G.t0) / 1000 - G.lt.inicio).toFixed(1); addProg(L.id); G.levelsDone.push(L.id);
+        vibrate('adult', P.vibMs, 2, 120); vibrate('child', P.vibMs, 2, 120); flashAll(false); const dur = playPhrase(L.ph); setStatus();
+        if (L.rel === 'song') setTimeout(() => { if (!running) return; G.state = 'songComplete'; G.song = true; setStatus(); say('Terminaron la canción.'); flashAll(true); const sd = playSong(); setTimeout(() => { if (running) closeSession(); }, sd * 1000 + 800); }, dur * 1000 + 300);
+        else setTimeout(() => { if (!running || G.state !== 'levelComplete') return; if (G.li < LEVELS.length - 1) { G.li++; startLevel(); } else closeSession(); }, dur * 1000 + 2200);
+      }
+      function vibrate(role, ms, reps, gap) { const st = ST[role]; st.vibUntil = performance.now() + reps * ms + (reps - 1) * (gap || 0) + 50; const el = panels[role]; el.classList.remove('vib'); void el.offsetWidth; el.classList.add('vib'); }
+      function flashAll(long) { const f = $('#flash'); f.className = ''; void f.offsetWidth; f.className = long ? 'long' : 'on'; }
+
+      function frame(now) {
+        if (!running) return; requestAnimationFrame(frame);
+        const dt = Math.min(.05, (now - last) / 1000 || 0); last = now;
+        keyDrive(dt); if (synth) synthDrive(now);
+        A.update(now, dt); C.update(now, dt);
+        const aA = A.active(now), cA = C.active(now), both = aA && cA, tol = curTol();
+        G.total += dt;
+        if (G.state === 'calibrating') { for (const r of ['adult', 'child']) { const st = ST[r]; if (st.has) G.calS[r].push({ t: now - G.calT0, x: st.tilt.x, y: st.tilt.y }); } if (now - G.calT0 > 6000) finishCal(); }
+        G.d = syncDist(curRel(), A.pos, C.pos, now);
+        G.inSync = G.inSync ? G.d <= P.hyst * tol : G.d < tol;
+        if (G.state === 'playing') {
+          const lt = G.lt; lt.juego += dt; lt.dS += G.d; lt.dN++;
+          if (both) { G.bothT += dt; if (G.inSync) { lt.sinc += dt; G.syncT += dt; if (lt.primera == null) lt.primera = +((now - G.t0) / 1000 - lt.inicio).toFixed(1); if (G.mode === 'levels') G.prog += dt; if (now - G.lastVib >= 1000) { vibrate('adult', P.vibMs, 1); vibrate('child', P.vibMs, 1); G.lastVib = now; } } }
+          if (!both) { if (G.idleSince == null) G.idleSince = now; const idle = now - G.idleSince; if (idle > P.idleAfter * 1000) { if (!G.pausedEp) { G.pausedEp = true; lt.pausas++; } G.prog = Math.max(0, G.prog - P.decay * dt); } if (appMode && idle > P.endAfter * 1000) { closeSession(); return; } }
+          else { if (G.pausedEp) { lt.reanud++; G.pausedEp = false; } G.idleSince = null; }
+          const L = curLevel();
+          if (L) {
+            if (L.rel !== 'song' && L.g[1] && !G.guideSwitched && G.prog >= curSec() / 2) { G.guideSwitched = true; setGuide(L.g[1]); }
+            if (G.prog >= curSec()) { if (L.rel === 'song' && G.part < L.parts.length - 1) partComplete(); else levelComplete(now); }
+          }
+          if (both && now - G.lagT > 500) { G.lagT = now; const ll = leadLag(now); G.ll = ll; if (ll) { lt.lagS += ll.lag; lt.lagN++; if (ll.lag < -.05) lt.adultoSigue++; } }
+        }
+        if (now - G.trajT > 100 && (A.has || C.has)) { G.trajT = now; G.traj.push([A.pos.x, A.pos.y, C.pos.x, C.pos.y].map(v => Math.round(v * 10) / 10)); if (G.traj.length > 3000) G.traj = G.traj.filter((_, i) => i % 2 === 0); }
+        audioUpdate(now, dt, aA, cA, both, tol);
+        if (ejeMode) lightUpdate(now, aA, cA, both, tol);
+        else if (now - G.drawT > 33) { G.drawT = now; drawBoard(now, aA, cA, both, tol); }
+      }
+
+      /* ---------- Audio en tres capas (Fase 5) ---------- */
+      function audioUpdate(now, dt, aA, cA, both, tol) {
+        if (!AU.ok()) return; if (!V.ok) vInit();
+        const t = AU.ctx.currentTime, live = G.state === 'playing' || G.state === 'calibrating';
+        const fa = hz(PA[clamp(Math.round((A.pos.y + 6) / 12 * (PA.length - 1)), 0, PA.length - 1)]);
+        V.aO.frequency.setTargetAtTime(fa, t, .05); V.aH.frequency.setTargetAtTime(fa * 2, t, .05);
+        const aOn = live && aA; V.aG.gain.setTargetAtTime(aOn ? .12 : 0, t, aOn ? .1 : .5);
+        const det = detune(G.d, tol); V.df += (det - V.df) * Math.min(1, dt * 3);
+        V.r1.frequency.setTargetAtTime(2 * fa, t, .05); V.r2.frequency.setTargetAtTime(2 * fa + V.df, t, .05); V.r3.frequency.setTargetAtTime(3 * fa, t, .05);
+        const rOn = G.state === 'playing' && both; V.rG.gain.setTargetAtTime(rOn ? .045 : 0, t, .15); V.fG.gain.setTargetAtTime(rOn && det === 0 ? .022 : 0, t, .2);
+        if (live && cA) { const cell = Math.round(C.pos.x) + ',' + Math.round(C.pos.y); if (cell !== C.cell && now - C.lastNote > 100) { C.cell = cell; C.lastNote = now; AU.tone(hz(PC[clamp(Math.round((C.pos.y + 6) / 12 * (PC.length - 1)), 0, PC.length - 1)]), 'marimba', clamp(.08 + C.speed / 45, .08, .22)); } }
+      }
+
+      /* ---------- Luz en dos mitades (Fase 6): lila adulto arriba, coral niño abajo; se funden en oliva ---------- */
+      const COL = { a: [179, 162, 220], c: [232, 94, 69], o: [143, 163, 62] };
+      const mix = (p, q, t) => p.map((v, i) => Math.round(v + (q[i] - v) * t)).join(',');
+      function lightUpdate(now, aA, cA, both, tol) {
+        const s = G.state === 'playing' && both ? clamp(1 - G.d / (2 * tol), 0, 1) : G.state === 'songComplete' ? 1 : 0;
+        let beat = 1; if (G.inSync && both && G.state === 'playing') { const f = curRel() === 'pulse' ? (A.rhythm(now).f || 1) : 1; beat = .72 + .28 * Math.sin(2 * Math.PI * f * now / 1000); }
+        if (G.state === 'calibrating') beat = .65 + .25 * Math.sin(now / 400);
+        const lvl = (st, act) => act ? clamp(.5 + st.speed / 14, .5, 1) : (G.state === 'songComplete' ? .8 : .14);
+        $('#hT').style.setProperty('--c', mix(COL.a, COL.o, s)); $('#hB').style.setProperty('--c', mix(COL.c, COL.o, s));
+        $('#hT').style.opacity = (lvl(A, aA) * beat).toFixed(3); $('#hB').style.opacity = (lvl(C, cA) * beat).toFixed(3);
+      }
+
+      /* ---------- Banco de prueba: plano, d, sincronía, progreso ---------- */
+      const cv = $('#plane'), g2 = cv.getContext('2d');
+      const STN = { idle: 'Listo', calibrating: 'Calibrando', playing: 'Jugando', levelComplete: 'Nivel logrado', songComplete: 'Canción completa' };
+      function setStatus() {
+        const L = curLevel(); $('#stName').textContent = STN[G.state] || '';
+        $('#stDesc').textContent = G.state === 'calibrating' ? 'Muévanse libremente: se mide el rango de cada persona.' : L ? ('Nivel ' + L.id + ' · ' + (L.rel === 'song' ? 'La canción · parte ' + (G.part + 1) + ' de 4: ' + REL_N[L.parts[G.part]] : L.n) + ' — ' + L.t) : 'Libre — el tono de relación busca el movimiento en común más cercano.';
+        $('#mLv').textContent = L ? 'Nivel ' + L.id + (L.rel === 'song' ? ' · parte ' + (G.part + 1) : '') : 'Libre';
+        $('#mGuide').textContent = L ? 'Guía ' + GN[G.guide] : '';
+      }
+      function drawBoard(now, aA, cA, both, tol) {
+        const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth; if (!W) return;
+        if (cv.width !== Math.round(W * dpr)) { cv.width = cv.height = Math.round(W * dpr); }
+        const k = cv.width / 13.2, o = cv.width / 2, X = x => o + x * k, Y = y => o - y * k, g = g2; g.clearRect(0, 0, cv.width, cv.height);
+        g.lineWidth = dpr; g.strokeStyle = 'rgba(43,37,54,.07)'; for (let i = -6; i <= 6; i++) { g.beginPath(); g.moveTo(X(i), Y(-6)); g.lineTo(X(i), Y(6)); g.moveTo(X(-6), Y(i)); g.lineTo(X(6), Y(i)); g.stroke(); }
+        g.strokeStyle = 'rgba(43,37,54,.28)'; g.beginPath(); g.moveTo(X(0), Y(-6)); g.lineTo(X(0), Y(6)); g.moveTo(X(-6), Y(0)); g.lineTo(X(6), Y(0)); g.stroke();
+        const trail = (st, col) => { g.strokeStyle = col; g.lineWidth = 2 * dpr; g.globalAlpha = .35; g.beginPath(); st.h.filter(q => now - q.t < 2000).forEach((q, i) => i ? g.lineTo(X(q.x), Y(q.y)) : g.moveTo(X(q.x), Y(q.y))); g.stroke(); g.globalAlpha = 1; };
+        trail(A, '#7B5FCB'); trail(C, '#E85E45');
+        const T = target(now);
+        if (T && A.has) {
+          g.fillStyle = 'rgba(179,162,220,.22)'; g.beginPath(); g.arc(X(T.x), Y(T.y), tol * k, 0, 7); g.fill();
+          g.strokeStyle = '#7B5FCB'; g.lineWidth = 2.5 * dpr; g.beginPath(); g.arc(X(T.x), Y(T.y), 9 * dpr, 0, 7); g.stroke();
+          if (C.has) {
+            g.setLineDash([5 * dpr, 5 * dpr]); g.strokeStyle = '#E85E45'; g.lineWidth = 2 * dpr; g.beginPath(); g.moveTo(X(C.pos.x), Y(C.pos.y)); g.lineTo(X(T.x), Y(T.y)); g.stroke(); g.setLineDash([]);
+            g.fillStyle = '#E85E45'; g.font = '800 ' + (12 * dpr) + 'px Nunito,system-ui'; g.fillText('d', (X(C.pos.x) + X(T.x)) / 2 + 6 * dpr, (Y(C.pos.y) + Y(T.y)) / 2 - 6 * dpr);
+          }
+        }
+        const dot = (st, col, r) => { if (!st.has) return; g.fillStyle = col; g.beginPath(); g.arc(X(st.pos.x), Y(st.pos.y), r * dpr, 0, 7); g.fill(); };
+        dot(A, '#7B5FCB', 11); dot(C, '#E85E45', 7.5);
+        $('#mD').textContent = 'd = ' + f1(G.d, 2) + ' · tolerancia ' + f1(tol, 2);
+        const sy = $('#mSync'); sy.textContent = G.inSync ? (both ? 'En sincronía' : 'Sincronía sin actividad') : 'Fuera de sincronía'; sy.classList.toggle('on', G.inSync && both);
+        $('#mProg').style.width = (curLevel() ? clamp(G.prog / curSec(), 0, 1) * 100 : 0) + '%';
+        const ra = A.rhythm(now), rc = C.rhythm(now); $('#mRhy').textContent = 'Ritmo · adulto ' + f1(ra.f, 2) + ' Hz · niño ' + f1(rc.f, 2) + ' Hz';
+        $('#mLead').textContent = !G.ll ? 'Quién guía: sin datos' : G.ll.lag > .05 ? 'Adelante: adulto (' + f1(G.ll.lag) + ' s)' : G.ll.lag < -.05 ? 'Adelante: niño (' + f1(-G.ll.lag) + ' s)' : 'Van a la par';
+        $('#aAct').textContent = aA ? 'Activo' : 'Quieto'; $('#cAct').textContent = cA ? 'Activo' : 'Quieto';
+        for (const role of ['adult', 'child']) { const el = panels[role], st = ST[role], d = el.querySelector('.dot'), r = st.range(); if (st.has) { d.style.display = 'block'; const fx = clamp(st.tilt.x / TILT / 2 + .5, 0, 1), fy = clamp(-st.tilt.y / TILT / 2 + .5, 0, 1); d.style.transform = 'translate(' + fx * el.clientWidth + 'px,' + fy * el.clientHeight + 'px) translate(-50%,-50%)'; } else d.style.display = 'none'; }
+        if (now - (G.ltT || 0) > 500) { G.ltT = now; renderLT(); }
+      }
+      const leadTxt = lt => !lt.lagN ? '–' : lt.adultoSigue / lt.lagN > .5 ? 'el niño (' + Math.round(lt.adultoSigue / lt.lagN * 100) + ' %)' : 'el adulto';
+      function renderLT() { $('#ltBody').innerHTML = G.lts.map(lt => '<tr><td>' + (lt.nivel === 'libre' ? 'Libre' : lt.nivel) + '</td><td>' + (lt.primera == null ? '–' : f1(lt.primera) + ' s') + '</td><td>' + (lt.juego ? Math.round(lt.sinc / lt.juego * 100) : 0) + ' %</td><td>' + (lt.dN ? f1(lt.dS / lt.dN, 2) : '–') + '</td><td>' + leadTxt(lt) + '</td><td>' + lt.pausas + ' / ' + lt.reanud + '</td><td>' + (lt.completado == null ? '–' : f1(lt.completado) + ' s') + '</td></tr>').join(''); }
+
+      /* ---------- Ajuste (Fase 8) ---------- */
+      const TUNE = [['tolScale', 'Tolerancia (× nivel)', .5, 1.5, .05, '×', 2], ['alpha', 'Suavizado de posición α', .05, .6, .01, '', 2], ['rangeA', 'Rango por defecto · adulto', 10, 60, 1, '°', 0], ['rangeC', 'Rango por defecto · niño', 15, 80, 1, '°', 0], ['onSpeed', 'Umbral de actividad', .5, 6, .1, ' u/s', 1], ['maxDetune', 'Desafinación máxima', 1, 8, .1, ' Hz', 1], ['secScale', 'Segundos por nivel (×)', .25, 2, .05, '×', 2], ['idleAfter', 'Inactividad antes de decaer', 1, 8, .5, ' s', 1]];
+      function drawTune() {
+        $('#tRows').innerHTML = TUNE.map(([k, l, a, b, s, u, d]) => '<label class="tr"><span>' + l + '</span><input type="range" min="' + a + '" max="' + b + '" step="' + s + '" value="' + P[k] + '" data-k="' + k + '"><b>' + f1(P[k], d) + u + '</b></label>').join('');
+        $$('#tRows input').forEach(i => i.oninput = () => { const row = TUNE.find(r => r[0] === i.dataset.k); P[row[0]] = +i.value; i.nextElementSibling.textContent = f1(P[row[0]], row[6]) + row[5]; store.set('balancin-ajuste', P); });
+      }
+      $('#tCopy').onclick = () => { try { navigator.clipboard.writeText(JSON.stringify(P, null, 2)); $('#tCopy').textContent = 'Copiado'; setTimeout(() => $('#tCopy').textContent = 'Copiar valores', 1200); } catch (e) { } };
+      $('#tReset').onclick = () => { Object.assign(P, P_DEF); store.set('balancin-ajuste', P); drawTune(); };
+      drawTune();
+      $('#bLevel').innerHTML = '<option value="free">Libre</option>' + LEVELS.map((L, i) => '<option value="' + i + '">' + L.id + ' · ' + L.n + '</option>').join('');
+      $('#bLevel').onchange = e => { const v = e.target.value; G.mode = v === 'free' ? 'free' : 'levels'; G.li = v === 'free' ? 0 : +v; if (running) beginPlay(); else startSession({ mode: G.mode, li: G.li }); };
+      $('#bCal').onclick = () => { if (running) startCal(); };
+      const SYN = [null, 'sync', 'cerca', 'lejos', 'cycle'], SYN_N = { sync: 'sintética · en sincronía', cerca: 'sintética · cerca', lejos: 'sintética · lejos', cycle: 'sintética · ciclo' };
+      const synLabel = () => $('#bSyn').textContent = 'Fuente: ' + (synth ? SYN_N[synth] : 'táctil');
+      $('#bSyn').onclick = () => { synth = SYN[(SYN.indexOf(synth) + 1) % SYN.length]; synLabel(); };
+      const voiceLabel = () => $('#bVoice').textContent = 'Voz: ' + (voiceOn ? 'activada' : 'desactivada');
+      $('#bVoice').onclick = () => { voiceOn = !voiceOn; store.set('balancin-voz', voiceOn); voiceLabel(); }; voiceLabel();
+      function setEje(on) { ejeMode = on; document.body.classList.toggle('modo-eje', on); scrollTo(0, 0); }
+      $('#ejeBtn').onclick = () => setEje(true);
+      $('#ejeExit').onclick = () => appMode ? closeSession() : setEje(false);
+      $('#bEnd').onclick = () => closeSession();
+      function download(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+      $('#bDl').onclick = $('#fDl').onclick = () => download('balancin-telemetria.json', JSON.stringify(report(), null, 2), 'application/json');
+
+      /* ---------- Telemetría (anónima: solo movimiento) ---------- */
+      function report() {
+        return {
+          proyecto: 'Balancín · mecánica v2 (prototipo HTML)', nota: 'Solo métricas de movimiento. Sin audio, imagen ni datos identificables.', inicio: new Date(G.T0 || Date.now()).toISOString(), modo: G.mode === 'free' ? 'libre' : 'niveles', duracion_s: +(G.total || 0).toFixed(1), en_sincronia_s: +(G.syncT || 0).toFixed(1), niveles_logrados: G.levelsDone || [], cancion_completa: !!G.song, parametros: P,
+          niveles: (G.lts || []).map(lt => ({ nivel: lt.nivel, tiempo_a_primera_sincronia_s: lt.primera, porcentaje_en_sincronia: lt.juego ? +(lt.sinc / lt.juego * 100).toFixed(1) : 0, d_promedio: lt.dN ? +(lt.dS / lt.dN).toFixed(2) : null, retraso_promedio_s: lt.lagN ? +(lt.lagS / lt.lagN).toFixed(2) : null, porcentaje_adulto_sigue_al_nino: lt.lagN ? Math.round(lt.adultoSigue / lt.lagN * 100) : null, pausas: lt.pausas, reanudaciones: lt.reanud, tiempo_para_completar_s: lt.completado }))
+        };
+      }
+
+      /* ---------- Cierre de sesión y recuerdo ---------- */
+      function sessionRecord() {
+        const lags = G.lts.filter(l => l.lagN); const lead = lags.length ? mean(lags.map(l => l.lagS / l.lagN)) : null; const step = Math.max(1, Math.ceil(G.traj.length / 300));
+        return { t: Date.now(), mode: G.mode, levels: [...G.levelsDone], dur: G.total, sync: G.total ? G.syncT / G.total : 0, song: G.song, lead, traj: G.traj.filter((_, i) => i % step === 0) };
+      }
+      function closeSession() {
+        if (!running) return; running = false; vSilence(); clearInterval(loopIv); unwake(); try { speechSynthesis.cancel(); } catch (e) { }
+        for (const r of ['adult', 'child']) panels[r]._pid = null; activePointers = 0; document.body.classList.remove('lock');
+        if (AU.ok()) [48, 52, 55].forEach((m, i) => AU.tone(hz(m), 'low', .16, 4, AU.ctx.currentTime + i * .12));
+        const rec = sessionRecord(); if (appMode && !DEMO && rec.dur > 2) { const s = store.get('balancin-sesiones-v2', []); s.unshift(rec); store.set('balancin-sesiones-v2', s.slice(0, 20)); }
+        G.state = 'idle'; renderFinal(rec); PARENT.final = 'home'; show('final'); setEje(false);
+      }
+      let lastRec = null;
+      function memoSVG(traj) {
+        let grid = ''; for (let i = -6; i <= 6; i += 2) grid += '<line x1="' + i + '" y1="-6" x2="' + i + '" y2="6" stroke="#EFECE4" stroke-width=".05"/><line x1="-6" y1="' + i + '" x2="6" y2="' + i + '" stroke="#EFECE4" stroke-width=".05"/>';
+        const pl = (ix, iy) => traj.map(p => p[ix] + ',' + (-p[iy])).join(' ');
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6.6 -6.6 13.2 13.2"><rect x="-6.6" y="-6.6" width="13.2" height="13.2" rx="1" fill="#fff"/>' + grid + '<polyline points="' + pl(0, 1) + '" fill="none" stroke="#9F8AD9" stroke-width=".16" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/><polyline points="' + pl(2, 3) + '" fill="none" stroke="#E85E45" stroke-width=".11" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/></svg>';
+      }
+      function renderFinal(r) {
+        lastRec = r; const got = getProg(), mins = Math.round(r.dur / 60), dur = mins >= 1 ? mins + ' min' : Math.round(r.dur) + ' s';
+        $('#fTitle').textContent = r.song ? 'Terminaron la canción.' : r.mode === 'free' ? 'Sonaron juntos.' : r.levels.length ? (r.levels.length === 1 ? 'Sumaron una parte de la canción.' : 'Sumaron ' + r.levels.length + ' partes de la canción.') : 'Hoy fue de práctica.';
+        $('#fSub').textContent = dur + ' · ' + Math.round(r.sync * 100) + ' % del tiempo en sincronía';
+        $('#fSongWrap').hidden = r.mode === 'free'; $('#fSong').innerHTML = songBar(got, r.levels); $('#fCount').textContent = got.length + ' de 7 partes';
+        $('#fMemo').innerHTML = memoSVG(r.traj || []);
+        $('#fLead').textContent = r.lead == null ? '' : r.lead < -.05 ? 'Esta vez el adulto siguió más al niño.' : r.lead > .05 ? 'Esta vez el niño siguió más al adulto.' : 'Se guiaron por turnos.';
+        $('#fListen').textContent = r.mode === 'free' ? 'Jugar otra vez' : 'Escuchar la canción';
+        $('#fDl').hidden = appMode;
+      }
+      $('#fListen').onclick = () => { if (lastRec && lastRec.mode === 'free') { pend = { mode: 'free', li: 0 }; PARENT.insert = 'mode'; goInsert(); } else { AU.ensure(); const got = getProg(); playSong(got.length ? got.slice().sort((a, b) => a - b) : [1]); } };
+      $('#fSave').onclick = () => download('balancin-recuerdo.svg', memoSVG((lastRec && lastRec.traj) || []), 'image/svg+xml');
+
+      /* ---------- Pérdida de conexión de un stick ---------- */
+      function loseStick(role, cause) {
+        running = false; vSilence(); clearInterval(loopIv); unwake();
+        if (AU.ok()) { const t = AU.ctx.currentTime; AU.bus.gain.cancelScheduledValues(t); AU.bus.gain.setValueAtTime(AU.bus.gain.value, t); AU.bus.gain.linearRampToValueAtTime(.0001, t + 1.2); }
+        const big = role === 'adult', bat = cause === 'bateria';
+        $('#lostStick').className = 'stick ' + (big ? 'big' : 'sm'); $('#lostTitle').textContent = 'Se perdió el stick ' + (big ? 'grande' : 'pequeño');
+        $('#lostCause').textContent = bat ? 'Batería agotada' : 'Fuera de alcance';
+        $('#lostText').textContent = bat ? 'El juego quedó en pausa y el sonido se apagó suavemente. Carga el stick un momento y mantén pulsado para volver.' : 'El juego quedó en pausa y el sonido se apagó suavemente. Acerca el stick al eje y mantén pulsado para reconectarlo.';
+        $('#lostTips').textContent = bat ? 'Con diez minutos de carga alcanza para una sesión.' : 'Lo logrado en los niveles no se pierde.';
+        const b = $('#hLost'); b.classList.remove('done'); b.querySelector('.lab').textContent = 'Mantener 3 s para reconectar'; b.querySelector('.bar i').style.width = '0';
+        document.body.classList.remove('modo-eje', 'lock'); ejeMode = false; show('lost');
+      }
+      function resumeSession() {
+        if (AU.ok()) { const t = AU.ctx.currentTime; AU.bus.gain.cancelScheduledValues(t); AU.bus.gain.setValueAtTime(.0001, t); AU.bus.gain.linearRampToValueAtTime(.8, t + .6); }
+        A.reset(); C.reset(); G.idleSince = null; if (G.state === 'idle' || !G.state) { G.lts = G.lts || []; beginPlay(); } show('play'); if (appMode) setEje(true); running = true; last = performance.now(); wake(); loopStart(); requestAnimationFrame(frame);
+      }
+      window.simularPerdida = (role, cause) => { if (!G.t0) Object.assign(G, { mode: 'levels', lts: [], levelsDone: [], traj: [], total: 0, syncT: 0, t0: performance.now() }); loseStick(role || 'child', cause || 'alcance'); };
+
+      /* ---------- Onboarding ---------- */
+      const steps = $$('.st'), progLi = $$('.prog li');
+      const curStep = () => steps.findIndex(s => s.classList.contains('cur'));
+      function goStep(i) { steps.forEach((s, k) => s.classList.toggle('cur', k === i)); progLi.forEach((p, k) => { p.classList.toggle('done', k < i); p.classList.toggle('cur', k === i); }); scrollTo(0, 0); }
+      $('#b1').onclick = () => goStep(1); $('#b2').onclick = () => goStep(2); $('#b3').onclick = () => goStep(3);
+      const linked = { h1: false, h2: false };
+      function hold(btn, onDone) {
+        let t0 = null, raf = 0, blink = 0; const leds = [btn.querySelector('.led'), btn.dataset.fig && $(btn.dataset.fig)].filter(Boolean), bar = btn.querySelector('.bar i'), lab = btn.querySelector('.lab');
+        const set = on => leds.forEach(l => l.classList.toggle('lit', on));
+        const cancel = () => { if (t0 == null) return; t0 = null; cancelAnimationFrame(raf); clearInterval(blink); set(false); bar.style.width = '0'; };
+        const finish = () => {
+          clearInterval(blink); t0 = null; set(true); bar.style.width = '100%'; btn.classList.add('done'); lab.textContent = btn.dataset.done; AU.tone(hz(72), 'glock', .2, .8);
+          if (onDone) setTimeout(onDone, 700); else { linked[btn.id] = true; if (linked.h1 && linked.h2) setTimeout(() => goStep(4), 900); }
+        };
+        btn.addEventListener('pointerdown', e => {
+          if (btn.classList.contains('done')) return; AU.ensure(); btn.setPointerCapture(e.pointerId); t0 = performance.now(); let on = false; blink = setInterval(() => { on = !on; set(on); }, 125);
+          const tick = () => { const p = Math.min(1, (performance.now() - t0) / 3000); bar.style.width = p * 100 + '%'; if (p >= 1) finish(); else raf = requestAnimationFrame(tick); }; raf = requestAnimationFrame(tick);
+        });
+        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => btn.addEventListener(ev, cancel));
+      }
+      hold($('#h1')); hold($('#h2')); hold($('#hLost'), resumeSession);
+      $('#lostEnd').onclick = () => { running = true; closeSession(); };
+
+      /* ---------- Navegación del flujo del usuario ---------- */
+      const BACK = { prep: 1, mode: 1, levels: 1, pre: 1, insert: 1, final: 1 };
+      const PARENT = { prep: 'login', mode: 'home', levels: 'home', pre: 'levels', insert: 'pre', final: 'home' };
+      let pend = { mode: 'levels', li: 0 }, insT = 0, skipCal = false;
+      function show(id) { $$('.screen').forEach(s => s.classList.toggle('active', s.id === id)); scrollTo(0, 0); const back = (appMode && BACK[id]) || (!appMode && id === 'final'); $('#backBtn').style.display = back ? 'flex' : 'none'; document.body.classList.toggle('has-back', !!back); }
+      function nav(id) { if (id === 'home') goHome(); else if (id === 'mode') goMode(); else if (id === 'levels') goLevels(); else if (id === 'prep') { goStep(4); show('prep'); } else show(id); }
+      $('#backBtn').onclick = () => { const cur = ($('.screen.active') || {}).id; if (!appMode) { startSession({ mode: G.mode, li: G.li }); return; } if (cur === 'prep' && curStep() > 0) { goStep(curStep() - 1); return; } if (cur === 'insert') cancelInsert(); nav(PARENT[cur]); };
+      const LS_ON = 'balancin-onboarded';
+      window.usuarioNuevo = () => { store.del(LS_ON); store.del('balancin-sesiones-v2'); store.del('balancin_progress'); };
+      function afterLogin() { if (store.get(LS_ON, false)) goHome(); else { PARENT.prep = 'login'; goStep(0); show('prep'); } }
+      $('#gbtn').onclick = () => { const b = $('#gbtn'); b.classList.add('busy'); b.querySelector('.glab').textContent = 'Conectando con Google…'; setTimeout(() => { b.classList.remove('busy'); b.querySelector('.glab').textContent = 'Continuar con Google'; afterLogin(); }, 1100); };
+      $('#guest').onclick = afterLogin;
+      $('#b5').onclick = () => { store.set(LS_ON, true); PARENT.levels = 'prep'; goLevels(); };
+      $('#homeGuide').onclick = () => { PARENT.prep = 'home'; goStep(0); show('prep'); };
+      $('#homePlay').onclick = () => { PARENT.levels = 'home'; goLevels(); };
+      const TIPS = ['Cuando el sonido deja de ondular, van juntos.', 'Adulto: los gestos pequeños bastan; tu stick se ajusta a tu rango.', 'En «Espejo», pónganse frente a frente.', 'En «Sígueme», dejen que el niño invente primero.', 'Lo logrado no se pierde: pueden volver otro día.'];
+      let tipI = 0; const setTip = () => $('#tip').textContent = TIPS[tipI]; setTip(); $('#tipNext').onclick = () => { tipI = (tipI + 1) % TIPS.length; setTip(); };
+      const fmtDay = t => { const d = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 864e5); if (d === 0) return 'Hoy'; if (d === 1) return 'Ayer'; const s = new Date(t).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'short' }); return s.charAt(0).toUpperCase() + s.slice(1); };
+      function goHome(list) {
+        const s = list || store.get('balancin-sesiones-v2', []);
+        $('#hbList').innerHTML = s.length ? s.slice(0, 6).map((x, i) => {
+          const pct = Math.round((x.sync || 0) * 100), lab = x.mode === 'free' ? 'Libre · ' + pct + ' % juntos' : x.song ? 'Canción completa' : x.levels.length ? x.levels.length + (x.levels.length === 1 ? ' parte' : ' partes') : 'Práctica';
+          return '<div class="hbS" role="button" tabindex="0" data-i="' + i + '"><div class="info"><div class="top"><span>' + fmtDay(x.t) + ' · ' + lab + '</span><span>' + Math.max(1, Math.round(x.dur / 60)) + ' min</span></div>' + (x.mode === 'free' ? '<span class="sbar"><i style="width:' + pct + '%"></i></span>' : '<span class="song">' + songBar(x.levels) + '</span>') + '</div><button class="shareBtn" aria-label="Compartir sesión"><i></i></button></div>';
+        }).join('')
+          : '<p class="small" style="background:#fff;border-radius:18px;padding:16px;text-align:center">Su primera sesión aparecerá aquí.</p>';
+        $$('#hbList .hbS').forEach(el => { const open = () => { renderFinal(s[+el.dataset.i]); PARENT.final = 'home'; show('final'); }; el.onclick = open; el.onkeydown = e => { if (e.key === 'Enter') open(); }; el.querySelector('.shareBtn').onclick = e => e.stopPropagation(); });
+        show('home');
+      }
+      function goMode() { const got = getProg(); $('#mdArt').innerHTML = LEVELS.map((L, i) => '<i class="' + (got.includes(L.id) ? 'on' : '') + '" style="height:' + (24 + i * 12) + 'px"></i>').join(''); $('#mdProg').textContent = got.length + ' de 7 partes de la canción'; show('mode'); }
+      $('#mdFree').onclick = () => { pend = { mode: 'free', li: 0 }; PARENT.insert = 'mode'; goInsert(); };
+      $('#mdLv').onclick = () => goLevels();
+      function goLevels() {
+        const got = getProg(), sug = (LEVELS.find(L => !got.includes(L.id)) || LEVELS[6]).id;
+        $('#lvSong').innerHTML = songBar(got); $('#lvCount').textContent = got.length + ' de 7 partes';
+        // Se avanza en orden: un nivel se abre al lograr el anterior; los ya logrados se pueden repetir.
+        const open = L => L.id === 1 || got.includes(L.id) || got.includes(L.id - 1);
+        $('#lvList').innerHTML = LEVELS.map((L, i) => { const lk = !open(L); return '<button class="lvc' + (L.id === 7 ? ' wide' : '') + (L.id === sug ? ' sug' : '') + (lk ? ' lock' : '') + '" data-i="' + i + '"' + (lk ? ' aria-disabled="true"' : '') + '>' + pict(L, '') + '<span class="tx"><b>' + L.id + ' · ' + L.n + '</b><span class="h">' + L.t + '</span><span class="dif">' + [1, 2, 3].map(k => '<i class="' + (k <= L.d ? 'on' : '') + '"></i>').join('') + '<em>' + ['', 'Fácil', 'Media', 'Difícil'][L.d] + '</em>' + (got.includes(L.id) ? '<span class="tag ok">Lograda</span>' : L.id === sug ? '<span class="tag sg">Sugerido</span>' : lk ? '<span class="tag lk">Primero el nivel ' + (L.id - 1) + '</span>' : '') + '</span></span></button>'; }).join('');
+        $$('#lvList .lvc').forEach(b => b.onclick = () => { if (!b.classList.contains('lock')) goPre(+b.dataset.i); });
+        show('levels');
+      }
+      function goPre(i) {
+        const L = LEVELS[i], [gr, gt] = guideOf(L); pend = { mode: 'levels', li: i };
+        $('#preArt').innerHTML = pict(L, ''); $('#preK').textContent = 'Nivel ' + L.id + ' de 7 · ' + ['', 'Fácil', 'Media', 'Difícil'][L.d];
+        $('#preN').textContent = L.n; $('#preT').textContent = L.t; $('#preG').className = 'guide ' + gr; $('#preG span').textContent = gt;
+        show('pre');
+      }
+      $('#preGo').onclick = () => { PARENT.insert = 'pre'; goInsert(); };
+      function cancelInsert() { clearTimeout(insT); const b = $('#insBar'); b.style.transition = 'none'; b.style.width = '0'; }
+      function goInsert() {
+        const L = pend.mode === 'levels' ? LEVELS[pend.li] : null; $('#insLv').textContent = L ? 'Nivel ' + L.id + ' · ' + L.n : 'Modo libre';
+        show('insert'); cancelInsert(); const b = $('#insBar'); void b.offsetWidth; b.style.transition = 'width 6s linear'; b.style.width = '100%'; insT = setTimeout(irisToEje, 6000);
+      }
+      function irisToEje() { const ir = $('#iris'); ir.classList.remove('out'); ir.classList.add('on'); insT = setTimeout(() => { goEje(); requestAnimationFrame(() => { ir.classList.add('out'); setTimeout(() => ir.classList.remove('on', 'out'), 450); }); }, 820); }
+      function goEje() { clearTimeout(insT); document.body.classList.add('modo-eje'); ejeMode = true; startSession({ mode: pend.mode, li: pend.li, cal: !skipCal }); setEje(true); }
+
+      /* ---------- Enlaces por hash (vistas previas del canvas) ---------- */
+      const demoTraj = (n, err) => Array.from({ length: n }, (_, i) => { const s = i * .1, ax = 3.6 * Math.sin(s * 1.05), ay = 4.4 * Math.sin(s * 1.6 + .5); return [ax, ay, ax * .9 + err * Math.sin(s * .83 + 1), ay + err * Math.cos(s * .71)].map(v => Math.round(clamp(v, -6, 6) * 10) / 10); });
+      const H = location.hash.slice(1).split('&'), deep = H[0] || 'app', prm = k => { const x = H.find(s => s.startsWith(k + '=')); return x ? x.slice(k.length + 1) : null; };
+      if (deep === 'banco') {
+        appMode = false; synth = prm('demo'); synLabel(); const lv = prm('lv');
+        $('#bLevel').value = lv ? String(+lv - 1) : 'free'; startSession({ mode: lv ? 'levels' : 'free', li: lv ? +lv - 1 : 0 });
+      } else {
+        appMode = true; const v = deep.split('=')[1] || 'login';
+        if (v !== 'login' && v !== 'onboarding') DEMO = true;
+        if (v === 'login') show('login');
+        else if (v === 'onboarding') { goStep(0); show('prep'); }
+        else if (v === 'home') { PROG_OVR = [1, 2, 3, 4]; const d = 864e5, n = Date.now(); goHome([{ t: n - d, mode: 'levels', levels: [3, 4], dur: 640, sync: .46, traj: demoTraj(300, .8), lead: -.2 }, { t: n - 3 * d, mode: 'free', levels: [], dur: 420, sync: .31, traj: demoTraj(300, 1.6), lead: .1 }, { t: n - 6 * d, mode: 'levels', levels: [1, 2], dur: 510, sync: .38, traj: demoTraj(300, 1.1), lead: .3 }]); }
+        else if (v === 'modo') { PROG_OVR = [1, 2, 3]; PARENT.mode = 'home'; goMode(); }
+        else if (v === 'niveles') { PROG_OVR = [1, 2, 3]; goLevels(); }
+        else if (v === 'antes') { PROG_OVR = [1, 2, 3]; goPre(clamp((+prm('lv') || 4) - 1, 0, 6)); }
+        else if (v === 'insert') { PROG_OVR = []; pend = { mode: 'levels', li: 0 }; goInsert(); }
+        else if (v === 'eje') { PROG_OVR = []; synth = prm('demo') || 'cycle'; skipCal = true; pend = { mode: 'levels', li: clamp((+prm('lv') || 1) - 1, 0, 6) }; goEje(); }
+        else if (v === 'final') { PROG_OVR = [1, 2, 3, 4, 5, 6, 7]; renderFinal({ mode: 'levels', levels: [5, 6, 7], dur: 780, sync: .52, song: true, lead: -.2, traj: demoTraj(700, .7) }); show('final'); }
+        else if (v === 'perdida' || v === 'bateria') window.simularPerdida(v === 'bateria' ? 'adult' : 'child', v === 'bateria' ? 'bateria' : 'alcance');
+        else show('login');
+      }
+    })();
+  </script>
+</body>
+
+</html>

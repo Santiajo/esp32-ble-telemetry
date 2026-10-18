@@ -1,0 +1,10 @@
+Balancín · prototipo HTML · mecánica v2
+
+Abrir index.html en el navegador del celular o del computador. Arranca en el inicio de sesión y recorre:
+Google → preparación (solo la primera vez) → home → modo (Libre o Niveles) → nivel → colocar en el eje → juego (solo luz en dos mitades) → recuerdo.
+
+- El sonido y la voz de consigna requieren un primer toque en la pantalla.
+- Sin sticks, cada mitad de la pantalla simula un stick: arrastrar el dedo = inclinarlo (izquierda: adulto, derecha: niño).
+- Banco de prueba del equipo (plano, distancia d en vivo, ajustes, telemetría por nivel): index.html#banco
+  Con fuente sintética: index.html#banco&lv=1&demo=cycle  (demo = sync | cerca | lejos | cycle)
+- El progreso de la canción se guarda en este navegador (clave balancin_progress).
