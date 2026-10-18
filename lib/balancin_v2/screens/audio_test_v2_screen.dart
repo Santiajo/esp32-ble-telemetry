@@ -54,6 +54,12 @@ class _AudioTestV2ScreenState extends State<AudioTestV2Screen> with SingleTicker
   final Map<Role, int?> _pointer = {Role.adult: null, Role.child: null};
   double _lastUi = 0;
 
+  /// Al lograr el nivel la sesión se cierra (en la app irá al final). Aquí se
+  /// avisa y se vuelve a empezar sola a los 4 s, para que no parezca colgada.
+  static const double autoRestartMs = 4000;
+  double? _closedAt;
+  String _closedReason = '';
+
   @override
   void initState() {
     super.initState();
@@ -88,6 +94,7 @@ class _AudioTestV2ScreenState extends State<AudioTestV2Screen> with SingleTicker
 
   void _restart() {
     final now = AppClock.nowMs();
+    _closedAt = null;
     _layers
       ..resetChild()
       ..startPad(now);
@@ -96,6 +103,8 @@ class _AudioTestV2ScreenState extends State<AudioTestV2Screen> with SingleTicker
 
   void _frame() {
     final now = AppClock.nowMs();
+    final closedAt = _closedAt;
+    if (closedAt != null && now - closedAt > autoRestartMs) _restart();
     _audio.notes(_layers.firePad(now, _engine, _progress), now);
     _handle(_engine.tick(now), now);
     if (_engine.running) _audio.notes(_layers.update(now, _engine.lastDt, _engine), now);
@@ -116,12 +125,18 @@ class _AudioTestV2ScreenState extends State<AudioTestV2Screen> with SingleTicker
         case LevelCompletedEvent(:final levelId):
           if (!_progress.contains(levelId)) _progress.add(levelId);
           _addLog('nivel $levelId logrado');
-        case SessionClosedEvent():
+        case SessionClosedEvent(:final byIdle, :final record):
           _layers
             ..silence()
             ..stopPad();
           _audio.playClosing();
-          _addLog('sesión cerrada · «Reiniciar» para otra');
+          _closedAt = now;
+          _closedReason = byIdle
+              ? 'Sesión cerrada: 30 s sin juego'
+              : record.levels.isNotEmpty
+                  ? '¡Nivel logrado! En la app aquí se pasa al final'
+                  : 'Sesión terminada';
+          _addLog('sesión cerrada');
         default:
           break;
       }
@@ -198,10 +213,26 @@ class _AudioTestV2ScreenState extends State<AudioTestV2Screen> with SingleTicker
         _status(e, det),
         const SizedBox(height: 8),
         Expanded(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(child: _panel(Role.adult, 'Adulto', lila)),
-            const SizedBox(width: 8),
-            Expanded(child: _panel(Role.child, 'Niño', coral)),
+          child: Stack(fit: StackFit.expand, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Expanded(child: _panel(Role.adult, 'Adulto', lila)),
+              const SizedBox(width: 8),
+              Expanded(child: _panel(Role.child, 'Niño', coral)),
+            ]),
+            if (_closedAt != null)
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(18)),
+                  child: Text(
+                    '$_closedReason.\nLos puntos quedan quietos porque el juego terminó.\n'
+                    'Vuelve a empezar en ${((autoRestartMs - (AppClock.nowMs() - _closedAt!)) / 1000).ceil().clamp(0, 9)} s…',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, height: 1.4),
+                  ),
+                ),
+              ),
           ]),
         ),
         const SizedBox(height: 6),
