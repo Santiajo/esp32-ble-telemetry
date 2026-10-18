@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../balancin_v2/screens/audio_test_v2_screen.dart';
+import '../../balancin_v2/screens/bench_screen.dart';
 import '../../screens/dashboard_screen.dart';
 import '../platform/audio_engine.dart';
 import '../platform/stick_hub.dart';
@@ -405,6 +406,32 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: const Text(
               'Prueba de audio',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Mecánica v2 (rama mecanica-v2): banco de prueba con plano limitado
+          OutlinedButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => BenchScreen(hub: _hub)),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              backgroundColor: const Color(0xFF7A8B34),
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFF7A8B34), width: 1.5),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            child: const Text(
+              'Banco de prueba v2',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,

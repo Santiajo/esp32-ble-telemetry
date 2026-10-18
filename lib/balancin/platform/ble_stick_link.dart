@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../../controllers/esp_device_controller.dart';
+import '../core/ble/imu_frame_parser.dart';
 import '../../core/ble/ble_constants.dart';
 import '../core/gesture/imu_gesture_reader.dart';
 import '../session/board_session.dart';
@@ -37,7 +38,13 @@ class BleStickLink extends ChangeNotifier {
       nombreEsperado: role == StickRole.adult ? BleConstants.nameStickA : BleConstants.nameStickB,
       onLog: onLog,
     );
-    controller.onImuSample = (s) => reader.addSample(s, clock());
+    controller.onImuSample = (s) {
+      final t = clock();
+      reader.addSample(s, t);
+      for (final l in List.of(sampleListeners)) {
+        l(s, t);
+      }
+    };
     controller.addListener(notifyListeners);
   }
 
@@ -50,6 +57,10 @@ class BleStickLink extends ChangeNotifier {
   final ImuGestureReader reader;
 
   late final EspDeviceController controller;
+
+  /// Otros consumidores de cada muestra v2 con su hora de llegada (la mecánica v2
+  /// cuelga aquí su lector de inclinación y el grabador de trazas).
+  final List<void Function(ImuSample sample, double arrivalMs)> sampleListeners = [];
 
   bool _disposed = false;
 
@@ -93,6 +104,7 @@ class BleStickLink extends ChangeNotifier {
     if (_disposed) return;
     _disposed = true;
     controller.onImuSample = null;
+    sampleListeners.clear();
     controller.removeListener(notifyListeners);
     controller.dispose();
     super.dispose();
