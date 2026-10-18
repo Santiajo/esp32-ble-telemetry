@@ -147,6 +147,9 @@ class SyncEngine {
   bool song = false;
 
   bool running = false;
+
+  /// `dt` (s, con tope de 0,05) del último [tick], para las capas de audio.
+  double lastDt = 0;
   bool _closed = true;
   double _last = 0;
 
@@ -272,6 +275,7 @@ class SyncEngine {
     var dt = (now - _last) / 1000;
     if (!dt.isFinite || dt < 0) dt = 0;
     if (dt > 0.05) dt = 0.05;
+    lastDt = dt;
     _last = now;
     drive?.call(now);
     final p = params;

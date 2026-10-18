@@ -4,12 +4,15 @@
 //   node tool/parity/gen_golden.mjs
 // Cada escenario se reproduce aquí con el mismo reloj (60 fps) y la misma
 // fuente sintética, y se comparan estados, d, progreso, posiciones, eventos,
-// telemetría y registro de sesión.
+// telemetría, registro de sesión y audio (objetivos de las voces continuas y
+// cada nota: niño, pad y acorde de cierre).
 
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/core/audio/layers.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/core/audio/synth_v2.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/sync_engine.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/synthetic_source.dart';
 
@@ -70,13 +73,33 @@ void main() {
         if (q != null) synthDrive(e, q, now);
       };
       final events = <Map<String, Object?>>[];
+      final tones = <Map<String, Object?>>[];
+      final progress = [for (final v in (sc['progress'] as List? ?? const [])) v as int];
+      final layers = AudioLayers();
       Map<String, Object?>? record;
+      void notes(List<NoteCmd> cmds) {
+        for (final n in cmds) {
+          tones.add({'t': n.at, 'freq': midiHz(n.midi), 'fam': n.family.name, 'gain': n.gain});
+        }
+      }
+
       void collect(List<SyncEvent> evs) {
         for (final ev in evs) {
           final j = _eventJson(ev);
           if (j.isNotEmpty) events.add(j);
+          // En el arnés el progreso solo se guarda si el escenario lo trae (PROG_OVR);
+          // si no, el almacenamiento del prototipo es un stub y el pad no tiene notas.
+          if (ev is LevelCompletedEvent && sc.containsKey('progress') && !progress.contains(ev.levelId)) {
+            progress.add(ev.levelId);
+          }
           if (ev is SessionClosedEvent && record == null) {
             record = ev.record.toJson();
+            layers
+              ..silence()
+              ..stopPad();
+            for (final t in closingTones()) {
+              tones.add({'t': ev.at, 'freq': midiHz(t.midi), 'fam': 'low', 'gain': t.gain});
+            }
           }
         }
       }
@@ -87,6 +110,9 @@ void main() {
         calibrate: sc['cal'] as bool,
         now: t0,
       ));
+      layers
+        ..resetChild()
+        ..startPad(t0);
       final actions = (sc['actions'] as List).cast<Map<String, dynamic>>();
       final samples = (sc['samples'] as List).cast<Map<String, dynamic>>();
       var si = 0;
@@ -95,7 +121,9 @@ void main() {
         for (final a in actions) {
           if (a['f'] == f) quality = _q(a['synth']);
         }
+        notes(layers.firePad(now, e, progress));
         collect(e.tick(now));
+        if (e.running) notes(layers.update(now, e.lastDt, e));
         if (f % sampleEvery == 0) {
           final s = samples[si++];
           final at = '${sc['name']} f=$f';
@@ -111,10 +139,21 @@ void main() {
           _deepClose('$at niño', [e.child.pos.x, e.child.pos.y, e.child.speed], s['c']);
           expect(e.adult.active(now), s['aAct'], reason: '$at adulto activo');
           expect(e.child.active(now), s['cAct'], reason: '$at niño activo');
+          _deepClose('$at audio', [
+            layers.adultHz.target,
+            layers.adultGain.target,
+            layers.adultGain.tau,
+            layers.rel2Hz.target,
+            layers.relGain.target,
+            layers.fifthGain.target,
+            layers.fifthGain.tau,
+            layers.df,
+          ], s['au']);
         }
       }
       expect(si, samples.length);
       _deepClose('${sc['name']} eventos', events, sc['events']);
+      _deepClose('${sc['name']} notas', tones, sc['tones']);
 
       final rep = e.report();
       final want = sc['report'] as Map<String, dynamic>;
