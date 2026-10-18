@@ -105,7 +105,7 @@ El prototipo recibe la inclinación ya hecha (el dedo simula ±60°). En el tel�
      - `k = 0,02` cuando `| |a| − |a|ᵣₑₚₒₛₒ | < 0,15 g`;
      - `k = 0` cuando el gesto es brusco (solo manda el giroscopio).
 2. **Neutro `g₀`:** el promedio de `ĝ` durante el primer segundo de la calibración (§4.3). Ese momento es la posición de descanso de cada persona.
-3. **Ejes del usuario:** `e_arriba` y `e_derecha` en el marco del sensor, ortonormalizados respecto de `g₀`. Los fija el **asistente de ejes** (§5.3) una vez por stick y se guardan con su MAC.
+3. **Ejes del usuario:** `e_arriba` y `e_derecha` en el marco del sensor, ortonormalizados respecto de `g₀`. Por defecto `e_derecha` = eje X del sensor y `e_arriba` = `g₀ × e_derecha` (§10.1). El **asistente de ejes** (§5.3) puede corregirlos una vez por stick; se guardan con su MAC.
 4. **Ángulos:** `tiltY = atan2(ĝ·e_arriba, ĝ·g₀)` y `tiltX = atan2(ĝ·e_derecha, ĝ·g₀)`, en grados.
 5. A partir de aquí el stick real entrega `(tiltX, tiltY)`, lo mismo que el dedo. El resto del motor no distingue la fuente.
 
@@ -342,7 +342,7 @@ El motor es **determinista**: `tick(now, adult, child)` devuelve el estado y los
 - Rama `mecanica-v2`, prototipo en `reference/mecanica-v2/` y este plan.
 - Pendiente del usuario: decidir si se suben a GitHub `balancin` y `mecanica-v2`.
 
-### Fase 1 · Núcleo de sincronía en Dart puro (Claude)
+### Fase 1 · Núcleo de sincronía en Dart puro (Claude) ✅ (17-10-2026)
 - `params`, `levels`, `stick_state`, `calibration`, `sync_engine`, `lead_lag`, `synthetic_source`, `light_model` y telemetría.
 - **Tests de paridad con el prototipo:** se ejecuta el JS del prototipo con Node sobre escenarios sintéticos (sync, cerca, lejos, ciclo, pausa de 4 s, quietud de 31 s) y se comparan `d`, `inSync`, `prog`, el momento del cambio de guía y del nivel logrado, y el JSON, con tolerancia de 1e-6.
 - **Tests de límite:** cualquier entrada (±1000°, NaN, saltos) deja `pos` en [−6, 6].
@@ -433,14 +433,23 @@ El motor es **determinista**: `tick(now, adult, child)` devuelve el estado y los
 | La voz del sistema (TTS) varía según el teléfono | Es un marcador; v3 usa audios grabados. Se puede desactivar. |
 | El niño suena solo (cambio respecto de v1) | Es decisión del prototipo (V1). Se observa en la prueba con díadas. |
 
-## 10. Preguntas abiertas
+## 10. Decisiones del usuario (antes preguntas abiertas)
 
-1. **¿Cómo se sostiene el stick y cómo va montada la placa dentro?** El asistente de ejes lo resuelve en cualquier caso, pero ayuda a elegir los ejes por defecto.
-2. **¿Qué hace la app al lograr el nivel 1?** Propuesta: ir al final. Alternativa: mostrar «Nivel 2 próximamente» y volver a la lista.
-3. **¿Se mantiene el interruptor «Sesión de estudio» de v1?** El prototipo guarda las sesiones siempre, en el teléfono. Propuesta: guardar siempre el historial y exportar el JSON solo desde el banco.
+1. **Montaje y forma de sostener el stick.** El stick es la ESP32 con el MPU6050 pegado. Se sostiene **vertical, hacia arriba**, en la mano. Mover la muñeca hacia los lados mueve el **eje X del sensor**. Consecuencias:
+   - en reposo la gravedad cae sobre el eje largo de la placa; el neutro `g₀` lo mide la calibración;
+   - `e_derecha` por defecto es el **eje X** del sensor (inclinar hacia los lados → X del plano);
+   - `e_arriba` por defecto es el eje restante, perpendicular a X y a `g₀`: **inclinar hacia adelante o atrás → Y del plano** («subir y bajar» en el nivel 1);
+   - el signo de cada eje se confirma en la fase 5 con el asistente de ejes (§5.3). Si los dos sticks tienen el mismo montaje, basta con los valores por defecto.
+2. **Al lograr el nivel 1 se va al final**, con:
+   - el dibujo de lo que hicieron los sticks;
+   - la barra de la canción con la parte nueva marcada;
+   - «Escuchar la canción», «Guardar el recuerdo» y el texto de quién guió.
+3. **Sin interruptor «Sesión de estudio».** El historial se guarda siempre, solo en el teléfono. El JSON de telemetría se exporta desde el banco.
 
 ## 11. Registro
 
 | Fecha | Fase | Nota |
 |---|---|---|
 | 17-10-2026 | 0 | Plan v2. Rama `mecanica-v2` desde `balancin` (`6d26705`). Prototipo copiado en `reference/mecanica-v2/`. Decisiones V1–V6. |
+| 17-10-2026 | 0 | Respuestas del usuario: stick vertical, muñeca hacia los lados = X del sensor; al lograr el nivel 1 se va al final con el dibujo y la canción; historial siempre guardado sin interruptor de estudio (§10). |
+| 17-10-2026 | 1 | ✅ Núcleo en `lib/balancin_v2/core/`: `params`, `levels`, `stick_state` (límite ±6 con desborde y % en el borde), `calibration`, `lead_lag`, `sync_engine` (temporizadores internos, cierre al lograr el último nivel habilitado), `synthetic_source`, `light_model`, `telemetry`. Paridad: `tool/parity/gen_golden.mjs` ejecuta en Node el código del prototipo extraído por líneas y genera `test/balancin_v2/golden/proto_scenarios.json` (14 escenarios, niveles 1–7 y Libre); `parity_test.dart` los reproduce con tolerancia 1e-6 (verificado con una mutación de 0,5 → 0,51 que sí falla). `core_test.dart`: 22 pruebas (límite del plano, calibración, nivel 1, Libre, pausa y cierre, parámetros, luz, registro). Suite completa: 125/125 en verde, `flutter analyze` sin problemas. Diferencia deliberada: un nivel ya logrado no se repite en `levelsDone`. |
