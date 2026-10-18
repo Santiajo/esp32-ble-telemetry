@@ -13,6 +13,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/audio/layers.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/audio/synth_v2.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/core/params.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/sync_engine.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/synthetic_source.dart';
 
@@ -66,7 +67,8 @@ void main() {
 
   for (final sc in (golden['scenarios'] as List).cast<Map<String, dynamic>>()) {
     test('paridad · ${sc['name']}', () {
-      final e = SyncEngine(closeOnIdle: sc['app'] as bool);
+      // Paridad con el prototipo: sin los cambios del 18-10-2026 (plan v2 §12).
+      final e = SyncEngine(closeOnIdle: sc['app'] as bool, params: SyncParams.prototype());
       SynthQuality? quality;
       e.drive = (now) {
         final q = quality;

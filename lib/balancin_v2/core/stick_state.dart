@@ -63,6 +63,7 @@ class StickState {
   late P2 raw; // inclinación llevada al plano, con límite
   late P2 pos; // posición suavizada
   late P2 overflow; // cuánto se pasó del plano (0 si está dentro), con signo
+  late P2 vel; // velocidad suavizada en el plano (u/s), para la sincronía con velocidad (§12.2)
   final ListQueue<TrailPoint> history = ListQueue<TrailPoint>();
   late double lastActive;
   late double speed;
@@ -77,6 +78,7 @@ class StickState {
     raw = P2.zero;
     pos = P2.zero;
     overflow = P2.zero;
+    vel = P2.zero;
     history.clear();
     lastActive = -1e9;
     speed = 0;
@@ -112,6 +114,8 @@ class StickState {
     );
     final step = math.sqrt((pos.x - px) * (pos.x - px) + (pos.y - py) * (pos.y - py));
     speed = speed * 0.7 + step / math.max(dt, 1e-3) * 0.3;
+    final idt = 1 / math.max(dt, 1e-3);
+    vel = P2(vel.x * 0.7 + (pos.x - px) * idt * 0.3, vel.y * 0.7 + (pos.y - py) * idt * 0.3);
     if (speed > p.onSpeed) lastActive = t;
     history.add(TrailPoint(t, pos.x, pos.y));
     while (history.isNotEmpty && t - history.first.t > 4500) {

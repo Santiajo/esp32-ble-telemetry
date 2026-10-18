@@ -4,7 +4,9 @@
 ///   1. Voz del adulto: seno en la altura del adulto + 2.º armónico (0,22).
 ///   2. Tono de relación: dos senos en 2·fa y 2·fa + desafinación (batido) y
 ///      una quinta (3·fa) solo cuando la desafinación es 0.
-///   3. Notas del niño (marimba), una por celda nueva del plano.
+///   3. Notas del niño (marimba), una por celda nueva del plano. Si la nota nueva
+///      queda a más de un paso de la anterior, se recorre la escala hasta ella
+///      con notas de paso rápidas y más suaves (§12.4), en vez de saltar.
 /// Más el pad que repite cada 420 ms las notas de las frases ganadas.
 ///
 /// Dart puro. Las voces continuas son valores que se acercan a su objetivo con
@@ -42,9 +44,11 @@ class Glide {
 enum NoteFamily { marimba, pad }
 
 /// Nota suelta. [gain] es la del prototipo (la polifonía la aplica la plataforma).
+/// [at] puede quedar en el futuro (notas de paso): la plataforma la agenda.
 class NoteCmd {
-  const NoteCmd(this.at, this.midi, this.family, this.gain);
+  const NoteCmd(this.at, this.midi, this.family, this.gain, {this.passing = false});
   final double at; // ms
+  final bool passing;
   final int midi;
   final NoteFamily family;
   final double gain;
@@ -80,6 +84,7 @@ class AudioLayers {
   // Notas del niño
   String _cell = '';
   double _lastNote = 0;
+  int? _lastChildIdx;
 
   // Pad
   double _nextPad = double.infinity;
@@ -89,6 +94,7 @@ class AudioLayers {
   void resetChild() {
     _cell = '';
     _lastNote = 0;
+    _lastChildIdx = null;
   }
 
   /// `loopStart`: el pad empieza a contar desde [now].
@@ -149,10 +155,34 @@ class AudioLayers {
         _lastNote = now;
         final ci = jsRound((c.y + 6) / 12 * (childScale.length - 1)).toInt().clamp(0, childScale.length - 1);
         final gain = (0.08 + e.child.speed / 45).clamp(0.08, 0.22).toDouble();
-        out.add(NoteCmd(now, childScale[ci], NoteFamily.marimba, gain));
+        out.addAll(childRun(now, _lastChildIdx, ci, gain, e.params.runMaxNotes.round(), e.params.runMs, e.params.runGain));
+        _lastChildIdx = ci;
       }
     }
     return out;
+  }
+
+  /// §12.4: notas para ir de [from] a [to] (índices de [childScale]). Si están a
+  /// más de un paso y [maxNotes] > 0, agrega notas de paso intermedias (como
+  /// mucho [maxNotes], repartidas parejo) en [runMs] ms en total, con volumen
+  /// `gain·runGain`; la nota de llegada suena al final con su volumen normal.
+  static List<NoteCmd> childRun(double now, int? from, int to, double gain, int maxNotes, double runMs, double runGain) {
+    if (from == null || maxNotes <= 0 || (to - from).abs() <= 1) {
+      return [NoteCmd(now, childScale[to], NoteFamily.marimba, gain)];
+    }
+    final dir = to > from ? 1 : -1;
+    var passing = [for (var i = from + dir; i != to; i += dir) i];
+    if (passing.length > maxNotes) {
+      final n = passing.length;
+      passing = [for (var k = 0; k < maxNotes; k++) passing[((k + 1) * n / (maxNotes + 1)).floor()]];
+    }
+    final total = passing.length + 1;
+    final step = runMs / total;
+    return [
+      for (var k = 0; k < passing.length; k++)
+        NoteCmd(now + k * step, childScale[passing[k]], NoteFamily.marimba, gain * runGain, passing: true),
+      NoteCmd(now + passing.length * step, childScale[to], NoteFamily.marimba, gain),
+    ];
   }
 
   /// `vSilence`: todas las voces continuas a 0 (τ 0,3 s). Al cerrar o perder un stick.

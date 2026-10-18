@@ -1,12 +1,24 @@
-/// Parámetros ajustables de la mecánica v2 (plan v2 §4.5).
+/// Parámetros ajustables de la mecánica v2 (plan v2 §4.5 y §12).
 ///
-/// Valores por defecto = `P_DEF` del prototipo, sin `vibMs` (v2 no vibra) y con
-/// los dos parámetros de la fusión de sensores (§4.1). Son mutables para el
-/// panel de ajuste del banco; se persisten con [toJson]/[SyncParams.fromJson].
+/// Valores por defecto = `P_DEF` del prototipo, sin `vibMs` (v2 no vibra), más
+/// la fusión de sensores (§4.1) y los cambios del usuario del 18-10-2026 (§12):
+/// salir de la sincronía cuesta, la sincronía mira también la velocidad, la
+/// frase se arma durante el nivel y las notas del niño recorren la escala en
+/// vez de saltar. [SyncParams.prototype] apaga esos cambios (paridad).
+///
+/// Son mutables para el panel de ajuste del banco; se persisten con
+/// [toJson] / [SyncParams.fromJson].
 library;
 
 class SyncParams {
   SyncParams();
+
+  /// Comportamiento exacto del prototipo: sin los cambios del §12.
+  factory SyncParams.prototype() => SyncParams()
+    ..slipDrain = 0
+    ..velWeight = 0
+    ..phraseSteps = 0
+    ..runMaxNotes = 0;
 
   /// Multiplica la tolerancia de cada nivel.
   double tolScale = 1;
@@ -34,7 +46,7 @@ class SyncParams {
   /// Inactividad (s) antes de que el progreso empiece a decaer.
   double idleAfter = 3;
 
-  /// Decaimiento del progreso (s de progreso por s).
+  /// Decaimiento del progreso por inactividad (s de progreso por s).
   double decay = 0.5;
 
   /// Desafinación máxima del tono de relación (Hz).
@@ -55,10 +67,40 @@ class SyncParams {
   /// Fusión de sensores (§4.1): desvío máximo de |a| respecto del reposo (g) para corregir.
   double accelGate = 0.15;
 
+  // ---- §12.1 · salir de la sincronía cuesta ----
+
+  /// Margen (s) fuera de la zona, moviéndose los dos, antes de empezar a perder progreso.
+  double slipGrace = 0.4;
+
+  /// Pérdida de progreso fuera de la zona tras el margen (s de progreso por s). 0 = como el prototipo.
+  double slipDrain = 1;
+
+  // ---- §12.2 · la sincronía mira la velocidad ----
+
+  /// Peso (s) de la diferencia de velocidad en `d`: `d += velWeight·|Δv|` (u/s). 0 = solo posición.
+  double velWeight = 0.06;
+
+  // ---- §12.3 · la frase se arma durante el nivel ----
+
+  /// 1 = suena una nota de la frase en cada cuarto del nivel (y «cae» si se pierde). 0 = apagado.
+  double phraseSteps = 1;
+
+  // ---- §12.4 · escala de paso en las notas del niño ----
+
+  /// Máximo de notas de paso entre dos notas lejanas. 0 = saltar directo (prototipo).
+  double runMaxNotes = 6;
+
+  /// Duración total (ms) de la escala de paso.
+  double runMs = 120;
+
+  /// Volumen de las notas de paso respecto de la nota de llegada (0–1).
+  double runGain = 0.6;
+
   static const List<String> keys = [
     'tolScale', 'alpha', 'rangeA', 'rangeC', 'minA', 'minC', 'onSpeed', 'hyst', //
     'secScale', 'idleAfter', 'decay', 'maxDetune', 'followLag', 'rhythmWin', 'endAfter',
     'kAccel', 'accelGate',
+    'slipGrace', 'slipDrain', 'velWeight', 'phraseSteps', 'runMaxNotes', 'runMs', 'runGain',
   ];
 
   double operator [](String k) => switch (k) {
@@ -79,6 +121,13 @@ class SyncParams {
         'endAfter' => endAfter,
         'kAccel' => kAccel,
         'accelGate' => accelGate,
+        'slipGrace' => slipGrace,
+        'slipDrain' => slipDrain,
+        'velWeight' => velWeight,
+        'phraseSteps' => phraseSteps,
+        'runMaxNotes' => runMaxNotes,
+        'runMs' => runMs,
+        'runGain' => runGain,
         _ => throw ArgumentError.value(k, 'k', 'parámetro desconocido'),
       };
 
@@ -118,6 +167,20 @@ class SyncParams {
         kAccel = v;
       case 'accelGate':
         accelGate = v;
+      case 'slipGrace':
+        slipGrace = v;
+      case 'slipDrain':
+        slipDrain = v;
+      case 'velWeight':
+        velWeight = v;
+      case 'phraseSteps':
+        phraseSteps = v;
+      case 'runMaxNotes':
+        runMaxNotes = v;
+      case 'runMs':
+        runMs = v;
+      case 'runGain':
+        runGain = v;
       default:
         throw ArgumentError.value(k, 'k', 'parámetro desconocido');
     }

@@ -181,6 +181,8 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
         case LevelCompletedEvent(:final levelId):
           if (!_progress.contains(levelId)) _progress.add(levelId);
           _addLog('nivel $levelId logrado');
+        case PhraseStepEvent(:final step, :final up):
+          _addLog(up ? 'frase: nota $step de 4' : 'frase: se cayó la nota $step');
         case GuideChangedEvent(:final guide):
           _addLog('ahora guía ${roleNames[guide]}');
         case CalibrationDoneEvent(:final adult, :final child):
@@ -746,6 +748,15 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     ('idleAfter', 'Inactividad antes de decaer', 1, 8, 0.5, ' s', 1),
     ('kAccel', 'Stick: corrección con gravedad', 0.005, 0.1, 0.005, '', 3),
     ('accelGate', 'Stick: compuerta de |a|', 0.05, 0.5, 0.01, ' g', 2),
+    // §12: cambios del 18-10-2026 (guía: docs/GUIA_AJUSTE_V2.md)
+    ('slipGrace', 'Margen al salir de la zona', 0, 1.5, 0.05, ' s', 2),
+    ('slipDrain', 'Pérdida al salir (× velocidad)', 0, 3, 0.1, '×', 1),
+    ('velWeight', 'Peso de la velocidad en d', 0, 0.3, 0.01, ' s', 2),
+    ('hyst', 'Histéresis de la sincronía', 1, 2, 0.05, '×', 2),
+    ('phraseSteps', 'Frase nota a nota (0 / 1)', 0, 1, 1, '', 0),
+    ('runMaxNotes', 'Notas de paso (máximo)', 0, 10, 1, '', 0),
+    ('runMs', 'Duración de la escala de paso', 40, 300, 10, ' ms', 0),
+    ('runGain', 'Volumen de las notas de paso', 0.2, 1, 0.05, '×', 2),
   ];
 
   void _openTuning() {
@@ -756,11 +767,11 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
       backgroundColor: paper,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
         return SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Row(children: [
-                const Expanded(child: Text('Ajuste', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900))),
+              Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+                const Text('Ajuste   ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                 TextButton(
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: const JsonEncoder.withIndent('  ').convert(p.toJson())));
@@ -775,6 +786,17 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
                     setSheet(() {});
                   },
                   child: const Text('Valores iniciales'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final proto = SyncParams.prototype();
+                    for (final k in SyncParams.keys) {
+                      p[k] = proto[k];
+                    }
+                    unawaited(BenchStore.saveParams(p));
+                    setSheet(() {});
+                  },
+                  child: const Text('Como el prototipo'),
                 ),
               ]),
               for (final (k, label, min, max, step, unit, dec) in _tune)

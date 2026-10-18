@@ -4,10 +4,11 @@ import 'package:flutter_tts/flutter_tts.dart';
 /// Voz de consignas (plan v2 §4.6): marcador con el texto a voz del teléfono,
 /// como `say()` del prototipo, hasta tener audios grabados.
 ///
-/// Cada frase corta la anterior. Velocidad 0,95 y tono 1,05 del prototipo
+/// Apagada por defecto (pedido del usuario del 18-10-2026: tapa los sonidos del
+/// juego); se enciende desde el banco o la prueba de audio. Cada frase corta la anterior. Velocidad 0,95 y tono 1,05 del prototipo
 /// (en Android la velocidad normal de flutter_tts es 0,5).
 class VoicePrompts {
-  VoicePrompts({this.enabled = true});
+  VoicePrompts({this.enabled = false});
 
   bool enabled;
   final FlutterTts _tts = FlutterTts();

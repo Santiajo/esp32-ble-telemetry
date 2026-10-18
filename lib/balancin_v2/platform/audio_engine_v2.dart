@@ -68,6 +68,9 @@ class AudioEngineV2 with WidgetsBindingObserver {
   /// Fin (ms del reloj de la app) y parciales de cada nota sonando: para la polifonía.
   final List<({double end, int partials})> _sounding = [];
 
+  /// Notas agendadas para más adelante (notas de paso, §12.4).
+  final Set<Timer> _timers = {};
+
   static String childKey(int midi) => 'v2_child_$midi';
   static String padKey(int midi) => 'v2_pad_$midi';
   static String glockKey(int midi) => 'v2_glock_$midi';
@@ -163,6 +166,10 @@ class AudioEngineV2 with WidgetsBindingObserver {
   Future<void> release() async {
     if (!_ready) return;
     _ready = false;
+    for (final t in _timers) {
+      t.cancel();
+    }
+    _timers.clear();
     WidgetsBinding.instance.removeObserver(this);
     final s = SoLoud.instance;
     if (!s.isInitialized) return;
@@ -261,9 +268,20 @@ class AudioEngineV2 with WidgetsBindingObserver {
     _play(key, SynthRenderer.volumeFor(n.gain * polyphonyGain(voices)));
   }
 
+  /// Toca las notas; las que traen [NoteCmd.at] en el futuro se agendan.
   void notes(List<NoteCmd> cmds, double now) {
     for (final n in cmds) {
-      note(n, now);
+      final delay = n.at - now;
+      if (delay < 2) {
+        note(n, now);
+        continue;
+      }
+      late final Timer t;
+      t = Timer(Duration(microseconds: (delay * 1000).round()), () {
+        _timers.remove(t);
+        if (_ready) note(n, n.at);
+      });
+      _timers.add(t);
     }
   }
 
@@ -280,6 +298,13 @@ class AudioEngineV2 with WidgetsBindingObserver {
           }
         case SongEvent(:final levelIds):
           unawaited(playSong(levelIds));
+        case PhraseStepEvent(:final midi, :final up):
+          // §12.3: la nota de la frase suena al ganar el cuarto; si se pierde, «cae» suave.
+          if (up) {
+            _play(glockKey(midi), SynthRenderer.volumeFor(0.2));
+          } else {
+            _play(padKey(midi), SynthRenderer.volumeFor(0.08));
+          }
         default:
           break;
       }

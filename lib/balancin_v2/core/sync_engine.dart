@@ -61,6 +61,17 @@ class GuideChangedEvent extends SyncEvent {
   final Role guide;
 }
 
+/// La frase se arma durante el nivel (§12.3): al pasar cada cuarto del progreso
+/// suena su nota ([up]); si el progreso vuelve a bajar de ese cuarto, la nota «cae».
+class PhraseStepEvent extends SyncEvent {
+  const PhraseStepEvent(super.at, this.step, this.midi, {required this.up});
+  final int step; // 1–3
+  final int midi;
+  final bool up;
+  @override
+  String toString() => 'step($step ${up ? '↑' : '↓'})';
+}
+
 /// Un nivel quedó logrado: guardarlo en el progreso.
 class LevelCompletedEvent extends SyncEvent {
   const LevelCompletedEvent(super.at, this.levelId);
@@ -142,6 +153,8 @@ class SyncEngine {
   double _trajT = 0;
   double? _idleSince;
   bool _pausedEp = false;
+  double? _outSince; // fuera de la zona moviéndose los dos (§12.1)
+  int _stepReached = 0; // cuartos de la frase ya sonados (§12.3)
   double _lagT = 0;
   LeadLag? lastLeadLag;
   bool song = false;
@@ -209,6 +222,8 @@ class SyncEngine {
     _trajT = 0;
     _idleSince = null;
     _pausedEp = false;
+    _outSince = null;
+    _stepReached = 0;
     _lagT = 0;
     lastLeadLag = null;
     song = false;
@@ -294,6 +309,7 @@ class SyncEngine {
     }
 
     d = syncDistance(relation, now);
+    final wasInSync = inSync;
     inSync = inSync ? d <= p.hyst * tol : d < tol;
 
     if (state == EngineState.playing) {
@@ -331,6 +347,19 @@ class SyncEngine {
         }
         _idleSince = null;
       }
+      // §12.1: salir de la zona moviéndose los dos cuesta, tras un margen.
+      if (mode == PlayMode.levels && both && !inSync) {
+        if (_outSince == null) {
+          _outSince = now;
+          if (wasInSync) lt.salidas++;
+        }
+        if (p.slipDrain > 0 && now - _outSince! > p.slipGrace * 1000) {
+          prog = math.max(0, prog - p.slipDrain * dt);
+        }
+      } else {
+        _outSince = null;
+      }
+      _phraseSteps(now);
       final l = level;
       if (l != null) {
         if (!l.isSong && l.guides.length > 1 && l.guides[1] != null && !_guideSwitched && prog >= secs / 2) {
@@ -374,6 +403,27 @@ class SyncEngine {
 
   /// Distancia entre el niño y donde debería estar según la relación (`syncDist`).
   double syncDistance(Relation rel, double t) {
+    final base = _positionDistance(rel, t);
+    final w = params.velWeight;
+    if (w <= 0) return base;
+    // §12.2: la sincronía mira también la velocidad (misma transformación que la posición).
+    final pv = adult.vel, cv = child.vel;
+    final dv = switch (rel) {
+      Relation.together => (cv.y - pv.y).abs(),
+      Relation.seesaw => (cv.y + pv.y).abs(),
+      Relation.mirror => _hypot(cv.x + pv.x, cv.y - pv.y),
+      Relation.same => _hypot(cv.x - pv.x, cv.y - pv.y),
+      Relation.free || Relation.song => [
+          (cv.y - pv.y).abs(),
+          _hypot(cv.x + pv.x, cv.y - pv.y),
+          (cv.y + pv.y).abs(),
+        ].reduce(math.min),
+      Relation.pulse || Relation.follow => 0.0,
+    };
+    return base + w * dv;
+  }
+
+  double _positionDistance(Relation rel, double t) {
     final p = adult.pos, c = child.pos;
     switch (rel) {
       case Relation.together:
@@ -518,9 +568,29 @@ class SyncEngine {
     guide = l.firstGuide;
     _guideSwitched = false;
     inSync = false;
+    _outSince = null;
+    _stepReached = 0;
     current = _newLT(l.id, now);
     levelTelemetry.add(current!);
     _emit(SayEvent(now, 'Nivel ${l.id}. ${l.name}. ${l.text} ${l.guideText}.'));
+  }
+
+  /// §12.3: una nota de la frase por cada cuarto del progreso (el cuarto final es el
+  /// nivel logrado). Baja con 0,25 s de margen para no repetir la nota en el borde.
+  void _phraseSteps(double now) {
+    final l = level;
+    if (params.phraseSteps <= 0 || l == null || l.isSong) return;
+    final q = secs / 4;
+    final step = (prog / q).floor().clamp(0, 3);
+    if (step > _stepReached) {
+      for (var k = _stepReached + 1; k <= step; k++) {
+        _emit(PhraseStepEvent(now, k, l.phraseMidi[k - 1], up: true));
+      }
+      _stepReached = step;
+    } else if (_stepReached > 0 && prog < _stepReached * q - 0.25) {
+      _emit(PhraseStepEvent(now, _stepReached, l.phraseMidi[_stepReached - 1], up: false));
+      _stepReached--;
+    }
   }
 
   void _setGuide(Role role, double now) {

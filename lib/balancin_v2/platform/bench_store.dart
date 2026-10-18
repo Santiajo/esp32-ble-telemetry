@@ -7,7 +7,7 @@ import '../core/params.dart';
 /// Preferencias del banco de prueba v2: parámetros de ajuste y voz.
 abstract final class BenchStore {
   static const String _paramsKey = 'balancin_v2_params';
-  static const String _voiceKey = 'balancin_v2_voz';
+  static const String _voiceKey = 'balancin_v2_voz_on'; // clave nueva: por defecto apagada
 
   static Future<SyncParams> loadParams() async {
     try {
@@ -29,9 +29,9 @@ abstract final class BenchStore {
 
   static Future<bool> loadVoice() async {
     try {
-      return (await SharedPreferences.getInstance()).getBool(_voiceKey) ?? true;
+      return (await SharedPreferences.getInstance()).getBool(_voiceKey) ?? false;
     } catch (_) {
-      return true;
+      return false;
     }
   }
 

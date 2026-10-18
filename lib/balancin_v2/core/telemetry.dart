@@ -29,6 +29,7 @@ class LevelTelemetry {
   int adultoSigue = 0; // mediciones con el adulto detrás
   int pausas = 0;
   int reanud = 0;
+  int salidas = 0; // veces que, moviéndose los dos, salieron de la sincronía (§12)
   double? completado; // s para completar
 
   bool get isFree => nivel == 'libre';
@@ -46,6 +47,7 @@ class LevelTelemetry {
         'porcentaje_adulto_sigue_al_nino': lagN > 0 ? jsRound(adultoSigue / lagN * 100).toInt() : null,
         'pausas': pausas,
         'reanudaciones': reanud,
+        'salidas_de_sincronia': salidas,
         'tiempo_para_completar_s': completado,
       };
 }
