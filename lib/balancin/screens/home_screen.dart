@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../balancin_v2/screens/audio_test_v2_screen.dart';
 import '../../screens/dashboard_screen.dart';
 import '../platform/audio_engine.dart';
 import '../platform/stick_hub.dart';
@@ -404,6 +405,32 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: const Text(
               'Prueba de audio',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Mecánica v2 (rama mecanica-v2): prueba del audio en tres capas
+          OutlinedButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AudioTestV2Screen()),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              backgroundColor: const Color(0xFFF3F5E8),
+              foregroundColor: const Color(0xFF2B2536),
+              side: const BorderSide(color: Color(0xFF7A8B34), width: 1.5),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            child: const Text(
+              'Prueba de audio v2',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
