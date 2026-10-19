@@ -27,6 +27,23 @@ abstract final class BenchStore {
     } catch (_) {}
   }
 
+  static const String _calKey = 'balancin_v2_calibrar_al_empezar';
+
+  /// Calibrar el rango de cada persona (6 s) al empezar cada sesión del banco. Por defecto sí.
+  static Future<bool> loadCalOnStart() async {
+    try {
+      return (await SharedPreferences.getInstance()).getBool(_calKey) ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  static Future<void> saveCalOnStart(bool on) async {
+    try {
+      await (await SharedPreferences.getInstance()).setBool(_calKey, on);
+    } catch (_) {}
+  }
+
   static Future<bool> loadVoice() async {
     try {
       return (await SharedPreferences.getInstance()).getBool(_voiceKey) ?? false;

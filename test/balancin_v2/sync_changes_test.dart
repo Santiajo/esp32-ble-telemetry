@@ -47,6 +47,56 @@ void main() {
     });
   });
 
+  group('§12.5 · tolerancia de retraso (lo visto en «Pruebas 2»)', () {
+    /// Fracción del tiempo en sincronía, en el nivel 1 «Juntos», con los dos
+    /// balanceándose ±5 a [hz] y el niño [lagMs] detrás. (En Libre, ir opuestos
+    /// también vale: cuenta como «sube y baja».)
+    double syncShare(SyncParams base, double hz, double lagMs) {
+      final p = base.copy()..secScale = 100; // que el nivel no termine durante la medición
+      final e = SyncEngine(params: p, isLevelEnabled: (_) => false);
+      e.drive = (now) {
+        final s = now / 1000;
+        feedPlane(e.adult, 0, 5 * math.sin(2 * math.pi * hz * s), e);
+        feedPlane(e.child, 0, 5 * math.sin(2 * math.pi * hz * (s - lagMs / 1000)), e);
+      };
+      e.start(mode: PlayMode.levels, now: 0);
+      var inSync = 0, n = 0;
+      for (var now = 0.0; now < 12000; now += fps) {
+        e.tick(now);
+        if (now > 2000) {
+          n++;
+          if (e.inSync) inSync++;
+        }
+      }
+      return inSync / n;
+    }
+
+    final antes = SyncParams()..syncLagMs = 0; // como estaba ayer
+    final ahora = SyncParams();
+
+    test('rápido (1,7 Hz) con el niño 80 ms detrás: antes casi nunca, ahora casi siempre', () {
+      expect(syncShare(antes, 1.7, 80), lessThan(0.4));
+      expect(syncShare(ahora, 1.7, 80), greaterThan(0.9));
+    });
+
+    test('rápido con 120 ms de retraso también cuenta', () {
+      expect(syncShare(ahora, 1.7, 120), greaterThan(0.85));
+    });
+
+    test('lento sigue funcionando igual de bien', () {
+      expect(syncShare(ahora, 0.5, 80), greaterThan(0.95));
+    });
+
+    test('un retraso de medio vaivén (casi opuestos) no cuenta', () {
+      expect(syncShare(ahora, 1.7, 300), lessThan(0.15));
+    });
+
+    test('moverse en sentido contrario sigue sin contar', () {
+      final e = run(SyncParams(), 10, (s, ay) => -ay);
+      expect(e.current!.sinc, lessThan(0.1));
+    });
+  });
+
   group('§12.1 · salir de la sincronía cuesta', () {
     double syncThenOff(double s, double ay) => s < 5 ? ay : -ay;
 

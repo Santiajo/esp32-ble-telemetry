@@ -168,15 +168,24 @@ void main() {
     });
 
     test('solo cuenta la altura: el movimiento lateral no cambia d', () {
-      final e = v2Engine()..start(mode: PlayMode.levels, now: 0);
-      for (var i = 0; i < 300; i++) {
-        final s = i * fps / 1000;
-        feedPlane(e.adult, 5 * math.sin(s * 2), 2 * math.sin(s), e);
-        feedPlane(e.child, -5 * math.sin(s * 3), 2 * math.sin(s), e);
-        e.tick(i * fps);
-        expect(e.syncDistance(Relation.together, i * fps), closeTo((e.child.pos.y - e.adult.pos.y).abs(), 1e-12));
+      // Mismo movimiento vertical, con y sin movimiento lateral muy distinto: misma d.
+      double dWith(double Function(double s) ax, double Function(double s) cx, {SyncParams? p}) {
+        final e = SyncEngine(params: p, isLevelEnabled: enabledLevelIds.contains)..start(mode: PlayMode.levels, now: 0);
+        for (var i = 0; i < 300; i++) {
+          final s = i * fps / 1000;
+          feedPlane(e.adult, ax(s), 2 * math.sin(s), e);
+          feedPlane(e.child, cx(s), 2 * math.sin(s), e);
+          e.tick(i * fps);
+        }
+        return e.d;
       }
-      expect(e.d, lessThan(0.05));
+
+      for (final p in [SyncParams(), SyncParams.prototype()]) {
+        final quieto = dWith((s) => 0, (s) => 0, p: p);
+        final lateral = dWith((s) => 5 * math.sin(s * 2), (s) => -5 * math.sin(s * 3), p: p);
+        expect(lateral, closeTo(quieto, 1e-9));
+        expect(lateral, lessThan(0.05));
+      }
     });
 
     test('si se mueve uno solo, el progreso no avanza', () {
@@ -213,22 +222,23 @@ void main() {
   group('modo Libre', () {
     test('d es bajo para juntos, espejo y sube y baja', () {
       final e = SyncEngine()..start(mode: PlayMode.free, now: 0);
+      var now = 0.0;
       void place(double ax, double ay, double cx, double cy) {
         feedPlane(e.adult, ax, ay, e);
         feedPlane(e.child, cx, cy, e);
         for (var i = 0; i < 120; i++) {
-          e.tick(i * fps);
+          e.tick(now += fps);
         }
       }
 
       place(2, 3, 2, 3); // juntos
-      expect(e.syncDistance(Relation.free, 0), lessThan(0.05));
+      expect(e.syncDistance(Relation.free, now), lessThan(0.05));
       place(2, 3, -2, 3); // espejo
-      expect(e.syncDistance(Relation.free, 0), lessThan(0.05));
+      expect(e.syncDistance(Relation.free, now), lessThan(0.05));
       place(2, 3, 2, -3); // sube y baja
-      expect(e.syncDistance(Relation.free, 0), lessThan(0.05));
+      expect(e.syncDistance(Relation.free, now), lessThan(0.05));
       place(4, 3, -1, -5); // nada en común
-      expect(e.syncDistance(Relation.free, 0), greaterThan(2));
+      expect(e.syncDistance(Relation.free, now), greaterThan(2));
     });
 
     test('no hay progreso ni guía, y el registro dice «free»', () {

@@ -17,6 +17,7 @@ class SyncParams {
   factory SyncParams.prototype() => SyncParams()
     ..slipDrain = 0
     ..velWeight = 0
+    ..syncLagMs = 0
     ..phraseSteps = 0
     ..runMaxNotes = 0;
 
@@ -80,6 +81,14 @@ class SyncParams {
   /// Peso (s) de la diferencia de velocidad en `d`: `d += velWeight·|Δv|` (u/s). 0 = solo posición.
   double velWeight = 0.06;
 
+  // ---- §12.5 · tolerancia de retraso ----
+
+  /// Desfase máximo (ms) entre los dos que se perdona: `d` compara al niño con el
+  /// adulto corrido hasta ±syncLagMs y se queda con el mejor calce. A alta
+  /// velocidad un retraso mínimo (de la persona o del Bluetooth) separa mucho los
+  /// puntos; esto lo absorbe. 0 = comparar en el mismo instante (prototipo).
+  double syncLagMs = 150;
+
   // ---- §12.3 · la frase se arma durante el nivel ----
 
   /// 1 = suena una nota de la frase en cada cuarto del nivel (y «cae» si se pierde). 0 = apagado.
@@ -100,7 +109,7 @@ class SyncParams {
     'tolScale', 'alpha', 'rangeA', 'rangeC', 'minA', 'minC', 'onSpeed', 'hyst', //
     'secScale', 'idleAfter', 'decay', 'maxDetune', 'followLag', 'rhythmWin', 'endAfter',
     'kAccel', 'accelGate',
-    'slipGrace', 'slipDrain', 'velWeight', 'phraseSteps', 'runMaxNotes', 'runMs', 'runGain',
+    'slipGrace', 'slipDrain', 'velWeight', 'syncLagMs', 'phraseSteps', 'runMaxNotes', 'runMs', 'runGain',
   ];
 
   double operator [](String k) => switch (k) {
@@ -124,6 +133,7 @@ class SyncParams {
         'slipGrace' => slipGrace,
         'slipDrain' => slipDrain,
         'velWeight' => velWeight,
+        'syncLagMs' => syncLagMs,
         'phraseSteps' => phraseSteps,
         'runMaxNotes' => runMaxNotes,
         'runMs' => runMs,
@@ -173,6 +183,8 @@ class SyncParams {
         slipDrain = v;
       case 'velWeight':
         velWeight = v;
+      case 'syncLagMs':
+        syncLagMs = v;
       case 'phraseSteps':
         phraseSteps = v;
       case 'runMaxNotes':

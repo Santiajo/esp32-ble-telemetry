@@ -403,6 +403,7 @@ class SyncEngine {
 
   /// Distancia entre el niño y donde debería estar según la relación (`syncDist`).
   double syncDistance(Relation rel, double t) {
+    if (params.syncLagMs > 0 && rel != Relation.pulse && rel != Relation.follow) return _lagDistance(rel, t);
     final base = _positionDistance(rel, t);
     final w = params.velWeight;
     if (w <= 0) return base;
@@ -422,6 +423,56 @@ class SyncEngine {
     };
     return base + w * dv;
   }
+
+  /// §12.5: `d` con tolerancia de retraso. Prueba desfases τ de −syncLagMs a
+  /// +syncLagMs (cada 20 ms; τ > 0 = el niño va detrás) y se queda con el mejor:
+  /// el promedio de la distancia de la relación en los últimos 100 ms con el
+  /// adulto (o el niño) corrido τ, más `velWeight` por la diferencia de velocidad
+  /// medida en esos mismos 100 ms. Así un mismo gesto con un pequeño desfase
+  /// cuenta como sincronía a cualquier velocidad; un gesto distinto, no.
+  double _lagDistance(Relation rel, double t) {
+    final maxLag = params.syncLagMs, w = params.velWeight;
+    const stepMs = 20.0, spanMs = 100.0;
+    const offsets = [0.0, 25.0, 50.0, 75.0, 100.0];
+    var best = double.infinity;
+    for (var tau = -maxLag; tau <= maxLag + 1e-9; tau += stepMs) {
+      final pa = tau > 0 ? tau : 0.0, ca = tau < 0 ? -tau : 0.0;
+      var s = 0.0;
+      for (final k in offsets) {
+        s += _pairDistance(rel, adult.at(t - k - pa), child.at(t - k - ca));
+      }
+      var cost = s / offsets.length;
+      if (w > 0) {
+        final p0 = adult.at(t - pa), p1 = adult.at(t - pa - spanMs);
+        final c0 = child.at(t - ca), c1 = child.at(t - ca - spanMs);
+        const inv = 1000 / spanMs;
+        cost += w *
+            _velDistance(rel, P2((p0.x - p1.x) * inv, (p0.y - p1.y) * inv), P2((c0.x - c1.x) * inv, (c0.y - c1.y) * inv));
+      }
+      if (cost < best) best = cost;
+    }
+    return best;
+  }
+
+  static double _pairDistance(Relation rel, P2 p, P2 c) => switch (rel) {
+        Relation.together => (c.y - p.y).abs(),
+        Relation.seesaw => (c.y + p.y).abs(),
+        Relation.mirror => _hypot(c.x + p.x, c.y - p.y),
+        Relation.same => _hypot(c.x - p.x, c.y - p.y),
+        _ => [
+            (c.y - p.y).abs() + (c.x - p.x).abs() * 0.5,
+            _hypot(c.x + p.x, c.y - p.y),
+            (c.y + p.y).abs() + (c.x - p.x).abs() * 0.5,
+          ].reduce(math.min),
+      };
+
+  static double _velDistance(Relation rel, P2 pv, P2 cv) => switch (rel) {
+        Relation.together => (cv.y - pv.y).abs(),
+        Relation.seesaw => (cv.y + pv.y).abs(),
+        Relation.mirror => _hypot(cv.x + pv.x, cv.y - pv.y),
+        Relation.same => _hypot(cv.x - pv.x, cv.y - pv.y),
+        _ => [(cv.y - pv.y).abs(), _hypot(cv.x + pv.x, cv.y - pv.y), (cv.y + pv.y).abs()].reduce(math.min),
+      };
 
   double _positionDistance(Relation rel, double t) {
     final p = adult.pos, c = child.pos;

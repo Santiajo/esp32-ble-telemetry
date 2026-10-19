@@ -85,6 +85,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
   final List<int> _progress = [];
   final List<String> _log = [];
   bool _eje = false;
+  bool _calOnStart = true;
   bool _closed = false;
   String _closedText = '';
   Map<String, Object?>? _lastReport;
@@ -105,6 +106,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     try {
       final params = await BenchStore.loadParams();
       _voice.enabled = await BenchStore.loadVoice();
+      _calOnStart = await BenchStore.loadCalOnStart();
       final e = SyncEngine(params: params, isLevelEnabled: enabledLevelIds.contains);
       e.drive = _drive;
       _params = params;
@@ -142,7 +144,9 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     _layers
       ..resetChild()
       ..startPad(now);
-    _handle(_e.start(mode: _mode, now: now), now);
+    // Con «Calibrar al empezar», cada sesión mide 6 s el rango de cada persona:
+    // sin eso el stick del niño pasaba ~70 % del tiempo pegado al borde (prueba del 18-10-2026).
+    _handle(_e.start(mode: _mode, now: now, calibrate: _calOnStart), now);
   }
 
   /// Fuentes que no son el dedo: sintética y stick (`synthDrive` del prototipo).
@@ -573,25 +577,41 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     final r = s.reader;
     final b = r.biasDps;
     final st = _e.stick(role);
+    // Lo más importante primero: en el teléfono el panel es chico (prueba del 18-10-2026).
     final lines = [
       s.statusText(now),
-      'inclinación ${r.tiltX.toStringAsFixed(1)}° / ${r.tiltY.toStringAsFixed(1)}°',
-      if (st.cal != null) 'calibrado: medio rango ${st.cal!.hr.toStringAsFixed(0)}°' else 'sin calibrar: rango ${st.range(_e.params).hr.toStringAsFixed(0)}°',
+      'giro ${r.calibrated ? 'calibrado' : 'SIN calibrar: déjalo quieto 1 s'} · borde ${(st.edgeFraction * 100).round()} %${st.atEdge ? ' (ahora)' : ''}',
+      st.cal != null ? 'rango calibrado ±${st.cal!.hr.toStringAsFixed(0)}°' : 'rango sin calibrar ±${st.range(_e.params).hr.toStringAsFixed(0)}°',
+      'inclinación ${r.tiltX.toStringAsFixed(0)}° / ${r.tiltY.toStringAsFixed(0)}°',
       '|a| ${r.accelMagG.toStringAsFixed(2)} g · ${r.correcting ? 'corrige con gravedad' : 'solo giroscopio'}',
       'bias ${b.x.toStringAsFixed(1)} / ${b.y.toStringAsFixed(1)} / ${b.z.toStringAsFixed(1)} °/s',
-      'en el borde ${(st.edgeFraction * 100).round()} %${st.atEdge ? ' · AHORA' : ''}',
-      if (s.recording) 'grabando ${s.recordedSeconds(now).toStringAsFixed(0)} s (${s.recordedSamples})',
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
         child: SingleChildScrollView(
-          child: Text(lines.join('\n'), style: const TextStyle(fontSize: 11, color: ink, height: 1.35, fontWeight: FontWeight.w600)),
+          child: Text(lines.join('\n'), style: const TextStyle(fontSize: 10.5, color: ink, height: 1.3, fontWeight: FontWeight.w600)),
         ),
       ),
-      Wrap(spacing: 4, runSpacing: 4, children: [
-        _mini(s.recording ? 'Detener y compartir' : 'Grabar traza', () => unawaited(_toggleRecording(role))),
-        _mini('Vincular otro', () => unawaited(_scan(s.link))),
-        _mini('Recalibrar giro', () => r.resetCalibration()),
+      Row(children: [
+        Expanded(
+          child: _mini(
+            s.recording ? 'Detener (${s.recordedSeconds(now).toStringAsFixed(0)} s)' : 'Grabar traza',
+            () => unawaited(_toggleRecording(role)),
+          ),
+        ),
+        PopupMenuButton<String>(
+          tooltip: 'Más',
+          padding: EdgeInsets.zero,
+          icon: const Icon(Icons.more_vert, size: 20, color: ink),
+          onSelected: (v) {
+            if (v == 'scan') unawaited(_scan(s.link));
+            if (v == 'gyro') r.resetCalibration();
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'scan', child: Text('Vincular otro stick')),
+            PopupMenuItem(value: 'gyro', child: Text('Recalibrar giro')),
+          ],
+        ),
       ]),
     ]);
   }
@@ -632,6 +652,10 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
       const SizedBox(height: 4),
       Wrap(spacing: 6, runSpacing: 6, children: [
         _mini('Calibrar rango', () => _handle(e.recalibrate(AppClock.nowMs()), AppClock.nowMs())),
+        _mini(_calOnStart ? 'Calibrar al empezar: sí' : 'Calibrar al empezar: no', () {
+          setState(() => _calOnStart = !_calOnStart);
+          unawaited(BenchStore.saveCalOnStart(_calOnStart));
+        }),
         _mini('Reiniciar', () => setState(_restart)),
         _mini('Terminar', () => _handle(e.close(AppClock.nowMs()), AppClock.nowMs())),
         _mini('Modo eje', () => setState(() => _eje = true)),
@@ -752,6 +776,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     ('slipGrace', 'Margen al salir de la zona', 0, 1.5, 0.05, ' s', 2),
     ('slipDrain', 'Pérdida al salir (× velocidad)', 0, 3, 0.1, '×', 1),
     ('velWeight', 'Peso de la velocidad en d', 0, 0.3, 0.01, ' s', 2),
+    ('syncLagMs', 'Tolerancia de retraso', 0, 300, 10, ' ms', 0),
     ('hyst', 'Histéresis de la sincronía', 1, 2, 0.05, '×', 2),
     ('phraseSteps', 'Frase nota a nota (0 / 1)', 0, 1, 1, '', 0),
     ('runMaxNotes', 'Notas de paso (máximo)', 0, 10, 1, '', 0),
