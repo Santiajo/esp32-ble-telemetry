@@ -30,8 +30,8 @@ SynthQuality effectiveQuality(SynthQuality q, double now) =>
 void feedPlane(StickState st, double x, double y, SyncEngine e) {
   final r = st.range(e.params);
   st.feedTilt(
-    r.cx + x.clamp(-planeLimit, planeLimit) / planeLimit * r.hr,
-    r.cy + y.clamp(-planeLimit, planeLimit) / planeLimit * r.hr,
+    r.cx + x.clamp(-planeLimit, planeLimit) / planeLimit * r.hrX,
+    r.cy + y.clamp(-planeLimit, planeLimit) / planeLimit * r.hrY,
     e.params,
   );
 }

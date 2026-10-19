@@ -303,7 +303,7 @@ class SyncEngine {
 
     if (state == EngineState.calibrating) {
       for (final st in [adult, child]) {
-        if (st.has) _cal!.add(st.role, now - _calT0, st.tilt);
+        if (st.has) _cal!.add(st.role, now - _calT0, st.tilt, moving: st.speed > p.onSpeed);
       }
       if (now - _calT0 > Calibration.durationMs) _finishCal(now);
     }
@@ -595,6 +595,8 @@ class SyncEngine {
     final c = _cal!;
     adult.cal = c.result(Role.adult, params);
     child.cal = c.result(Role.child, params);
+    adult.resetEdgeStats();
+    child.resetEdgeStats();
     _cal = null;
     _emit(CalibrationDoneEvent(now, adult.cal, child.cal));
     _beginPlay(now);

@@ -190,7 +190,9 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
         case GuideChangedEvent(:final guide):
           _addLog('ahora guía ${roleNames[guide]}');
         case CalibrationDoneEvent(:final adult, :final child):
-          String f(StickCal? c) => c == null ? 'sin datos (rango por defecto)' : 'centro ${c.cx.toStringAsFixed(0)}°/${c.cy.toStringAsFixed(0)}° · medio rango ${c.hr.toStringAsFixed(0)}°';
+          String f(StickCal? c) => c == null
+              ? 'no se movió: rango por defecto'
+              : 'centro ${c.cx.toStringAsFixed(0)}°/${c.cy.toStringAsFixed(0)}° · rango ±${c.hrX.toStringAsFixed(0)}° lados, ±${c.hrY.toStringAsFixed(0)}° adelante';
           _addLog('calibrado · adulto ${f(adult)} · niño ${f(child)}');
         case SessionClosedEvent(:final record, :final byIdle):
           _layers
@@ -226,6 +228,12 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     if (src == BenchSource.stick) {
       final ok = await _useStick(role);
       if (!ok) return;
+    }
+    // La calibración era de la fuente anterior (dedo, sintética u otro stick): se descarta.
+    final st = _e.stick(role);
+    if (st.cal != null && _src[role] != src) {
+      st.cal = null;
+      _addLog('cambió la fuente de ${roleNames[role]}: rango por defecto hasta volver a calibrar');
     }
     setState(() => _src[role] = src);
   }
@@ -581,7 +589,9 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     final lines = [
       s.statusText(now),
       'giro ${r.calibrated ? 'calibrado' : 'SIN calibrar: déjalo quieto 1 s'} · borde ${(st.edgeFraction * 100).round()} %${st.atEdge ? ' (ahora)' : ''}',
-      st.cal != null ? 'rango calibrado ±${st.cal!.hr.toStringAsFixed(0)}°' : 'rango sin calibrar ±${st.range(_e.params).hr.toStringAsFixed(0)}°',
+      st.cal != null
+          ? 'calibrado ±${st.cal!.hrX.toStringAsFixed(0)}° / ±${st.cal!.hrY.toStringAsFixed(0)}°'
+          : 'sin calibrar ±${st.range(_e.params).hr.toStringAsFixed(0)}°',
       'inclinación ${r.tiltX.toStringAsFixed(0)}° / ${r.tiltY.toStringAsFixed(0)}°',
       '|a| ${r.accelMagG.toStringAsFixed(2)} g · ${r.correcting ? 'corrige con gravedad' : 'solo giroscopio'}',
       'bias ${b.x.toStringAsFixed(1)} / ${b.y.toStringAsFixed(1)} / ${b.z.toStringAsFixed(1)} °/s',
@@ -777,6 +787,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     ('slipDrain', 'Pérdida al salir (× velocidad)', 0, 3, 0.1, '×', 1),
     ('velWeight', 'Peso de la velocidad en d', 0, 0.3, 0.01, ' s', 2),
     ('syncLagMs', 'Tolerancia de retraso', 0, 300, 10, ' ms', 0),
+    ('calMode', 'Calibración robusta (0 / 1)', 0, 1, 1, '', 0),
     ('hyst', 'Histéresis de la sincronía', 1, 2, 0.05, '×', 2),
     ('phraseSteps', 'Frase nota a nota (0 / 1)', 0, 1, 1, '', 0),
     ('runMaxNotes', 'Notas de paso (máximo)', 0, 10, 1, '', 0),

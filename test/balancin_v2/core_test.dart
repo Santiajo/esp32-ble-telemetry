@@ -84,7 +84,8 @@ void main() {
   group('calibración', () {
     final p = SyncParams();
 
-    test('el medio rango sale de los percentiles y respeta el mínimo por rol', () {
+    test('como el prototipo: centro del primer segundo, medio rango de los percentiles, mínimo por rol', () {
+      final p = SyncParams.prototype();
       final c = Calibration();
       for (var t = 0.0; t < 6000; t += 10) {
         final s = t / 1000;
@@ -97,6 +98,56 @@ void main() {
       expect(a.hr, p.minA, reason: '±10° < mínimo de 15°');
       expect(k.cy, closeTo(-3, 1e-9));
       expect(k.hr, inInclusiveRange(38, 40.01));
+    });
+
+    test('robusta: un stick apoyado al empezar no corre el centro (prueba del 18-10-2026)', () {
+      final c = Calibration();
+      for (var t = 0.0; t < 6000; t += 16) {
+        final s = t / 1000;
+        if (t < 1500) {
+          // Apoyado en la mesa: inclinación enorme y quieto.
+          c.add(Role.child, t, const P2(10, 85), moving: false);
+        } else {
+          // En la mano, balanceándose ±30° alrededor de (5, −3).
+          c.add(Role.child, t, P2(5 + 4 * math.sin(s * 5), -3 + 30 * math.sin(s * 4)));
+        }
+      }
+      final robusta = c.result(Role.child, SyncParams())!;
+      expect(robusta.cx, closeTo(5, 1));
+      expect(robusta.cy, closeTo(-3, 1.5));
+      expect(robusta.hrY, closeTo(30, 2));
+      expect(robusta.hrX, SyncParams().minC, reason: 'casi no se movió hacia los lados: mínimo');
+      final proto = c.result(Role.child, SyncParams.prototype())!;
+      expect(proto.cy, closeTo(85, 1), reason: 'el prototipo toma la postura de la mesa como centro');
+    });
+
+    test('robusta: sin movimiento suficiente no calibra', () {
+      final c = Calibration();
+      for (var t = 0.0; t < 6000; t += 16) {
+        c.add(Role.adult, t, const P2(0, 0), moving: t < 300);
+      }
+      expect(c.result(Role.adult, SyncParams()), isNull);
+    });
+
+    test('tras calibrar con el stick apoyado al empezar, el punto ya no vive en el borde', () {
+      final e = SyncEngine(isLevelEnabled: (_) => false);
+      e.drive = (now) {
+        final s = now / 1000;
+        for (final st in [e.adult, e.child]) {
+          if (now < 1500) {
+            st.feedTilt(10, 85, e.params); // apoyado
+          } else {
+            st.feedTilt(5, -3 + 30 * math.sin(s * 4), e.params);
+          }
+        }
+      };
+      e.start(mode: PlayMode.levels, calibrate: true, now: 0);
+      for (var now = 0.0; now < 20000; now += fps) {
+        e.tick(now);
+      }
+      expect(e.adult.cal, isNotNull);
+      expect(e.child.edgeFraction, lessThan(0.15));
+      expect(e.adult.edgeFraction, lessThan(0.15));
     });
 
     test('sin datos suficientes no calibra', () {

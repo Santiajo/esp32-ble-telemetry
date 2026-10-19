@@ -18,6 +18,7 @@ class SyncParams {
     ..slipDrain = 0
     ..velWeight = 0
     ..syncLagMs = 0
+    ..calMode = 0
     ..phraseSteps = 0
     ..runMaxNotes = 0;
 
@@ -89,6 +90,13 @@ class SyncParams {
   /// puntos; esto lo absorbe. 0 = comparar en el mismo instante (prototipo).
   double syncLagMs = 150;
 
+  // ---- §12.6 · calibración robusta ----
+
+  /// 1 = el centro es el medio del recorrido mientras el stick se mueve, con rango
+  /// por eje (no depende de cómo estaba el stick en el primer segundo).
+  /// 0 = como el prototipo: centro = promedio del primer segundo, un rango para ambos ejes.
+  double calMode = 1;
+
   // ---- §12.3 · la frase se arma durante el nivel ----
 
   /// 1 = suena una nota de la frase en cada cuarto del nivel (y «cae» si se pierde). 0 = apagado.
@@ -109,7 +117,7 @@ class SyncParams {
     'tolScale', 'alpha', 'rangeA', 'rangeC', 'minA', 'minC', 'onSpeed', 'hyst', //
     'secScale', 'idleAfter', 'decay', 'maxDetune', 'followLag', 'rhythmWin', 'endAfter',
     'kAccel', 'accelGate',
-    'slipGrace', 'slipDrain', 'velWeight', 'syncLagMs', 'phraseSteps', 'runMaxNotes', 'runMs', 'runGain',
+    'slipGrace', 'slipDrain', 'velWeight', 'syncLagMs', 'calMode', 'phraseSteps', 'runMaxNotes', 'runMs', 'runGain',
   ];
 
   double operator [](String k) => switch (k) {
@@ -134,6 +142,7 @@ class SyncParams {
         'slipDrain' => slipDrain,
         'velWeight' => velWeight,
         'syncLagMs' => syncLagMs,
+        'calMode' => calMode,
         'phraseSteps' => phraseSteps,
         'runMaxNotes' => runMaxNotes,
         'runMs' => runMs,
@@ -185,6 +194,8 @@ class SyncParams {
         velWeight = v;
       case 'syncLagMs':
         syncLagMs = v;
+      case 'calMode':
+        calMode = v;
       case 'phraseSteps':
         phraseSteps = v;
       case 'runMaxNotes':

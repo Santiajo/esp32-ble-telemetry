@@ -25,6 +25,7 @@ Cómo mover los controles de **Banco de prueba v2 → Ajuste** según lo que qui
 | **Frustra: se pierde el avance por nada** | Margen al salir de la zona | Subir: 0,4 → 0,7 s |
 | | Pérdida al salir | Bajar: 1 → 0,5 |
 | | Tolerancia (× nivel) | Subir: 1 → 1,15 |
+| **Tras calibrar, un punto queda pegado a un borde** | Calibración robusta | Debe estar en 1. Repite «Calibrar rango» moviendo los sticks por todo su recorrido. |
 | **A alta velocidad se pierde la sincronía** aunque los dos lo hagan bien | Tolerancia de retraso | Subir: 150 → 200–250 ms |
 | | Calibrar al empezar | «sí» (botón del banco): si el stick vive pegado al borde, su curva se recorta |
 | **Cuenta como juntos aunque uno vaya claramente atrasado** | Tolerancia de retraso | Bajar: 150 → 80 ms |
@@ -77,6 +78,10 @@ Cuando el niño se mueve rápido, su nota puede saltar varias notas de golpe. La
 | **Sin calibrar**, al adulto le cuesta llegar a los bordes | Rango por defecto · adulto | Bajar: 30 → 20°. O toca «Calibrar rango». |
 | **Sin calibrar**, el punto del niño se pega al borde enseguida | Rango por defecto · niño | Subir: 45 → 60° |
 
+> **Cómo calibra ahora («Calibración robusta» = 1):** durante los 6 s solo cuentan los momentos en que el stick **se mueve**. El centro es el medio de ese recorrido y el rango se mide por separado hacia los lados y hacia adelante. No importa si el stick estaba apoyado o en otra postura al empezar. Con 0 vuelve al método del prototipo (centro = cómo estaba el stick el primer segundo). Al cambiar la fuente de un panel, su calibración se descarta: vuelve a calibrar.
+>
+> **Para calibrar bien:** cuando diga «Calibrando», cada persona mueve su stick por **todo el recorrido que usará al jugar** (arriba y abajo, y un poco a los lados) durante los 6 s. Si al terminar el Registro dice «no se movió», ese stick queda con el rango por defecto.
+>
 > **«Calibrar al empezar: sí»** (botón del banco, viene encendido) hace que cada sesión empiece con 6 s de «muévanse libremente». Si el porcentaje «En el borde» de un stick pasa de ~15 %, su rango es chico: calibra o sube su rango por defecto. En la prueba del 18-10-2026 el niño estaba en el borde el 70 % del tiempo.
 >
 > «Calibrar rango» mide 6 s de movimiento libre de cada persona y ajusta el rango a ella. Es lo mejor antes de cada prueba seria. Los rangos por defecto solo se usan sin calibrar.
@@ -102,6 +107,7 @@ Si algo del stick se ve raro, usa **Grabar traza** en su panel, repite el gesto 
 | Suavizado de posición α | 0,2 | Pérdida al salir | 1× |
 | Rango por defecto · adulto / niño | 30° / 45° | Peso de la velocidad en d | 0,06 s |
 | Tolerancia de retraso | 150 ms |
+| Calibración robusta | 1 |
 | Umbral de actividad | 2,5 u/s | Histéresis de la sincronía | 1,25× |
 | Desafinación máxima | 4 Hz | Frase nota a nota | 1 |
 | Segundos por nivel | 1× (8 s) | Notas de paso (máximo) | 6 |

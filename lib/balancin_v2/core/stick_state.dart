@@ -32,12 +32,17 @@ class TrailPoint {
   final double t, x, y;
 }
 
-/// Centro y medio rango de la inclinación de una persona (°).
+/// Centro y medio rango de la inclinación de una persona (°). El rango puede
+/// ser distinto en horizontal ([hrX]) y en vertical ([hrY]); [hr] es el mayor.
 class StickCal {
-  const StickCal({required this.cx, required this.cy, required this.hr});
-  final double cx, cy, hr;
+  const StickCal({required this.cx, required this.cy, required double hr, double? hrX, double? hrY})
+      : hrX = hrX ?? hr,
+        hrY = hrY ?? hr;
+  final double cx, cy, hrX, hrY;
 
-  Map<String, double> toJson() => {'cx': cx, 'cy': cy, 'hr': hr};
+  double get hr => hrX > hrY ? hrX : hrY;
+
+  Map<String, double> toJson() => {'cx': cx, 'cy': cy, 'hrX': hrX, 'hrY': hrY};
 }
 
 class Rhythm {
@@ -94,8 +99,8 @@ class StickState {
     has = true;
     tilt = P2(tx, ty);
     final r = range(p);
-    final ux = planeLimit * (tx - r.cx) / r.hr;
-    final uy = planeLimit * (ty - r.cy) / r.hr;
+    final ux = planeLimit * (tx - r.cx) / r.hrX;
+    final uy = planeLimit * (ty - r.cy) / r.hrY;
     raw = P2(_clamp(ux, -planeLimit, planeLimit), _clamp(uy, -planeLimit, planeLimit));
     overflow = P2(ux - raw.x, uy - raw.y);
   }
@@ -103,6 +108,12 @@ class StickState {
   bool get atEdge => overflow.x != 0 || overflow.y != 0;
 
   double get edgeFraction => timeWithData > 0 ? timeAtEdge / timeWithData : 0;
+
+  /// Vuelve a contar el % en el borde desde cero (tras calibrar).
+  void resetEdgeStats() {
+    timeWithData = 0;
+    timeAtEdge = 0;
+  }
 
   void update(double t, double dt, SyncParams p) {
     if (!has) return;
