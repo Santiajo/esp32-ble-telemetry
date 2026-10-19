@@ -87,9 +87,12 @@ class AudioEngineV2 with WidgetsBindingObserver {
     if (_ready || _busy) return;
     _busy = true;
     try {
-      final sw = Stopwatch()..start();
-      _wavs.addAll(await Isolate.run(_renderBase));
-      renderTimeMs = sw.elapsedMilliseconds;
+      if (_wavs.isEmpty) {
+        // Tras un release() se reutilizan los WAV ya sintetizados.
+        final sw = Stopwatch()..start();
+        _wavs.addAll(await Isolate.run(_renderBase));
+        renderTimeMs = sw.elapsedMilliseconds;
+      }
       await _start();
       _ready = true;
       WidgetsBinding.instance.addObserver(this);

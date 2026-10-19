@@ -15,14 +15,18 @@ class LostScreen extends StatefulWidget {
     super.key,
     required this.hub,
     required this.role,
-    required this.session,
+    this.session,
+    this.onResume,
     this.cause = LossCause.alcance,
     this.audioEngine,
   });
 
   final StickHub hub;
   final StickRole role;
-  final BoardSession session;
+
+  /// Sesión de v1 que se reanuda; la mecánica v2 pasa [onResume] en su lugar.
+  final BoardSession? session;
+  final VoidCallback? onResume;
   final LossCause cause;
   final AudioEngine? audioEngine;
 
@@ -59,18 +63,23 @@ class _LostScreenState extends State<LostScreen>
     );
   }
 
+  void _resume() {
+    widget.onResume?.call();
+    widget.session?.resumeAfterLoss();
+  }
+
   void _onHubChanged() {
     if (!mounted) return;
     if (_waitingForReconnect && widget.hub.isConnected(widget.role)) {
       _waitingForReconnect = false;
-      widget.session.resumeAfterLoss();
+      _resume();
       Navigator.of(context).pop('resumed');
     }
   }
 
   void _onHoldDone() {
     if (widget.hub.isConnected(widget.role)) {
-      widget.session.resumeAfterLoss();
+      _resume();
       Navigator.of(context).pop('resumed');
     } else {
       setState(() {

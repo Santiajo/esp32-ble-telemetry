@@ -20,7 +20,10 @@ import '../platform/voice_prompts.dart';
 /// voz del adulto, tono de relación, notas del niño, pad, frases y voz de
 /// consignas. Cada capa se puede silenciar para aislar un sonido.
 class AudioTestV2Screen extends StatefulWidget {
-  const AudioTestV2Screen({super.key});
+  const AudioTestV2Screen({super.key, this.audio});
+
+  /// Motor de audio de la app; si es null la prueba crea el suyo y lo libera al salir.
+  final AudioEngineV2? audio;
 
   @override
   State<AudioTestV2Screen> createState() => _AudioTestV2ScreenState();
@@ -40,7 +43,7 @@ class _AudioTestV2ScreenState extends State<AudioTestV2Screen> with SingleTicker
     scaffoldBackgroundColor: paper,
   );
 
-  final AudioEngineV2 _audio = AudioEngineV2();
+  late final AudioEngineV2 _audio = widget.audio ?? AudioEngineV2();
   final VoicePrompts _voice = VoicePrompts();
   final AudioLayers _layers = AudioLayers();
   late final SyncEngine _engine;
@@ -88,7 +91,12 @@ class _AudioTestV2ScreenState extends State<AudioTestV2Screen> with SingleTicker
   void dispose() {
     _ticker.dispose();
     unawaited(_voice.stop());
-    unawaited(_audio.release());
+    if (widget.audio == null) {
+      unawaited(_audio.release());
+    } else {
+      _layers.silence();
+      _audio.frame(_layers, 0.3);
+    }
     super.dispose();
   }
 

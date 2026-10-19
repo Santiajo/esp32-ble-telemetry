@@ -23,12 +23,21 @@ import '../experience/insert_screen.dart';
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({
     super.key,
-    required this.audioEngine,
+    this.audioEngine,
     required this.hub,
+    this.onChime,
+    this.onFinished,
   });
 
-  final AudioEngine audioEngine;
+  /// Motor de audio de v1 (campanita). La mecánica v2 pasa [onChime] en su lugar.
+  final AudioEngine? audioEngine;
   final StickHub hub;
+
+  /// Campanita de stick vinculado (si no, la de [audioEngine]).
+  final VoidCallback? onChime;
+
+  /// Qué hacer al tocar «Comenzar». Si es null, va a la inserción de v1.
+  final void Function(BuildContext context)? onFinished;
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -199,7 +208,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     switch (outcome) {
       case PairOutcome.paired:
         controller.setStatus(HoldButtonStatus.done);
-        widget.audioEngine.playChime();
+        if (widget.onChime != null) {
+          widget.onChime!();
+        } else {
+          widget.audioEngine?.playChime();
+        }
         setState(() {
           if (role == StickRole.adult) {
             _adultPaired = true;
@@ -272,10 +285,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (!mounted) return;
 
+    final onFinished = widget.onFinished;
+    if (onFinished != null) {
+      onFinished(context);
+      return;
+    }
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => InsertScreen(
-          audioEngine: widget.audioEngine,
+          audioEngine: widget.audioEngine!,
           hub: widget.hub,
         ),
       ),

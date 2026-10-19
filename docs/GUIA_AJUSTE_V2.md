@@ -75,6 +75,8 @@ Cuando el niño se mueve rápido, su nota puede saltar varias notas de golpe. La
 | El punto **va atrasado** respecto de la mano | Suavizado de posición α | Subir: 0,2 → 0,3 |
 | Dice «activo» con el stick **casi quieto** (temblor de la mano) | Umbral de actividad | Subir: 2,5 → 3,5 |
 | **No detecta** un gesto lento del adulto | Umbral de actividad | Bajar: 2,5 → 1,5 |
+| **El niño tiene que moverse mucho más que el adulto** para lo mismo | Rango mínimo · niño | Bajar: 25 → 15° (igual que el adulto). Es una decisión de diseño: el prototipo pide al niño gestos más amplios. |
+| El adulto llega a los bordes con un gesto **demasiado chico** | Rango mínimo · adulto | Subir: 15 → 20–25° |
 | **Sin calibrar**, al adulto le cuesta llegar a los bordes | Rango por defecto · adulto | Bajar: 30 → 20°. O toca «Calibrar rango». |
 | **Sin calibrar**, el punto del niño se pega al borde enseguida | Rango por defecto · niño | Subir: 45 → 60° |
 
@@ -105,7 +107,8 @@ Si algo del stick se ve raro, usa **Grabar traza** en su panel, repite el gesto 
 |---|---|---|---|
 | Tolerancia (× nivel) | 1 | Margen al salir de la zona | 0,4 s |
 | Suavizado de posición α | 0,2 | Pérdida al salir | 1× |
-| Rango por defecto · adulto / niño | 30° / 45° | Peso de la velocidad en d | 0,06 s |
+| Rango por defecto · adulto / niño | 30° / 45° |
+| Rango mínimo · adulto / niño | 15° / 25° | Peso de la velocidad en d | 0,06 s |
 | Tolerancia de retraso | 150 ms |
 | Calibración robusta | 1 |
 | Umbral de actividad | 2,5 u/s | Histéresis de la sincronía | 1,25× |

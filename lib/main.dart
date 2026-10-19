@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:esp32_ble_telemetry/balancin/screens/home_screen.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/app_v2.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +29,9 @@ class TelemetryStationApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: const HomeScreen(),
+      // Mecánica v2: flujo del prototipo (preparación → inicio → modo → nivel → eje → recuerdo).
+      // La app v1 (tablero, diagnóstico BLE) queda en «Herramientas del equipo».
+      home: const BalancinV2Root(),
     );
   }
 }

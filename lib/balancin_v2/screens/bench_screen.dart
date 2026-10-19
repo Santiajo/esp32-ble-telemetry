@@ -45,10 +45,13 @@ const Map<BenchSource, String> _sourceNames = {
 /// nivel exportable; ajuste en vivo de los parámetros; modo eje (solo luz) y
 /// grabación de trazas de los sticks.
 class BenchScreen extends StatefulWidget {
-  const BenchScreen({super.key, required this.hub});
+  const BenchScreen({super.key, required this.hub, this.audio});
 
-  /// Dueño de las conexiones BLE (el mismo de la app v1).
+  /// Dueño de las conexiones BLE (el mismo de la app).
   final StickHub hub;
+
+  /// Motor de audio de la app; si es null el banco crea el suyo y lo libera al salir.
+  final AudioEngineV2? audio;
 
   @override
   State<BenchScreen> createState() => _BenchScreenState();
@@ -69,7 +72,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     scaffoldBackgroundColor: paper,
   );
 
-  final AudioEngineV2 _audio = AudioEngineV2();
+  late final AudioEngineV2 _audio = widget.audio ?? AudioEngineV2();
   final VoicePrompts _voice = VoicePrompts();
   final AudioLayers _layers = AudioLayers();
   late final Ticker _ticker;
@@ -128,7 +131,12 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
       s.dispose();
     }
     unawaited(_voice.stop());
-    unawaited(_audio.release());
+    if (widget.audio == null) {
+      unawaited(_audio.release());
+    } else {
+      _layers.silence();
+      _audio.frame(_layers, 0.3); // las voces continuas bajan a 0 antes de salir
+    }
     super.dispose();
   }
 
@@ -776,6 +784,8 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     ('alpha', 'Suavizado de posición α', 0.05, 0.6, 0.01, '', 2),
     ('rangeA', 'Rango por defecto · adulto', 10, 60, 1, '°', 0),
     ('rangeC', 'Rango por defecto · niño', 15, 80, 1, '°', 0),
+    ('minA', 'Rango mínimo · adulto', 5, 40, 1, '°', 0),
+    ('minC', 'Rango mínimo · niño', 5, 50, 1, '°', 0),
     ('onSpeed', 'Umbral de actividad', 0.5, 6, 0.1, ' u/s', 1),
     ('maxDetune', 'Desafinación máxima', 1, 8, 0.1, ' Hz', 1),
     ('secScale', 'Segundos por nivel (×)', 0.25, 2, 0.05, '×', 2),
