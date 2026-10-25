@@ -460,6 +460,18 @@ Tras probar el banco, el usuario pidió apartarse del prototipo en tres puntos. 
 
 La idea del usuario de evaluar un **trazo predeterminado** queda como propuesta para un nivel o modo guiado (por sonido, porque en el eje la pantalla no se ve), cerca del nivel 5 «Mismo pulso».
 
+## 13. Niveles 2 «Espejo» y 3 «Iguales» (24-10-2026)
+
+Rama `niveles-2-3` (desde `flujo-v2`).
+
+- **Habilitados:** `enabledLevelIds = {1, 2, 3}`; del 4 al 7 siguen «Próximamente». Se abren en orden (el 2 al lograr el 1).
+- **Al lograr un nivel se sigue solo al siguiente**, como en el prototipo (`autoNext` 1); después del 3 se va al final. Con `autoNext` 0 se va al final después de cada nivel (control en el banco).
+- **Relaciones** (ya portadas del prototipo y con paridad): «Espejo» `d = hypot(c.x + p.x, c.y − p.y)`, guía el niño y luego el adulto, tolerancia 1,2; «Iguales» `d = hypot(c.x − p.x, c.y − p.y)`, tolerancia 1,0. Con los cambios del §12 (velocidad, retraso, pérdida al salir) también en el eje horizontal.
+- **El eje horizontal importa.** El nivel 1 solo miraba la altura; el 2 y el 3 miran también el lado, así que el sentido de «derecha» de cada stick tiene que ser correcto. **Asistente de ejes** en el banco (menú «⋮» de cada stick: descanso → arriba → derecha), guardado por MAC (`platform/axis_store.dart`) y cargado por `TiltStick` en el banco y en el juego. El panel del stick dice si usa ejes «de fábrica» o «del asistente».
+- **Calibración:** la pantalla de inserción avisa «muévanse libremente: arriba, abajo y hacia los lados» (la voz está apagada por defecto). La calibración robusta mide el rango de cada eje por separado.
+- **Banco:** selector Libre / 1 / 2 / 3 que sigue al nivel que juega el motor.
+- Pruebas: `levels23_test.dart` (9: espejo y retraso sí, copiar no; iguales sí, espejo no; sesión 1 → 2 → 3 → final), navegación al 2 y ejes por MAC en `screens_test.dart`.
+
 ## 11. Registro
 
 | Fecha | Fase | Nota |
@@ -477,3 +489,4 @@ La idea del usuario de evaluar un **trazo predeterminado** queda como propuesta 
 | 18-10-2026 | 12 | «Pruebas 2» (ambos sticks): a alta velocidad se perdía la sincronía por desfases mínimos (trazos iguales corridos en el tiempo) y el niño estaba ~70 % en el borde. Tolerancia de retraso `syncLagMs` (§12.5), calibrar al empezar en el banco, panel del stick compacto. 5 pruebas nuevas; 188/188. 2.0.0-dev.6+9. |
 | 18-10-2026 | 12 | «Pruebas 3»: tras calibrar, los puntos quedaban pegados a un borde. Calibración robusta por eje con muestras en movimiento (§12.6), descarte de la calibración al cambiar de fuente, % en el borde desde la calibración. 3 pruebas nuevas (incluye el stick apoyado al empezar). 2.0.0-dev.7+10. |
 | 18-10-2026 | 6 | «Pruebas 5»: con la calibración robusta el nivel 1 se logra bien con ambos sticks. Flujo del prototipo en `lib/balancin_v2/`: `app_v2.dart` (raíz: un `StickHub`, un `AudioEngineV2`, voz y parámetros del banco compartidos; preparación la primera vez), `screens/home_v2.dart` (Jugar con esfera animada, sesiones pasadas, idea para hoy, repasar la preparación, herramientas del equipo: banco, prueba de audio, app v1), `mode_screen`, `levels_screen` (2–7 «Próximamente»), `pre_level_screen`, `insert_v2_screen` (animación y iris), `play_eje_screen` (calibra al empezar, solo luz, destello, pérdida de stick con `LostScreen` de v1, salida manteniendo 2 s la esquina superior derecha, inmersivo y pantalla siempre encendida), `final_screen` (recuerdo, canción, quién guió, escuchar, guardar como PNG en la galería). `widgets/v2_ui.dart` (paleta, barra de la canción, pictogramas de los 7 niveles, dibujo del recuerdo, cápsula de guía); `platform/progress_store.dart` (claves del prototipo). La preparación y la pérdida de v1 aceptan `onFinished`/`onChime`/`onResume`. `main.dart` abre la v2. Sin Google (V2). Luz en dos mitades con el degradado del prototipo. Controles «Rango mínimo» en el banco. `screens_test.dart`: 10 pruebas (incluye 360 × 740 sin desbordes). 2.0.0-dev.8+11. |
+| 24-10-2026 | 13 | Niveles 2 y 3 habilitados, «seguir al siguiente nivel», asistente de ejes por MAC en el banco, aviso de calibración en la inserción, selector de nivel en el banco. 213/213. 2.0.0-dev.9+12. |

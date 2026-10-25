@@ -37,6 +37,18 @@ Cómo mover los controles de **Banco de prueba v2 → Ajuste** según lo que qui
 
 > **Cómo funciona ahora:** el progreso sube mientras están dentro de la zona *y* se mueven a una velocidad parecida. La app perdona un pequeño desfase entre los dos (la **tolerancia de retraso**, 150 ms): compara al niño con el adulto un poco antes o después y se queda con el mejor calce. Sin eso, a alta velocidad un retraso mínimo de la mano o del Bluetooth separa mucho los puntos. Si salen, tienen un **margen** (0,4 s) antes de que empiece a bajar. Pasado el margen, baja a la **velocidad de pérdida**: con 1, baja tan rápido como sube.
 
+## 1b. Niveles 2 «Espejo» y 3 «Iguales»
+
+En estos niveles importa también **hacia qué lado** se inclina cada stick, no solo la altura.
+
+| Lo que pasa | Qué hacer |
+|---|---|
+| En «Espejo» o «Iguales», **un stick va al revés** hacia los lados (cuando uno inclina a su derecha, el punto se va a la izquierda) | En el banco, menú **«⋮» del stick → «Asistente de ejes»**: descanso, arriba, derecha. Queda guardado para esa placa. |
+| Después de girar la placa en la mano, o al cambiarla de carcasa | Repetir el asistente. El panel dice «ejes del asistente» o «ejes de fábrica». |
+| El punto casi no se mueve hacia los lados | Al calibrar (los 6 s del principio), **muevan también hacia los lados**. |
+| Quiero ver el final después de cada nivel, sin seguir al siguiente | Seguir al siguiente nivel = **0** |
+| «Iguales» cuesta demasiado | Tolerancia (× nivel): subir a 1,1–1,2. «Iguales» tiene una tolerancia más estricta (1,0) que «Juntos» y «Espejo» (1,2). |
+
 ## 2. La frase que se arma durante el nivel
 
 | Lo que pasa | Qué mover |
@@ -111,6 +123,7 @@ Si algo del stick se ve raro, usa **Grabar traza** en su panel, repite el gesto 
 | Rango mínimo · adulto / niño | 15° / 25° | Peso de la velocidad en d | 0,06 s |
 | Tolerancia de retraso | 150 ms |
 | Calibración robusta | 1 |
+| Seguir al siguiente nivel | 1 |
 | Umbral de actividad | 2,5 u/s | Histéresis de la sincronía | 1,25× |
 | Desafinación máxima | 4 Hz | Frase nota a nota | 1 |
 | Segundos por nivel | 1× (8 s) | Notas de paso (máximo) | 6 |

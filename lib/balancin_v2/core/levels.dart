@@ -164,7 +164,7 @@ const List<Level> levels = [
       difficulty: 3),
 ];
 
-/// Niveles que se pueden jugar en esta versión (plan v2, V4).
-const Set<int> enabledLevelIds = {1};
+/// Niveles que se pueden jugar en esta versión (plan v2, V4; el 2 y el 3 desde el 24-10-2026).
+const Set<int> enabledLevelIds = {1, 2, 3};
 
 Level levelById(int id) => levels[id - 1];

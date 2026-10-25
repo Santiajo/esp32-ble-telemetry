@@ -26,6 +26,7 @@ import '../platform/bench_store.dart';
 import '../platform/share_file.dart';
 import '../platform/tilt_stick.dart';
 import '../platform/voice_prompts.dart';
+import '../widgets/axis_wizard_sheet.dart';
 import '../widgets/sync_plane.dart';
 import '../widgets/two_halves_light.dart';
 
@@ -81,6 +82,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
   String? _error;
 
   PlayMode _mode = PlayMode.levels;
+  int _levelIndex = 0;
   final Map<Role, BenchSource> _src = {Role.adult: BenchSource.finger, Role.child: BenchSource.finger};
   SynthQuality _quality = SynthQuality.cycle;
   final Map<Role, TiltStick> _sticks = {};
@@ -154,7 +156,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
       ..startPad(now);
     // Con «Calibrar al empezar», cada sesión mide 6 s el rango de cada persona:
     // sin eso el stick del niño pasaba ~70 % del tiempo pegado al borde (prueba del 18-10-2026).
-    _handle(_e.start(mode: _mode, now: now, calibrate: _calOnStart), now);
+    _handle(_e.start(mode: _mode, levelIndex: _levelIndex, now: now, calibrate: _calOnStart), now);
   }
 
   /// Fuentes que no son el dedo: sintética y stick (`synthDrive` del prototipo).
@@ -600,7 +602,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
       st.cal != null
           ? 'calibrado ±${st.cal!.hrX.toStringAsFixed(0)}° / ±${st.cal!.hrY.toStringAsFixed(0)}°'
           : 'sin calibrar ±${st.range(_e.params).hr.toStringAsFixed(0)}°',
-      'inclinación ${r.tiltX.toStringAsFixed(0)}° / ${r.tiltY.toStringAsFixed(0)}°',
+      'inclinación ${r.tiltX.toStringAsFixed(0)}° / ${r.tiltY.toStringAsFixed(0)}° · ejes ${r.axesFromDefault ? 'de fábrica' : 'del asistente'}',
       '|a| ${r.accelMagG.toStringAsFixed(2)} g · ${r.correcting ? 'corrige con gravedad' : 'solo giroscopio'}',
       'bias ${b.x.toStringAsFixed(1)} / ${b.y.toStringAsFixed(1)} / ${b.z.toStringAsFixed(1)} °/s',
     ];
@@ -624,8 +626,10 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
           onSelected: (v) {
             if (v == 'scan') unawaited(_scan(s.link));
             if (v == 'gyro') r.resetCalibration();
+            if (v == 'axes') unawaited(AxisWizardSheet.open(context, s, role == Role.adult ? 'adulto' : 'niño'));
           },
           itemBuilder: (_) => const [
+            PopupMenuItem(value: 'axes', child: Text('Asistente de ejes')),
             PopupMenuItem(value: 'scan', child: Text('Vincular otro stick')),
             PopupMenuItem(value: 'gyro', child: Text('Recalibrar giro')),
           ],
@@ -638,19 +642,23 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     final anySynth = _src.values.contains(BenchSource.synthetic);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        SegmentedButton<PlayMode>(
+        // Libre o nivel 1–3. Muestra lo que juega el motor (con «seguir al siguiente nivel» avanza solo).
+        SegmentedButton<int>(
           style: const ButtonStyle(visualDensity: VisualDensity.compact),
-          segments: const [
-            ButtonSegment(value: PlayMode.free, label: Text('Libre')),
-            ButtonSegment(value: PlayMode.levels, label: Text('Nivel 1')),
+          showSelectedIcon: false,
+          segments: [
+            const ButtonSegment(value: 0, label: Text('Libre')),
+            for (final id in enabledLevelIds) ButtonSegment(value: id, label: Text('$id')),
           ],
-          selected: {_mode},
+          selected: {e.mode == PlayMode.free ? 0 : e.levelIndex + 1},
           onSelectionChanged: (s) {
-            _mode = s.first;
+            final v = s.first;
+            _mode = v == 0 ? PlayMode.free : PlayMode.levels;
+            _levelIndex = v == 0 ? 0 : v - 1;
             if (_closed) {
               _restart();
             } else {
-              _handle(e.switchTo(mode: _mode, now: AppClock.nowMs()), AppClock.nowMs());
+              _handle(e.switchTo(mode: _mode, levelIndex: _levelIndex, now: AppClock.nowMs()), AppClock.nowMs());
             }
           },
         ),
@@ -798,6 +806,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     ('velWeight', 'Peso de la velocidad en d', 0, 0.3, 0.01, ' s', 2),
     ('syncLagMs', 'Tolerancia de retraso', 0, 300, 10, ' ms', 0),
     ('calMode', 'Calibración robusta (0 / 1)', 0, 1, 1, '', 0),
+    ('autoNext', 'Seguir al siguiente nivel (0 / 1)', 0, 1, 1, '', 0),
     ('hyst', 'Histéresis de la sincronía', 1, 2, 0.05, '×', 2),
     ('phraseSteps', 'Frase nota a nota (0 / 1)', 0, 1, 1, '', 0),
     ('runMaxNotes', 'Notas de paso (máximo)', 0, 10, 1, '', 0),

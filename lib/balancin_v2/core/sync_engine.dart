@@ -685,7 +685,7 @@ class SyncEngine {
       _after(now, dur * 1000 + 2200, (t) {
         if (state != EngineState.levelComplete) return;
         final next = levelIndex + 1;
-        if (next < levels.length && isLevelEnabled(levels[next].id)) {
+        if (params.autoNext >= 1 && next < levels.length && isLevelEnabled(levels[next].id)) {
           levelIndex = next;
           _startLevel(t);
         } else {

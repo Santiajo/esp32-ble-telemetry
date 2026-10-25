@@ -97,6 +97,12 @@ class SyncParams {
   /// 0 = como el prototipo: centro = promedio del primer segundo, un rango para ambos ejes.
   double calMode = 1;
 
+  // ---- §13 · niveles 2 y 3 ----
+
+  /// 1 = al lograr un nivel se sigue solo al siguiente habilitado (prototipo);
+  /// 0 = se pasa al final después de cada nivel.
+  double autoNext = 1;
+
   // ---- §12.3 · la frase se arma durante el nivel ----
 
   /// 1 = suena una nota de la frase en cada cuarto del nivel (y «cae» si se pierde). 0 = apagado.
@@ -117,7 +123,7 @@ class SyncParams {
     'tolScale', 'alpha', 'rangeA', 'rangeC', 'minA', 'minC', 'onSpeed', 'hyst', //
     'secScale', 'idleAfter', 'decay', 'maxDetune', 'followLag', 'rhythmWin', 'endAfter',
     'kAccel', 'accelGate',
-    'slipGrace', 'slipDrain', 'velWeight', 'syncLagMs', 'calMode', 'phraseSteps', 'runMaxNotes', 'runMs', 'runGain',
+    'slipGrace', 'slipDrain', 'velWeight', 'syncLagMs', 'calMode', 'autoNext', 'phraseSteps', 'runMaxNotes', 'runMs', 'runGain',
   ];
 
   double operator [](String k) => switch (k) {
@@ -143,6 +149,7 @@ class SyncParams {
         'velWeight' => velWeight,
         'syncLagMs' => syncLagMs,
         'calMode' => calMode,
+        'autoNext' => autoNext,
         'phraseSteps' => phraseSteps,
         'runMaxNotes' => runMaxNotes,
         'runMs' => runMs,
@@ -196,6 +203,8 @@ class SyncParams {
         syncLagMs = v;
       case 'calMode':
         calMode = v;
+      case 'autoNext':
+        autoNext = v;
       case 'phraseSteps':
         phraseSteps = v;
       case 'runMaxNotes':

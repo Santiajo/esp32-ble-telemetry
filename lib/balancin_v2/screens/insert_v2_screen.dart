@@ -93,6 +93,13 @@ class _InsertV2ScreenState extends State<InsertV2Screen> with TickerProviderStat
                 ),
                 const SizedBox(height: 8),
                 Text(l == null ? 'Modo libre' : 'Nivel ${l.id} · ${l.name}', style: V2.kicker),
+                const SizedBox(height: 8),
+                // Sin voz de consignas, este es el único aviso de la calibración (6 s al entrar al eje).
+                const SizedBox(
+                  width: 300,
+                  child: Text('Al empezar, muévanse libremente unos segundos: arriba, abajo y hacia los lados.',
+                      textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: V2.mute, fontWeight: FontWeight.w700)),
+                ),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: 300,

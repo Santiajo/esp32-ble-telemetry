@@ -7,6 +7,9 @@ import 'package:esp32_ble_telemetry/balancin_v2/app_v2.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/levels.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/params.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/telemetry.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/core/tilt/axis_map.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/core/tilt/vec3.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/platform/axis_store.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/platform/audio_engine_v2.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/platform/progress_store.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/platform/voice_prompts.dart';
@@ -53,7 +56,9 @@ void main() {
       expect(find.text('0 de 7 partes'), findsOneWidget);
       expect(find.text('1 · Juntos'), findsOneWidget);
       expect(find.text('Sugerido'), findsOneWidget);
-      expect(find.text('Próximamente'), findsNWidgets(6));
+      expect(find.text('Próximamente'), findsNWidgets(4), reason: 'del 4 al 7');
+      expect(find.text('Primero el nivel 1'), findsOneWidget);
+      expect(find.text('Primero el nivel 2'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -137,6 +142,32 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       expect(tester.takeException(), isNull, reason: e.key);
     }
+  });
+
+  testWidgets('con el 1 logrado, el 2 se abre y se puede entrar a su previa', (tester) async {
+    SharedPreferences.setMockInitialValues({ProgressStore.progressKey: jsonEncode([1])});
+    await pumpPage(tester, LevelsScreen(s: services()));
+    expect(find.text('Sugerido'), findsOneWidget);
+    expect(find.text('Primero el nivel 1'), findsNothing);
+    expect(find.text('Primero el nivel 2'), findsOneWidget, reason: 'el 3 sigue esperando al 2');
+    await tester.tap(find.text('2 · Espejo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Nivel 2 de 7 · Fácil'), findsOneWidget);
+    expect(find.text('Guía el niño, luego el adulto'), findsOneWidget);
+  });
+
+  test('ejes por stick: se guardan y se leen por MAC', () async {
+    SharedPreferences.setMockInitialValues({});
+    final m = AxisMap.fromRight(V3.ez, V3.ey)!;
+    await AxisStore.save('aa:bb:cc:dd:ee:ff', m);
+    final back = await AxisStore.load('AA:BB:CC:DD:EE:FF');
+    expect(back, isNotNull);
+    expect(back!.right.angleTo(m.right), lessThan(1e-9));
+    expect(await AxisStore.load('11:22:33:44:55:66'), isNull);
+    expect(await AxisStore.load(null), isNull);
+    await AxisStore.clear('aa:bb:cc:dd:ee:ff');
+    expect(await AxisStore.load('aa:bb:cc:dd:ee:ff'), isNull);
   });
 
   test('progreso y sesiones: guardar y leer', () async {

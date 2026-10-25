@@ -184,8 +184,8 @@ void main() {
   });
 
   group('nivel 1 «Juntos»', () {
-    test('se logra con 8 s en sincronía, cambia la guía a los 4 s y va al final', () {
-      final e = v2Engine();
+    test('se logra con 8 s en sincronía, cambia la guía a los 4 s y (sin seguir) va al final', () {
+      final e = SyncEngine(params: SyncParams()..autoNext = 0, closeOnIdle: true, isLevelEnabled: enabledLevelIds.contains);
       e.drive = (now) => synthDrive(e, SynthQuality.sync, now);
       final start = e.start(mode: PlayMode.levels, now: 0);
       expect(start.whereType<SayEvent>().single.text,
@@ -206,7 +206,20 @@ void main() {
       expect(closed.record.traj, isNotEmpty);
       expect(e.report()['niveles_logrados'], [1]);
       expect(ev.whereType<SayEvent>().where((s) => s.text.startsWith('Nivel 2')), isEmpty,
-          reason: 'el nivel 2 no está habilitado en v2');
+          reason: 'con «seguir al siguiente nivel» apagado no continúa');
+    });
+
+    test('con «seguir al siguiente nivel» (por defecto) continúa con el 2 en la misma sesión', () {
+      final e = v2Engine();
+      e.drive = (now) => synthDrive(e, SynthQuality.sync, now);
+      e.start(mode: PlayMode.levels, now: 0);
+      final ev = runFor(e, 0, 20000);
+      expect(ev.whereType<LevelCompletedEvent>().first.levelId, 1);
+      expect(ev.whereType<SessionClosedEvent>(), isEmpty);
+      expect(ev.whereType<SayEvent>().map((s) => s.text),
+          contains('Nivel 2. Espejo. Frente a frente, como en un espejo. Guía el niño, luego el adulto.'));
+      expect(e.level!.id, 2);
+      expect(e.levelTelemetry.map((l) => l.nivel), [1, 2]);
     });
 
     test('lejos de la sincronía no hay progreso', () {

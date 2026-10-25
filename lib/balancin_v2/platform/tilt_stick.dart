@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import '../../balancin/core/ble/imu_frame_parser.dart';
 import '../../balancin/platform/ble_stick_link.dart';
 import '../core/params.dart';
+import '../core/tilt/axis_map.dart';
 import '../core/tilt/imu_trace.dart';
 import '../core/tilt/tilt_reader.dart';
+import 'axis_store.dart';
 
 /// Un stick real visto por la mecánica v2 (plan v2 §4.1 y fase 4).
 ///
@@ -12,6 +16,25 @@ import '../core/tilt/tilt_reader.dart';
 class TiltStick {
   TiltStick(this.link, {SyncParams? params}) : reader = TiltReader(params: params) {
     link.sampleListeners.add(_onSample);
+    unawaited(loadSavedAxes());
+  }
+
+  /// Ejes del asistente guardados para esta placa (por MAC), si los hay.
+  Future<void> loadSavedAxes() async {
+    final map = await AxisStore.load(link.savedMac);
+    if (map != null) reader.setAxes(map);
+  }
+
+  /// Guarda los ejes del asistente para esta placa y los aplica.
+  Future<void> saveAxes(AxisMap map) async {
+    reader.setAxes(map);
+    await AxisStore.save(link.savedMac, map);
+  }
+
+  /// Olvida los ejes del asistente: vuelve a los de fábrica (vertical = Z, derecha = X).
+  Future<void> resetAxes() async {
+    reader.useDefaultAxes();
+    await AxisStore.clear(link.savedMac);
   }
 
   final BleStickLink link;

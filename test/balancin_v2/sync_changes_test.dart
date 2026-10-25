@@ -135,9 +135,11 @@ void main() {
     test('suenan do, re y mi a los 2, 4 y 6 s; el nivel completa con sol', () {
       final ev = <SyncEvent>[];
       run(SyncParams(), 20, (s, ay) => ay, events: ev);
-      final steps = ev.whereType<PhraseStepEvent>().toList();
+      // Solo el nivel 1 (después sigue el 2, con su propia frase).
+      final done1 = ev.whereType<LevelCompletedEvent>().first;
+      final steps = ev.whereType<PhraseStepEvent>().where((x) => x.at <= done1.at).toList();
       expect(steps.map((x) => (x.step, x.midi, x.up)), [(1, 60, true), (2, 62, true), (3, 64, true)]);
-      expect(ev.whereType<LevelCompletedEvent>().single.levelId, 1);
+      expect(done1.levelId, 1);
     });
 
     test('si el progreso vuelve a bajar de un cuarto, esa nota «cae»', () {
