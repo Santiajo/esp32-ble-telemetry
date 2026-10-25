@@ -112,7 +112,9 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
       final params = await BenchStore.loadParams();
       _voice.enabled = await BenchStore.loadVoice();
       _calOnStart = await BenchStore.loadCalOnStart();
-      final e = SyncEngine(params: params, isLevelEnabled: enabledLevelIds.contains);
+      // El banco puede jugar los 7 niveles para ver cómo se comportan; en la app
+      // siguen cerrados los que no están en enabledLevelIds.
+      final e = SyncEngine(params: params, isLevelEnabled: (_) => true);
       e.drive = _drive;
       _params = params;
       _engine = e;
@@ -428,7 +430,9 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
         ? 'Muévanse libremente: se mide el rango de cada persona (${(e.calibrationElapsed(AppClock.nowMs()) / 1000).toStringAsFixed(0)} de 6 s).'
         : l == null
             ? 'Libre: el tono de relación busca el movimiento en común más cercano.'
-            : 'Nivel ${l.id} · ${l.name}: ${l.text}';
+            : l.isSong
+                ? 'Nivel 7 · La canción, parte ${e.part + 1} de 4 (${relationNames[e.relation]}): ${l.text}'
+                : 'Nivel ${l.id} · ${l.name}: ${l.text}';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
@@ -442,6 +446,24 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
         overflow: TextOverflow.ellipsis,
       ),
     );
+  }
+
+  /// Qué mide el motor ahora, en palabras (para el banco).
+  String _behind(SyncEngine e) {
+    final lag = e.params.syncLagMs.round();
+    final g = roleNames[e.guide];
+    return switch (e.relation) {
+      Relation.free => 'Libre: d = la más cercana entre juntos, espejo y sube y baja (±$lag ms).',
+      Relation.together => 'Juntos: d = diferencia de altura (y de velocidad), tolerando ±$lag ms de desfase. Guía $g.',
+      Relation.mirror => 'Espejo: misma altura y lados opuestos (x del niño = −x del adulto), ±$lag ms. Guía $g.',
+      Relation.same => 'Iguales: misma altura y mismo lado (el punto del niño sobre el del adulto), ±$lag ms. Guía $g.',
+      Relation.seesaw => 'Sube y baja: alturas opuestas (y del niño = −y del adulto), ±$lag ms. Guía $g.',
+      Relation.pulse =>
+        'Mismo pulso: compara el ritmo (vaivenes por segundo) de los dos, no la posición. Necesita balanceos de amplitud ≥ 1.',
+      Relation.follow =>
+        'Sígueme: quien no guía copia el trazo de $g con hasta ${e.params.followLag.toStringAsFixed(1)} s de retraso.',
+      Relation.song => 'La canción.',
+    };
   }
 
   Widget _closedBanner() => Center(
@@ -515,6 +537,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
         overflow: TextOverflow.ellipsis,
       ),
       Text('En el borde: adulto ${edge(Role.adult)} · niño ${edge(Role.child)}', style: small),
+      Text('Por detrás: ${_behind(e)}', style: small, maxLines: 2, overflow: TextOverflow.ellipsis),
     ]);
   }
 
@@ -642,17 +665,23 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     final anySynth = _src.values.contains(BenchSource.synthetic);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        // Libre o nivel 1–3. Muestra lo que juega el motor (con «seguir al siguiente nivel» avanza solo).
-        SegmentedButton<int>(
-          style: const ButtonStyle(visualDensity: VisualDensity.compact),
-          showSelectedIcon: false,
-          segments: [
-            const ButtonSegment(value: 0, label: Text('Libre')),
-            for (final id in enabledLevelIds) ButtonSegment(value: id, label: Text('$id')),
+        // Libre o cualquiera de los 7 niveles. Muestra lo que juega el motor
+        // (con «seguir al siguiente nivel» avanza solo). Los que en la app dicen
+        // «Próximamente» llevan un asterisco.
+        DropdownButton<int>(
+          value: e.mode == PlayMode.free ? 0 : e.levelIndex + 1,
+          isDense: true,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: ink),
+          items: [
+            const DropdownMenuItem(value: 0, child: Text('Libre')),
+            for (final l in levels)
+              DropdownMenuItem(
+                value: l.id,
+                child: Text('${l.id} · ${l.name}${enabledLevelIds.contains(l.id) ? '' : ' *'}'),
+              ),
           ],
-          selected: {e.mode == PlayMode.free ? 0 : e.levelIndex + 1},
-          onSelectionChanged: (s) {
-            final v = s.first;
+          onChanged: (v) {
+            if (v == null) return;
             _mode = v == 0 ? PlayMode.free : PlayMode.levels;
             _levelIndex = v == 0 ? 0 : v - 1;
             if (_closed) {
