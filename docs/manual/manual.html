@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Balancín · Manual de usuario</title>
 <style>
-  @page { size: A4; margin: 16mm 15mm 18mm; }
+  @page { size: A4; margin: 0; }
   :root {
     --paper: #EFECE4; --ink: #2B2536; --soft: #4A445A; --mute: #5A536B;
     --lila: #B3A2DC; --lilaInk: #7B5FCB; --coral: #E85E45; --coralSoft: #F4C3B6;
@@ -12,14 +12,24 @@
   }
   * { box-sizing: border-box; }
   html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { margin: 0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.5; }
+  body { margin: 0; background: #fff; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.5; }
   h1, h2, h3 { font-weight: 800; letter-spacing: -0.01em; color: var(--ink); }
   h2 { font-size: 19pt; margin: 0 0 4mm; padding-top: 2mm; }
   h3 { font-size: 12.5pt; margin: 6mm 0 2mm; }
   p { margin: 0 0 3mm; }
   ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
   li { margin-bottom: 1.2mm; }
-  .chapter { break-before: page; }
+  /* Páginas A4 fijas: el script del final reparte el contenido sin partir figuras ni dejar páginas vacías. */
+  .page { width: 210mm; height: 297mm; padding: 16mm 15mm 0; position: relative; overflow: hidden; break-after: page; page-break-after: always; background: #fff; }
+  .page:last-child { break-after: auto; page-break-after: auto; }
+  .page .box { height: 263mm; overflow: hidden; }
+  .page .box > :first-child { margin-top: 0; padding-top: 0; }
+  .folio { position: absolute; bottom: 9mm; right: 15mm; font-size: 8.5pt; font-weight: 800; color: var(--mute); }
+  .folio::before { content: "Balancín · manual de usuario"; font-weight: 600; margin-right: 6mm; }
+  #src { display: none; }
+  .figs .phone { zoom: .86; }
+  .figs { gap: 5mm; flex-wrap: nowrap; }
+  .figs figcaption { max-width: 52mm; }
   .kicker { font-size: 8.5pt; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); margin-bottom: 1mm; }
   .lead { font-size: 11.5pt; color: var(--soft); }
   .note { background: #fff; border-left: 4px solid var(--olive); padding: 3mm 4mm; border-radius: 0 3mm 3mm 0; margin: 3mm 0 4mm; }
@@ -38,7 +48,7 @@
   .step { display: inline-flex; width: 6mm; height: 6mm; border-radius: 50%; background: var(--ink); color: #fff; font-size: 8.5pt; font-weight: 800; align-items: center; justify-content: center; margin-right: 2mm; }
 
   /* ---------- Portada ---------- */
-  .cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; padding: 8mm 2mm; }
+  .cover { height: 263mm; display: flex; flex-direction: column; justify-content: space-between; padding: 8mm 2mm; }
   .brand { display: flex; gap: 5mm; }
   .brand span { width: 13mm; height: 13mm; display: block; }
   .cover h1 { font-size: 46pt; line-height: 1; margin: 18mm 0 4mm; letter-spacing: -0.03em; }
@@ -75,7 +85,7 @@
   .song i.ok { background: var(--olive); }
   .lv { display: flex; align-items: center; gap: 1.4mm; background: #fff; border-radius: 3mm; padding: 2mm; margin-bottom: 1.4mm; }
   .lv .ic { width: 5.5mm; height: 5.5mm; border-radius: 2mm; background: var(--paper); flex: none; position: relative; }
-  .lv .nm { flex: 1; font-weight: 900; color: var(--ink); font-size: 6pt; white-space: nowrap; min-width: 0; overflow: hidden; }
+  .lv .nm { flex: 1; font-weight: 900; color: var(--ink); font-size: 5.6pt; white-space: nowrap; min-width: 0; overflow: hidden; }
   .lv .nm small { display: block; font-weight: 700; color: var(--mute); font-size: 5.8pt; }
   .tag { font-size: 5pt; font-weight: 900; border-radius: 99px; padding: .3mm 1.2mm; white-space: nowrap; flex: none; }
   .tag.ok { background: var(--olive); color: #fff; }
@@ -107,6 +117,7 @@
   .sw::after { content: ""; position: absolute; right: .6mm; top: .6mm; width: 2.8mm; height: 2.8mm; border-radius: 50%; background: #fff; }
   .sw.off { background: var(--line); }
   .sw.off::after { right: auto; left: .6mm; }
+  .diff td { font-size: 9pt; }
   .controls td:first-child { width: 21%; font-weight: 800; }
   .controls td:nth-child(2) { width: 43%; }
   .controls td:nth-child(3) { width: 26%; }
@@ -120,7 +131,8 @@
 <body>
 
 <!-- ======================= PORTADA ======================= -->
-<section class="cover">
+<div id="book">
+<section class="page"><div class="box cover">
   <div class="brand">
     <span style="background:var(--lila);border-radius:3mm"></span>
     <span style="background:var(--coral);border-radius:50%"></span>
@@ -136,8 +148,10 @@
     Versión 2.0.0-dev.13 · 25-10-2026<br>
     Basado en la <i>Especificación funcional v0.1</i> de Joaquín Muñoz Quiroz (Escuela de Diseño UDP) y en el prototipo «mecánica v2».
   </div>
-</section>
+</div></section>
+</div>
 
+<div id="src">
 <!-- ======================= ÍNDICE ======================= -->
 <section class="chapter">
   <div class="kicker">Contenido</div>
@@ -154,11 +168,12 @@
     <div><span>9</span>Si se pierde un stick</div>
     <div><span>10</span>Banco de prueba (equipo)</div>
     <div><span>11</span>Ajuste: todos los controles</div>
-    <div><span>12</span>Problemas frecuentes</div>
-    <div><span>13</span>Datos y privacidad</div>
+    <div><span>12</span>Diferencias con el prototipo y por qué</div>
+    <div><span>13</span>Problemas frecuentes</div>
+    <div><span>14</span>Datos y privacidad</div>
   </div>
   <div class="note tip" style="margin-top:10mm">
-    <b>Para quien ajusta la experiencia.</b> Los capítulos 10 y 11 explican el banco de prueba y cada control de Ajuste. En la app, cada control tiene un botón <b>?</b> con la misma explicación.
+    <b>Para quien ajusta la experiencia.</b> El capítulo 12 resume en qué se aparta la app del prototipo y por qué. Los capítulos 10 y 11 explican el banco de prueba y cada control de Ajuste. En la app, cada control tiene un botón <b>?</b> con la misma explicación.
   </div>
 </section>
 
@@ -687,9 +702,55 @@
   </table>
 </section>
 
+<!-- ======================= 12 · DIFERENCIAS ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 12 · Para el equipo</div>
+  <h2>Diferencias con el prototipo y por qué</h2>
+  <p class="lead">La app parte del prototipo HTML «mecánica v2»: sus niveles, sus reglas de sincronía, su sonido en tres capas y sus valores son la base, y donde el prototipo y la <i>Especificación funcional v0.1</i> no coinciden, manda el prototipo. Pero el prototipo se juega con el dedo, en una pantalla que se ve; la app se juega con dos sticks reales y el teléfono escondido en el eje. Casi todas las diferencias vienen de ahí: de probarlo con personas, a ciegas y con sensores de verdad.</p>
+  <div class="note"><b>Para comparar:</b> en el banco, Ajuste → <b>«Como el prototipo»</b> vuelve a las reglas de sincronía del prototipo (medir por punto, sin pérdida al salir, sin velocidad ni retraso, calibración del primer segundo, sin frase nota a nota ni escala de paso). Lo que no depende de Ajuste (cuenta, vibración, sensores) se explica abajo.</div>
+  <h3>Alcance y flujo</h3>
+  <table class="diff">
+    <tr><th style="width:17%">Tema</th><th style="width:22%">Prototipo</th><th style="width:25%">App entregada</th><th>Por qué</th></tr>
+    <tr><td><b>Inicio de sesión</b></td><td>«Continuar con Google» (simulado).</td><td>Sin cuenta. La app abre en la preparación (la primera vez) o en el inicio.</td><td>No hace falta para jugar ni para el estudio, y evita guardar datos de personas fuera del teléfono. Queda para una versión futura.</td></tr>
+    <tr><td><b>Niveles</b></td><td>Los 7 niveles definidos.</td><td>Del 1 al 5 se pueden jugar; el 6 y el 7, «Próximamente». En el banco se prueban los 7.</td><td>Se habilitan a medida que se validan con personas: los 5 primeros se lograron sin ver la pantalla. «Sígueme» y «La canción» aún no se han probado así.</td></tr>
+    <tr><td><b>Vibración</b></td><td>Los sticks vibran al cambiar de guía, al lograr un nivel y cada segundo en sincronía.</td><td>Sin vibración.</td><td>Los sticks actuales no tienen motor de vibración. El cambio de guía se puede avisar con una campanita.</td></tr>
+    <tr><td><b>Voz de consignas</b></td><td>Encendida, con la voz del navegador.</td><td>Apagada de fábrica; se enciende en el banco. Usa la voz del teléfono.</td><td>En las pruebas tapaba el sonido del juego. Es un marcador hasta tener voces grabadas.</td></tr>
+    <tr><td><b>Historial</b></td><td>Guardado en el navegador.</td><td>Siempre en el teléfono, sin interruptor de «sesión de estudio».</td><td>Decisión del 17-10-2026: más simple, y nada sale del teléfono.</td></tr>
+    <tr><td><b>Pérdida de stick</b></td><td>No existe (no hay sticks).</td><td>Pantalla de pérdida; la sesión sigue al reconectar. La causa siempre es «Fuera de alcance».</td><td>Con Bluetooth real un stick puede alejarse o apagarse. La batería no se mide, así que no se puede decir «batería agotada».</td></tr>
+  </table>
+  <h3>Sensores y movimiento</h3>
+  <table class="diff">
+    <tr><th style="width:17%">Tema</th><th style="width:22%">Prototipo</th><th style="width:25%">App entregada</th><th>Por qué</th></tr>
+    <tr><td><b>De dónde sale la inclinación</b></td><td>El dedo simula ±60°.</td><td>Se calcula en el teléfono con el acelerómetro y el giroscopio del stick.</td><td>Solo el acelerómetro salta con cada gesto; solo el giroscopio se desvía con el tiempo. Juntos dan una inclinación estable.</td></tr>
+    <tr><td><b>Error del sensor</b></td><td>—</td><td>Se mide con el stick quieto y se guarda por placa.</td><td>Cada giroscopio marca un error propio (el del stick B, unos 41 °/s). Sin medirlo, el punto tiritaba al empezar cada partida.</td></tr>
+    <tr><td><b>Ejes de cada stick</b></td><td>—</td><td>Asistente de ejes (descanso, arriba, derecha), guardado por placa.</td><td>Cada placa puede ir montada distinta. En «Espejo» e «Iguales» un lado invertido hacía imposible el nivel.</td></tr>
+    <tr><td><b>Calibración</b></td><td>Centro = cómo estaba el stick el primer segundo; un solo rango.</td><td>Solo cuentan los momentos en movimiento; un rango por eje. Aviso de dejar los sticks quietos al colocar el teléfono.</td><td>Si el stick estaba apoyado al empezar, el centro quedaba corrido decenas de grados y el punto vivía pegado a un borde.</td></tr>
+    <tr><td><b>Plano</b></td><td>Sin límite visible.</td><td>Límite de ±6 con marco, marca de salida y % del tiempo en el borde (banco).</td><td>Para ver cuándo un rango es chico y recalibrar.</td></tr>
+  </table>
+  <h3>Cómo se mide la sincronía</h3>
+  <table class="diff">
+    <tr><th style="width:17%">Tema</th><th style="width:22%">Prototipo</th><th style="width:25%">App entregada</th><th>Por qué</th></tr>
+    <tr><td><b>Qué cuenta como «juntos»</b></td><td>Punto: el niño dentro de un círculo chico alrededor de donde «debería» estar.</td><td>Zonas y trazo: la misma franja del plano y moverse hacia el mismo lado al mismo tiempo. El punto sigue disponible en Ajuste.</td><td>En el eje nadie ve el plano: acertar un círculo del 10 % del plano a ciegas era casi imposible y llevaba a estacionarse en las esquinas. Con zonas y trazo, una díada logró los niveles 1 a 5 sin mirar.</td></tr>
+    <tr><td><b>Salir de la zona</b></td><td>El avance solo deja de subir.</td><td>Tras 0,4 s fuera, el avance baja.</td><td>Se podía lograr el nivel pasando de rebote por la zona, desafinados casi todo el tiempo.</td></tr>
+    <tr><td><b>Velocidad</b></td><td>Solo la posición.</td><td>También cuenta que la velocidad se parezca.</td><td>Cruzarse en sentidos contrarios contaba como «juntos».</td></tr>
+    <tr><td><b>Retraso</b></td><td>Compara en el mismo instante.</td><td>Perdona hasta 150 ms de desfase.</td><td>A alta velocidad, un retraso mínimo de la mano o del Bluetooth separaba los puntos: la app «no seguía» al niño.</td></tr>
+    <tr><td><b>Ayudas sin vista</b></td><td>—</td><td>Opcionales («Sin vista»): solo el lado en Espejo e Iguales, el borde no cuenta, campanita de guía.</td><td>Para seguir ajustando la dificultad a ciegas sin tocar el código.</td></tr>
+  </table>
+  <h3>Sonido</h3>
+  <table class="diff">
+    <tr><th style="width:17%">Tema</th><th style="width:22%">Prototipo</th><th style="width:25%">App entregada</th><th>Por qué</th></tr>
+    <tr><td><b>Frase del nivel</b></td><td>Suena entera al lograrlo.</td><td>Una nota por cada cuarto del avance; si el avance baja, la nota «cae».</td><td>Deja oír cuánto falta sin mirar.</td></tr>
+    <tr><td><b>Notas del niño</b></td><td>Saltan de una nota a otra.</td><td>Recorren la escala rápido hasta llegar (escala de paso).</td><td>Con movimientos rápidos los saltos sonaban bruscos.</td></tr>
+    <tr><td><b>Ubicarse por el oído</b></td><td>—</td><td>Opcional: escala común (misma nota a la misma altura), timbre por lado, quinta gradual.</td><td>En el prototipo el lado no suena y la misma altura no suena relacionada: a ciegas no hay cómo encontrarse.</td></tr>
+    <tr><td><b>Mezcla</b></td><td>Web Audio, con la reverb del navegador.</td><td>Misma cadena (ecualizador, compresor y limitador) con una reverb propia.</td><td>La reverb del motor de audio del teléfono solo funciona en estéreo y la app suena en mono: sonaba mal.</td></tr>
+  </table>
+  <h3>Herramientas del equipo</h3>
+  <p>El banco de prueba amplía el banco del prototipo: fuente por persona (dedo, sintética o stick real), lecturas del sensor, grabación de trazas, telemetría por nivel y el panel Ajuste con ayuda en cada control. Todo lo que se ajusta ahí vale también para el juego.</p>
+</section>
+
 <!-- ======================= 12 ======================= -->
 <section class="chapter">
-  <div class="kicker">Capítulo 12</div>
+  <div class="kicker">Capítulo 13</div>
   <h2>Problemas frecuentes</h2>
   <table>
     <tr><th style="width:38%">Lo que pasa</th><th>Qué hacer</th></tr>
@@ -706,8 +767,8 @@
 </section>
 
 <!-- ======================= 13 ======================= -->
-<section class="chapter" style="break-before:auto;margin-top:10mm">
-  <div class="kicker">Capítulo 13</div>
+<section class="chapter" data-flow="1">
+  <div class="kicker">Capítulo 14</div>
   <h2>Datos y privacidad</h2>
   <ul>
     <li>Todo se guarda <b>solo en el teléfono</b>: progreso de la canción, las últimas 20 sesiones, ajustes, y los ejes y el error del sensor de cada stick. Nada se envía a internet.</li>
@@ -716,6 +777,96 @@
     <li>El recuerdo se guarda en la galería solo al tocar «Guardar el recuerdo».</li>
   </ul>
 </section>
+</div>
 
+<script>
+// Reparte los bloques de cada capítulo en páginas A4. Cada capítulo empieza en
+// página nueva (salvo data-flow); tablas y listas se parten por filas, el resto
+// (figuras, filas texto + teléfono) va entero a la página siguiente si no cabe,
+// llevándose los títulos que quedarían huérfanos.
+(function () {
+  const src = document.getElementById('src'), book = document.getElementById('book');
+  let box = null, n = 1;
+  function newPage() {
+    const page = document.createElement('section');
+    page.className = 'page';
+    box = document.createElement('div');
+    box.className = 'box';
+    page.appendChild(box);
+    const f = document.createElement('div');
+    f.className = 'folio';
+    f.textContent = ++n;
+    page.appendChild(f);
+    book.appendChild(page);
+  }
+  const over = () => box.scrollHeight > box.clientHeight + 1;
+  const isHead = (el) => el && (el.tagName === 'H2' || el.tagName === 'H3' || el.classList.contains('kicker'));
+  function freshPageCarryingHeads() {
+    const carry = [];
+    while (isHead(box.lastElementChild)) carry.unshift(box.removeChild(box.lastElementChild));
+    if (box.children.length === 0) { carry.forEach((c) => box.appendChild(c)); return; }
+    newPage();
+    carry.forEach((c) => box.appendChild(c));
+  }
+  function place(el) {
+    box.appendChild(el);
+    if (!over()) return;
+    box.removeChild(el);
+    if (el.tagName === 'TABLE' || el.tagName === 'UL' || el.tagName === 'OL') return split(el);
+    freshPageCarryingHeads();
+    box.appendChild(el);
+  }
+  function split(el) {
+    const isT = el.tagName === 'TABLE';
+    const rows = isT ? [...el.querySelectorAll('tr')] : [...el.children];
+    const head = isT ? rows.filter((r) => r.querySelector('th')) : [];
+    const body = rows.filter((r) => !head.includes(r));
+    let index = 0;
+    function shell() {
+      const c = el.cloneNode(false);
+      if (el.tagName === 'OL') c.setAttribute('start', String(index + (+el.getAttribute('start') || 1)));
+      if (!isT) return [c, c];
+      const tb = document.createElement('tbody');
+      head.forEach((h) => tb.appendChild(h.cloneNode(true)));
+      c.appendChild(tb);
+      return [c, tb];
+    }
+    let [cur, holder] = shell();
+    box.appendChild(cur);
+    let inThis = 0;
+    for (const it of body) {
+      holder.appendChild(it);
+      if (over()) {
+        holder.removeChild(it);
+        const moved = [];
+        // Un título de sección de la tabla no queda solo al pie.
+        while (holder.lastElementChild && holder.lastElementChild.classList.contains('sec')) moved.unshift(holder.removeChild(holder.lastElementChild));
+        if (inThis - moved.length <= 0) {
+          box.removeChild(cur);
+          freshPageCarryingHeads();
+          box.appendChild(cur);
+        } else {
+          newPage();
+          [cur, holder] = shell();
+          box.appendChild(cur);
+        }
+        moved.forEach((m) => holder.appendChild(m));
+        holder.appendChild(it);
+        inThis = moved.length;
+      }
+      inThis++;
+      index++;
+    }
+  }
+  [...src.children].forEach((sec, i) => {
+    if (!box || sec.dataset.flow !== '1') newPage();
+    [...sec.children].forEach(place);
+  });
+  src.remove();
+  const bad = [...document.querySelectorAll('.page .box')].filter((b) => b.scrollHeight > b.clientHeight + 1).length;
+  document.body.dataset.pages = String(document.querySelectorAll('.page').length);
+  document.body.dataset.overflow = String(bad);
+})();
+</script>
 </body>
 </html>
