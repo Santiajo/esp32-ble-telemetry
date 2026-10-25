@@ -392,6 +392,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
                   child: e.child,
                   now: now,
                   target: e.target(now),
+                  zone: e.targetZone(now),
                   tol: e.tol,
                   adultStale: _stale(Role.adult, now),
                   childStale: _stale(Role.child, now),
@@ -450,9 +451,21 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
 
   /// Qué mide el motor ahora, en palabras (para el banco).
   String _behind(SyncEngine e) {
-    final lag = e.params.syncLagMs.round();
+    final p = e.params, rel = e.relation;
+    final mode = p.matchMode.round().clamp(0, 3);
+    if (mode > 0 && rel != Relation.pulse && rel != Relation.follow) {
+      final parts = [
+        if (p.usesZones) 'misma franja (${p.zoneCount.round()} por eje)',
+        if (p.usesTrace)
+          'mismo trazo en ${(p.traceWinMs / 1000).toStringAsFixed(1)} s '
+              '(parecido ${e.traceSimilarity(rel, AppClock.nowMs()).toStringAsFixed(2)} de ${p.traceMin.toStringAsFixed(2)})',
+      ];
+      final side = p.sideOnly > 0 && (rel == Relation.mirror || rel == Relation.same) ? ', solo el lado' : '';
+      return '${relationNames[rel] ?? 'Libre'} por ${matchModeNames[mode]}: ${parts.join(' y ')}$side. Guía ${roleNames[e.guide]}.';
+    }
+    final lag = p.syncLagMs.round();
     final g = roleNames[e.guide];
-    return switch (e.relation) {
+    final r = switch (rel) {
       Relation.free => 'Libre: d = la más cercana entre juntos, espejo y sube y baja (±$lag ms).',
       Relation.together => 'Juntos: d = diferencia de altura (y de velocidad), tolerando ±$lag ms de desfase. Guía $g.',
       Relation.mirror => 'Espejo: misma altura y lados opuestos (x del niño = −x del adulto), ±$lag ms. Guía $g.',
@@ -464,6 +477,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
         'Sígueme: quien no guía copia el trazo de $g con hasta ${e.params.followLag.toStringAsFixed(1)} s de retraso.',
       Relation.song => 'La canción.',
     };
+    return p.edgeNoSync > 0 ? '$r Pegados al borde no cuenta.' : r;
   }
 
   Widget _closedBanner() => Center(
@@ -841,7 +855,23 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     ('runMaxNotes', 'Notas de paso (máximo)', 0, 10, 1, '', 0),
     ('runMs', 'Duración de la escala de paso', 40, 300, 10, ' ms', 0),
     ('runGain', 'Volumen de las notas de paso', 0.2, 1, 0.05, '×', 2),
+    // §15: jugar sin vista (botón «Sin vista» los enciende juntos)
+    ('matchMode', 'Medir la sincronía por', 0, 3, 1, '', 0),
+    ('zoneCount', 'Zonas: franjas por eje', 2, 6, 1, '', 0),
+    ('traceWinMs', 'Trazo: ventana', 600, 3000, 100, ' ms', 0),
+    ('traceMin', 'Trazo: parecido mínimo', 0.2, 0.95, 0.05, '', 2),
+    ('sideOnly', 'Espejo e Iguales: solo el lado (0 / 1)', 0, 1, 1, '', 0),
+    ('edgeNoSync', 'Pegados al borde no cuenta (0 / 1)', 0, 1, 1, '', 0),
+    ('guideChime', 'Campanita al cambiar de guía (0 / 1)', 0, 1, 1, '', 0),
+    ('sharedScale', 'Niño en la escala del adulto (0 / 1)', 0, 1, 1, '', 0),
+    ('sideTimbre', 'El lado cambia el timbre (0 / 1)', 0, 1, 1, '', 0),
+    ('fifthRamp', 'Quinta gradual al acercarse (0 / 1)', 0, 1, 1, '', 0),
   ];
+
+  static const List<String> matchModeNames = ['punto', 'zonas', 'trazo', 'zonas y trazo'];
+
+  static String _tuneValue(String k, double v, int dec, String unit) =>
+      k == 'matchMode' ? matchModeNames[v.round().clamp(0, 3)] : '${v.toStringAsFixed(dec)}$unit';
 
   void _openTuning() {
     final p = _params!;
@@ -873,14 +903,19 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
                 ),
                 TextButton(
                   onPressed: () {
-                    final proto = SyncParams.prototype();
-                    for (final k in SyncParams.keys) {
-                      p[k] = proto[k];
-                    }
+                    p.setAll(SyncParams.prototype());
                     unawaited(BenchStore.saveParams(p));
                     setSheet(() {});
                   },
                   child: const Text('Como el prototipo'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    p.setAll(SyncParams.blind());
+                    unawaited(BenchStore.saveParams(p));
+                    setSheet(() {});
+                  },
+                  child: const Text('Sin vista'),
                 ),
               ]),
               for (final (k, label, min, max, step, unit, dec) in _tune)
@@ -901,7 +936,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
                   ),
                   SizedBox(
                     width: 56,
-                    child: Text('${p[k].toStringAsFixed(dec)}$unit',
+                    child: Text(_tuneValue(k, p[k], dec, unit),
                         textAlign: TextAlign.right, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
                   ),
                 ]),

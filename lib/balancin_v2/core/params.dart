@@ -6,6 +6,9 @@
 /// frase se arma durante el nivel y las notas del niño recorren la escala en
 /// vez de saltar. [SyncParams.prototype] apaga esos cambios (paridad).
 ///
+/// §15 agrega opciones para jugar sin ver el plano (todas apagadas por
+/// defecto); [SyncParams.blind] las enciende juntas.
+///
 /// Son mutables para el panel de ajuste del banco; se persisten con
 /// [toJson] / [SyncParams.fromJson].
 library;
@@ -21,6 +24,22 @@ class SyncParams {
     ..calMode = 0
     ..phraseSteps = 0
     ..runMaxNotes = 0;
+
+  /// §15 · para jugar sin vista: zonas + trazo, solo el lado en «Espejo» e
+  /// «Iguales», el borde no cuenta, campanita de guía, sonidos que ubican y
+  /// valores más permisivos.
+  factory SyncParams.blind() => SyncParams()
+    ..matchMode = 3
+    ..sideOnly = 1
+    ..edgeNoSync = 1
+    ..guideChime = 1
+    ..sharedScale = 1
+    ..sideTimbre = 1
+    ..fifthRamp = 1
+    ..tolScale = 1.3
+    ..slipDrain = 0.4
+    ..velWeight = 0
+    ..minA = 25;
 
   /// Multiplica la tolerancia de cada nivel.
   double tolScale = 1;
@@ -119,11 +138,48 @@ class SyncParams {
   /// Volumen de las notas de paso respecto de la nota de llegada (0–1).
   double runGain = 0.6;
 
+  // ---- §15 · jugar sin vista ----
+
+  /// Cómo se mide la sincronía en las relaciones de posición (Juntos, Espejo,
+  /// Iguales, Sube y baja, Libre): 0 = punto (prototipo), 1 = zonas, 2 = trazo,
+  /// 3 = zonas y trazo a la vez.
+  double matchMode = 0;
+
+  /// Franjas por eje en el modo zonas (3 = arriba, medio, abajo).
+  double zoneCount = 3;
+
+  /// Ventana (ms) del trazo: se compara la dirección del movimiento en este tiempo.
+  double traceWinMs = 1500;
+
+  /// Parecido mínimo del trazo (−1 a 1) para contar como sincronía.
+  double traceMin = 0.6;
+
+  /// 1 = en «Espejo» e «Iguales» solo cuenta el lado (x); la altura queda libre.
+  double sideOnly = 0;
+
+  /// 1 = si los dos están pegados al borde en el mismo eje que se mide, no cuenta.
+  double edgeNoSync = 0;
+
+  /// 1 = suena la campanita cuando cambia quién guía.
+  double guideChime = 0;
+
+  /// 1 = el niño usa la escala del adulto una octava arriba: a la misma altura, misma nota.
+  double sharedScale = 0;
+
+  /// 1 = el lado cambia el timbre (niño: marimba a la izquierda, glock a la
+  /// derecha; adulto: más brillante a la derecha).
+  double sideTimbre = 0;
+
+  /// 1 = la quinta aparece de a poco al acercarse (de 2·tol a tol), no de golpe.
+  double fifthRamp = 0;
+
   static const List<String> keys = [
     'tolScale', 'alpha', 'rangeA', 'rangeC', 'minA', 'minC', 'onSpeed', 'hyst', //
     'secScale', 'idleAfter', 'decay', 'maxDetune', 'followLag', 'rhythmWin', 'endAfter',
     'kAccel', 'accelGate',
     'slipGrace', 'slipDrain', 'velWeight', 'syncLagMs', 'calMode', 'autoNext', 'phraseSteps', 'runMaxNotes', 'runMs', 'runGain',
+    'matchMode', 'zoneCount', 'traceWinMs', 'traceMin', 'sideOnly', 'edgeNoSync', 'guideChime', 'sharedScale', 'sideTimbre',
+    'fifthRamp',
   ];
 
   double operator [](String k) => switch (k) {
@@ -154,6 +210,16 @@ class SyncParams {
         'runMaxNotes' => runMaxNotes,
         'runMs' => runMs,
         'runGain' => runGain,
+        'matchMode' => matchMode,
+        'zoneCount' => zoneCount,
+        'traceWinMs' => traceWinMs,
+        'traceMin' => traceMin,
+        'sideOnly' => sideOnly,
+        'edgeNoSync' => edgeNoSync,
+        'guideChime' => guideChime,
+        'sharedScale' => sharedScale,
+        'sideTimbre' => sideTimbre,
+        'fifthRamp' => fifthRamp,
         _ => throw ArgumentError.value(k, 'k', 'parámetro desconocido'),
       };
 
@@ -213,6 +279,26 @@ class SyncParams {
         runMs = v;
       case 'runGain':
         runGain = v;
+      case 'matchMode':
+        matchMode = v;
+      case 'zoneCount':
+        zoneCount = v;
+      case 'traceWinMs':
+        traceWinMs = v;
+      case 'traceMin':
+        traceMin = v;
+      case 'sideOnly':
+        sideOnly = v;
+      case 'edgeNoSync':
+        edgeNoSync = v;
+      case 'guideChime':
+        guideChime = v;
+      case 'sharedScale':
+        sharedScale = v;
+      case 'sideTimbre':
+        sideTimbre = v;
+      case 'fifthRamp':
+        fifthRamp = v;
       default:
         throw ArgumentError.value(k, 'k', 'parámetro desconocido');
     }
@@ -232,10 +318,16 @@ class SyncParams {
 
   SyncParams copy() => SyncParams.fromJson(toJson());
 
-  void resetToDefaults() {
-    final d = SyncParams();
+  void resetToDefaults() => setAll(SyncParams());
+
+  /// Copia todos los valores de [o] (para los botones de valores del banco).
+  void setAll(SyncParams o) {
     for (final k in keys) {
-      this[k] = d[k];
+      this[k] = o[k];
     }
   }
+
+  /// Modo de medición (§15) como enteros.
+  bool get usesZones => matchMode.round() == 1 || matchMode.round() == 3;
+  bool get usesTrace => matchMode.round() >= 2;
 }

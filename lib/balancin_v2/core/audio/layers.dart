@@ -9,6 +9,11 @@
 ///      con notas de paso rápidas y más suaves (§12.4), en vez de saltar.
 /// Más el pad que repite cada 420 ms las notas de las frases ganadas.
 ///
+/// §15 (para jugar sin vista, apagado por defecto): el niño puede usar la
+/// escala del adulto una octava arriba ([SyncParams.sharedScale]), el lado puede
+/// cambiar el timbre ([SyncParams.sideTimbre]) y la quinta puede aparecer de a
+/// poco al acercarse ([SyncParams.fifthRamp]).
+///
 /// Dart puro. Las voces continuas son valores que se acercan a su objetivo con
 /// la misma curva que `setTargetAtTime` de Web Audio; el motor de plataforma
 /// los lee en cada cuadro ([voices]) y los pasa a SoLoud. Las notas sueltas
@@ -18,6 +23,7 @@ library;
 import 'dart:math' as math;
 
 import '../levels.dart';
+import '../params.dart';
 import '../sync_engine.dart';
 import '../telemetry.dart' show jsRound;
 import 'eq.dart';
@@ -41,7 +47,14 @@ class Glide {
   }
 }
 
-enum NoteFamily { marimba, pad }
+/// [glock] = nota del niño a la derecha con [SyncParams.sideTimbre] (§15).
+enum NoteFamily { marimba, pad, glock }
+
+/// Escala del niño: la propia (do4–do6) o, con [SyncParams.sharedScale], la del
+/// adulto una octava arriba (do4–sol5): a la misma altura, la misma nota.
+List<int> childScaleFor(SyncParams p) => p.sharedScale > 0 ? sharedChildScale : childScale;
+
+const List<int> sharedChildScale = [60, 62, 64, 67, 69, 72, 74, 76, 79];
 
 /// Nota suelta. [gain] es la del prototipo (la polifonía la aplica la plataforma).
 /// [at] puede quedar en el futuro (notas de paso): la plataforma la agenda.
@@ -70,6 +83,9 @@ class AudioLayers {
   final Glide adultHz = Glide(130);
   final Glide adultHarmHz = Glide(260);
   final Glide adultGain = Glide(0);
+
+  /// Ganancia del 2.º armónico del adulto (0,22; con [SyncParams.sideTimbre] va de 0,06 a 0,5 según el lado).
+  final Glide adultHarmGain = Glide(0.22);
   // Tono de relación
   final Glide rel1Hz = Glide(260);
   final Glide rel2Hz = Glide(260);
@@ -138,6 +154,8 @@ class AudioLayers {
     adultHarmHz.setTarget(fa * 2, 0.05);
     final aOn = live && aA;
     adultGain.setTarget(aOn ? 0.12 : 0, aOn ? 0.1 : 0.5);
+    final side = e.params.sideTimbre > 0;
+    adultHarmGain.setTarget(side ? 0.06 + 0.44 * ((e.adult.pos.x + 6) / 12).clamp(0.0, 1.0) : 0.22, 0.1);
     final det = detune(e.d, tol, e.params.maxDetune);
     detuneTarget = det;
     df += (det - df) * math.min(1, dt * 3);
@@ -146,16 +164,19 @@ class AudioLayers {
     fifthHz.setTarget(3 * fa, 0.05);
     final rOn = e.state == EngineState.playing && both;
     relGain.setTarget(rOn ? 0.045 : 0, 0.15);
-    fifthGain.setTarget(rOn && det == 0 ? 0.022 : 0, 0.2);
+    fifthGain.setTarget(rOn ? 0.022 * fifthLevel(e.d, tol, det, ramp: e.params.fifthRamp > 0) : 0, 0.2);
     if (live && cA) {
       final c = e.child.pos;
       final cell = '${jsRound(c.x).toInt()},${jsRound(c.y).toInt()}';
       if (cell != _cell && now - _lastNote > 100) {
         _cell = cell;
         _lastNote = now;
-        final ci = jsRound((c.y + 6) / 12 * (childScale.length - 1)).toInt().clamp(0, childScale.length - 1);
+        final scale = childScaleFor(e.params);
+        final ci = jsRound((c.y + 6) / 12 * (scale.length - 1)).toInt().clamp(0, scale.length - 1);
         final gain = (0.08 + e.child.speed / 45).clamp(0.08, 0.22).toDouble();
-        out.addAll(childRun(now, _lastChildIdx, ci, gain, e.params.runMaxNotes.round(), e.params.runMs, e.params.runGain));
+        final family = side && c.x > 0 ? NoteFamily.glock : NoteFamily.marimba;
+        out.addAll(childRun(now, _lastChildIdx, ci, gain, e.params.runMaxNotes.round(), e.params.runMs, e.params.runGain,
+            scale: scale, family: family));
         _lastChildIdx = ci;
       }
     }
@@ -166,9 +187,11 @@ class AudioLayers {
   /// más de un paso y [maxNotes] > 0, agrega notas de paso intermedias (como
   /// mucho [maxNotes], repartidas parejo) en [runMs] ms en total, con volumen
   /// `gain·runGain`; la nota de llegada suena al final con su volumen normal.
-  static List<NoteCmd> childRun(double now, int? from, int to, double gain, int maxNotes, double runMs, double runGain) {
+  static List<NoteCmd> childRun(double now, int? from, int to, double gain, int maxNotes, double runMs, double runGain,
+      {List<int> scale = childScale, NoteFamily family = NoteFamily.marimba}) {
+    if (from != null && from >= scale.length) from = scale.length - 1; // cambió la escala a mitad de juego
     if (from == null || maxNotes <= 0 || (to - from).abs() <= 1) {
-      return [NoteCmd(now, childScale[to], NoteFamily.marimba, gain)];
+      return [NoteCmd(now, scale[to], family, gain)];
     }
     final dir = to > from ? 1 : -1;
     var passing = [for (var i = from + dir; i != to; i += dir) i];
@@ -180,9 +203,16 @@ class AudioLayers {
     final step = runMs / total;
     return [
       for (var k = 0; k < passing.length; k++)
-        NoteCmd(now + k * step, childScale[passing[k]], NoteFamily.marimba, gain * runGain, passing: true),
-      NoteCmd(now + passing.length * step, childScale[to], NoteFamily.marimba, gain),
+        NoteCmd(now + k * step, scale[passing[k]], family, gain * runGain, passing: true),
+      NoteCmd(now + passing.length * step, scale[to], family, gain),
     ];
+  }
+
+  /// Nivel de la quinta (0–1). Prototipo: 1 solo afinado (`det == 0`). Con
+  /// [ramp] (§15) sube de a poco entre `2·tol` y `tol`, para oír que se acercan.
+  static double fifthLevel(double d, double tol, double det, {required bool ramp}) {
+    if (!ramp) return det == 0 ? 1 : 0;
+    return ((2 * tol - d) / tol).clamp(0.0, 1.0).toDouble();
   }
 
   /// `vSilence`: todas las voces continuas a 0 (τ 0,3 s). Al cerrar o perder un stick.
@@ -194,7 +224,7 @@ class AudioLayers {
 
   /// Avanza las curvas [dt] segundos (la plataforma lo llama en cada cuadro).
   void advance(double dt) {
-    for (final g in [adultHz, adultHarmHz, adultGain, rel1Hz, rel2Hz, fifthHz, relGain, fifthGain]) {
+    for (final g in [adultHz, adultHarmHz, adultGain, adultHarmGain, rel1Hz, rel2Hz, fifthHz, relGain, fifthGain]) {
       g.step(dt);
     }
   }
@@ -203,7 +233,7 @@ class AudioLayers {
   /// batido y la quinta. Amplitudes con la EQ incorporada.
   List<VoiceLevel> get voices => [
         VoiceLevel(adultHz.value, adultGain.value * eqGain(adultHz.value)),
-        VoiceLevel(adultHarmHz.value, adultGain.value * 0.22 * eqGain(adultHarmHz.value)),
+        VoiceLevel(adultHarmHz.value, adultGain.value * adultHarmGain.value * eqGain(adultHarmHz.value)),
         VoiceLevel(rel1Hz.value, relGain.value * eqGain(rel1Hz.value)),
         VoiceLevel(rel2Hz.value, relGain.value * eqGain(rel2Hz.value)),
         VoiceLevel(fifthHz.value, fifthGain.value * eqGain(fifthHz.value)),

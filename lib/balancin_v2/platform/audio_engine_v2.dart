@@ -262,12 +262,20 @@ class AudioEngineV2 with WidgetsBindingObserver {
 
   /// Nota del niño o del pad, con la polifonía del prototipo.
   void note(NoteCmd n, double now) {
-    if (n.family == NoteFamily.marimba ? muteChild : mutePad) return;
-    final tone = n.family == NoteFamily.marimba ? childNoteTone(n.midi) : padTone(n.midi);
+    if (n.family == NoteFamily.pad ? mutePad : muteChild) return;
+    final tone = switch (n.family) {
+      NoteFamily.marimba => childNoteTone(n.midi),
+      NoteFamily.glock => phraseNoteTone(n.midi),
+      NoteFamily.pad => padTone(n.midi),
+    };
     final voices = _activePartials(now);
     if (voices > maxPartialVoices) return;
     _sounding.add((end: now + (tone.endS) * 1000, partials: tone.audiblePartials));
-    final key = n.family == NoteFamily.marimba ? childKey(n.midi) : padKey(n.midi);
+    final key = switch (n.family) {
+      NoteFamily.marimba => childKey(n.midi),
+      NoteFamily.glock => glockKey(n.midi),
+      NoteFamily.pad => padKey(n.midi),
+    };
     _play(key, SynthRenderer.volumeFor(n.gain * polyphonyGain(voices)));
   }
 
@@ -308,6 +316,9 @@ class AudioEngineV2 with WidgetsBindingObserver {
           } else {
             _play(padKey(midi), SynthRenderer.volumeFor(0.08));
           }
+        case ChimeEvent():
+          // §15: aviso de cambio de guía sin voz.
+          playChime();
         default:
           break;
       }

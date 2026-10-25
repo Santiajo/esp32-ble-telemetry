@@ -61,6 +61,22 @@ class GuideChangedEvent extends SyncEvent {
   final Role guide;
 }
 
+/// Campanita: cambió quién guía y [SyncParams.guideChime] está encendido (§15).
+class ChimeEvent extends SyncEvent {
+  const ChimeEvent(super.at);
+  @override
+  String toString() => 'chime';
+}
+
+/// Zona objetivo del modo zonas (§15), en unidades del plano: la franja donde
+/// tiene que estar el niño. Un eje que no se mide va de −6 a 6.
+class PlaneBox {
+  const PlaneBox(this.x0, this.y0, this.x1, this.y1);
+  final double x0, y0, x1, y1;
+  @override
+  String toString() => 'box($x0..$x1, $y0..$y1)';
+}
+
 /// La frase se arma durante el nivel (§12.3): al pasar cada cuarto del progreso
 /// suena su nota ([up]); si el progreso vuelve a bajar de ese cuarto, la nota «cae».
 class PhraseStepEvent extends SyncEvent {
@@ -309,6 +325,8 @@ class SyncEngine {
     }
 
     d = syncDistance(relation, now);
+    // §15: los dos pegados al borde en un eje que se mide no es sincronía (el atajo de las esquinas).
+    if (p.edgeNoSync > 0 && _pinned(adult, relation) && _pinned(child, relation)) d = math.max(d, p.hyst * tol + 0.01);
     final wasInSync = inSync;
     inSync = inSync ? d <= p.hyst * tol : d < tol;
 
@@ -403,6 +421,15 @@ class SyncEngine {
 
   /// Distancia entre el niño y donde debería estar según la relación (`syncDist`).
   double syncDistance(Relation rel, double t) {
+    if (_positional(rel) && params.usesTrace) {
+      final tr = _traceDistance(rel, t);
+      return params.usesZones ? math.max(tr, _pointDistance(rel, t)) : tr;
+    }
+    return _pointDistance(rel, t);
+  }
+
+  /// `d` por posición: punto (prototipo y §12) o zonas (§15).
+  double _pointDistance(Relation rel, double t) {
     if (params.syncLagMs > 0 && rel != Relation.pulse && rel != Relation.follow) return _lagDistance(rel, t);
     final base = _positionDistance(rel, t);
     final w = params.velWeight;
@@ -412,8 +439,8 @@ class SyncEngine {
     final dv = switch (rel) {
       Relation.together => (cv.y - pv.y).abs(),
       Relation.seesaw => (cv.y + pv.y).abs(),
-      Relation.mirror => _hypot(cv.x + pv.x, cv.y - pv.y),
-      Relation.same => _hypot(cv.x - pv.x, cv.y - pv.y),
+      Relation.mirror => _side ? (cv.x + pv.x).abs() : _hypot(cv.x + pv.x, cv.y - pv.y),
+      Relation.same => _side ? (cv.x - pv.x).abs() : _hypot(cv.x - pv.x, cv.y - pv.y),
       Relation.free || Relation.song => [
           (cv.y - pv.y).abs(),
           _hypot(cv.x + pv.x, cv.y - pv.y),
@@ -454,37 +481,41 @@ class SyncEngine {
     return best;
   }
 
-  static double _pairDistance(Relation rel, P2 p, P2 c) => switch (rel) {
-        Relation.together => (c.y - p.y).abs(),
-        Relation.seesaw => (c.y + p.y).abs(),
-        Relation.mirror => _hypot(c.x + p.x, c.y - p.y),
-        Relation.same => _hypot(c.x - p.x, c.y - p.y),
-        _ => [
-            (c.y - p.y).abs() + (c.x - p.x).abs() * 0.5,
-            _hypot(c.x + p.x, c.y - p.y),
-            (c.y + p.y).abs() + (c.x - p.x).abs() * 0.5,
-          ].reduce(math.min),
-      };
+  double _pairDistance(Relation rel, P2 p, P2 c) {
+    if (params.usesZones) return _zoneDistance(rel, p, c);
+    return switch (rel) {
+      Relation.together => (c.y - p.y).abs(),
+      Relation.seesaw => (c.y + p.y).abs(),
+      Relation.mirror => _side ? (c.x + p.x).abs() : _hypot(c.x + p.x, c.y - p.y),
+      Relation.same => _side ? (c.x - p.x).abs() : _hypot(c.x - p.x, c.y - p.y),
+      _ => [
+          (c.y - p.y).abs() + (c.x - p.x).abs() * 0.5,
+          _hypot(c.x + p.x, c.y - p.y),
+          (c.y + p.y).abs() + (c.x - p.x).abs() * 0.5,
+        ].reduce(math.min),
+    };
+  }
 
-  static double _velDistance(Relation rel, P2 pv, P2 cv) => switch (rel) {
+  double _velDistance(Relation rel, P2 pv, P2 cv) => switch (rel) {
         Relation.together => (cv.y - pv.y).abs(),
         Relation.seesaw => (cv.y + pv.y).abs(),
-        Relation.mirror => _hypot(cv.x + pv.x, cv.y - pv.y),
-        Relation.same => _hypot(cv.x - pv.x, cv.y - pv.y),
+        Relation.mirror => _side ? (cv.x + pv.x).abs() : _hypot(cv.x + pv.x, cv.y - pv.y),
+        Relation.same => _side ? (cv.x - pv.x).abs() : _hypot(cv.x - pv.x, cv.y - pv.y),
         _ => [(cv.y - pv.y).abs(), _hypot(cv.x + pv.x, cv.y - pv.y), (cv.y + pv.y).abs()].reduce(math.min),
       };
 
   double _positionDistance(Relation rel, double t) {
     final p = adult.pos, c = child.pos;
+    if (params.usesZones && _positional(rel)) return _zoneDistance(rel, p, c);
     switch (rel) {
       case Relation.together:
         return (c.y - p.y).abs();
       case Relation.seesaw:
         return (c.y + p.y).abs();
       case Relation.mirror:
-        return _hypot(c.x + p.x, c.y - p.y);
+        return _side ? (c.x + p.x).abs() : _hypot(c.x + p.x, c.y - p.y);
       case Relation.same:
-        return _hypot(c.x - p.x, c.y - p.y);
+        return _side ? (c.x - p.x).abs() : _hypot(c.x - p.x, c.y - p.y);
       case Relation.pulse:
         final ra = adult.rhythm(t, params), rc = child.rhythm(t, params);
         if (ra.amp < 1 || rc.amp < 1 || ra.f == 0 || rc.f == 0) return 6;
@@ -518,11 +549,132 @@ class SyncEngine {
     return switch (relation) {
       Relation.together => P2(c.x, p.y),
       Relation.seesaw => P2(c.x, -p.y),
-      Relation.mirror => P2(-p.x, p.y),
-      Relation.same => P2(p.x, p.y),
+      Relation.mirror => P2(-p.x, _side ? c.y : p.y),
+      Relation.same => P2(p.x, _side ? c.y : p.y),
       Relation.follow => guide == Role.adult ? adult.at(now - 500) : null,
       _ => null,
     };
+  }
+
+  // ---------------- §15 · jugar sin vista ----------------
+
+  bool get _side => params.sideOnly > 0;
+
+  static bool _positional(Relation rel) => rel != Relation.pulse && rel != Relation.follow;
+
+  /// Ejes que mide la relación: (x, y).
+  (bool, bool) _axesOf(Relation rel) => switch (rel) {
+        Relation.together || Relation.seesaw => (false, true),
+        Relation.mirror || Relation.same => (true, !_side),
+        Relation.free || Relation.song => (false, true),
+        Relation.pulse || Relation.follow => (false, false),
+      };
+
+  /// El stick está pegado al borde en un eje que mide [rel].
+  bool _pinned(StickState s, Relation rel) {
+    final (ax, ay) = _axesOf(rel);
+    return (ax && s.overflow.x != 0) || (ay && s.overflow.y != 0);
+  }
+
+  /// Franja (unidades del plano) que contiene a [v].
+  (double, double) _band(double v) {
+    final n = params.zoneCount.round().clamp(1, 12), w = 2 * planeLimit / n;
+    final i = ((v + planeLimit) / w).floor().clamp(0, n - 1);
+    final lo = -planeLimit + i * w;
+    return (lo, lo + w);
+  }
+
+  /// Cuánto le falta a [v] para entrar en la franja de [target] (0 = adentro).
+  double _zoneGap(double target, double v) {
+    final (lo, hi) = _band(target);
+    return v < lo ? lo - v : (v > hi ? v - hi : 0);
+  }
+
+  /// `d` del modo zonas: 0 dentro de la franja que le toca al niño; afuera, lo que falta para entrar.
+  double _zoneDistance(Relation rel, P2 p, P2 c) => switch (rel) {
+        Relation.together => _zoneGap(p.y, c.y),
+        Relation.seesaw => _zoneGap(-p.y, c.y),
+        Relation.mirror => _side ? _zoneGap(-p.x, c.x) : _hypot(_zoneGap(-p.x, c.x), _zoneGap(p.y, c.y)),
+        Relation.same => _side ? _zoneGap(p.x, c.x) : _hypot(_zoneGap(p.x, c.x), _zoneGap(p.y, c.y)),
+        _ => [_zoneGap(p.y, c.y), _hypot(_zoneGap(-p.x, c.x), _zoneGap(p.y, c.y)), _zoneGap(-p.y, c.y)].reduce(math.min),
+      };
+
+  /// Franja donde tiene que estar el niño (modo zonas), para dibujarla en el banco.
+  PlaneBox? targetZone(double now) {
+    if (!params.usesZones || !adult.has) return null;
+    final p = adult.pos;
+    const all = (-planeLimit, planeLimit);
+    final ((double, double) x, (double, double) y)? box = switch (relation) {
+      Relation.together => (all, _band(p.y)),
+      Relation.seesaw => (all, _band(-p.y)),
+      Relation.mirror => (_band(-p.x), _side ? all : _band(p.y)),
+      Relation.same => (_band(p.x), _side ? all : _band(p.y)),
+      _ => null,
+    };
+    if (box == null) return null;
+    return PlaneBox(box.$1.$1, box.$2.$1, box.$1.$2, box.$2.$2);
+  }
+
+  static const double _traceStepMs = 50;
+
+  /// Posiciones de [s] cada [_traceStepMs] hacia atrás desde [t]: `[0]` = ahora.
+  static List<P2> _samples(StickState s, double t, int n) {
+    final out = List<P2>.filled(n, P2.zero);
+    final h = s.history;
+    if (h.isEmpty) return out;
+    var i = h.length - 1;
+    for (var k = 0; k < n; k++) {
+      final tk = t - k * _traceStepMs;
+      while (i > 0 && h.elementAt(i).t > tk) {
+        i--;
+      }
+      final q = h.elementAt(i);
+      out[k] = P2(q.x, q.y);
+    }
+    return out;
+  }
+
+  /// Parecido del trazo (−1 a 1): coseno entre las velocidades del adulto (con la
+  /// transformación de la relación) y las del niño, en los ejes que mide la
+  /// relación, durante [SyncParams.traceWinMs]. Prueba desfases de hasta
+  /// ±[SyncParams.syncLagMs]. Si alguno casi no se mueve, 0. No mira dónde está
+  /// cada uno ni cuán amplio es el gesto: solo hacia dónde y cuándo se mueven.
+  double traceSimilarity(Relation rel, double t) {
+    if (rel == Relation.free || rel == Relation.song) {
+      return [Relation.together, Relation.mirror, Relation.seesaw].map((r) => traceSimilarity(r, t)).reduce(math.max);
+    }
+    final (ax, ay) = _axesOf(rel);
+    final sx = rel == Relation.mirror ? -1.0 : 1.0, sy = rel == Relation.seesaw ? -1.0 : 1.0;
+    final n = math.max(4, (params.traceWinMs / _traceStepMs).round());
+    final maxShift = (params.syncLagMs / _traceStepMs).round();
+    final a = _samples(adult, t, n + maxShift + 1), c = _samples(child, t, n + maxShift + 1);
+    // Velocidad media mínima para que haya trazo: la mitad del umbral de actividad.
+    final step = params.onSpeed * 0.5 * _traceStepMs / 1000;
+    final minE = step * step * n;
+    var best = 0.0;
+    for (var shift = -maxShift; shift <= maxShift; shift++) {
+      final pa = shift > 0 ? shift : 0, ca = shift < 0 ? -shift : 0;
+      var sac = 0.0, saa = 0.0, scc = 0.0;
+      for (var k = 0; k < n; k++) {
+        final avx = ax ? sx * (a[k + pa].x - a[k + pa + 1].x) : 0.0;
+        final avy = ay ? sy * (a[k + pa].y - a[k + pa + 1].y) : 0.0;
+        final cvx = ax ? c[k + ca].x - c[k + ca + 1].x : 0.0;
+        final cvy = ay ? c[k + ca].y - c[k + ca + 1].y : 0.0;
+        sac += avx * cvx + avy * cvy;
+        saa += avx * avx + avy * avy;
+        scc += cvx * cvx + cvy * cvy;
+      }
+      if (saa < minE || scc < minE) continue;
+      best = math.max(best, sac / math.sqrt(saa * scc));
+    }
+    return best;
+  }
+
+  /// `d` del modo trazo: 0 con el mismo trazo, `tol` en el parecido mínimo, hasta 6.
+  double _traceDistance(Relation rel, double t) {
+    final sim = traceSimilarity(rel, t);
+    final span = math.max(0.05, 1 - params.traceMin);
+    return (tol * (1 - sim) / span).clamp(0.0, planeLimit).toDouble();
   }
 
   // ---------------- telemetría ----------------
@@ -649,6 +801,7 @@ class SyncEngine {
   void _setGuide(Role role, double now) {
     guide = role;
     _emit(GuideChangedEvent(now, role));
+    if (params.guideChime > 0) _emit(ChimeEvent(now));
     _emit(SayEvent(now, 'Ahora guía ${roleNames[role]}.'));
   }
 
@@ -660,6 +813,7 @@ class SyncEngine {
     inSync = false;
     guide = l.guides[part] ?? Role.adult;
     _emit(GuideChangedEvent(now, guide));
+    if (params.guideChime > 0) _emit(ChimeEvent(now));
     _emit(SayEvent(now, 'Ahora, ${relationNames[l.parts[part]]}. Guía ${roleNames[guide]}.'));
   }
 

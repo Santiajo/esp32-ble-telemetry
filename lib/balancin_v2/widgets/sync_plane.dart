@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../core/stick_state.dart';
+import '../core/sync_engine.dart' show PlaneBox;
 
 /// Plano de sincronía con límite (plan v2 §5.2).
 ///
@@ -18,6 +19,7 @@ class SyncPlane extends StatelessWidget {
     required this.child,
     required this.now,
     this.target,
+    this.zone,
     this.tol = 1.2,
     this.adultStale = false,
     this.childStale = false,
@@ -28,6 +30,9 @@ class SyncPlane extends StatelessWidget {
 
   /// Dónde debería estar el niño (zona objetivo), o `null` sin objetivo (Libre).
   final P2? target;
+
+  /// Franja objetivo del modo zonas (§15). Si está, se dibuja en vez del círculo de [tol].
+  final PlaneBox? zone;
   final double tol;
   final bool adultStale, childStale;
 
@@ -107,7 +112,13 @@ class _PlanePainter extends CustomPainter {
     final t = w.target;
     if (t != null && w.adult.has) {
       final tp = g.toPx(t.x, t.y);
-      canvas.drawCircle(tp, w.tol * g.k, Paint()..color = const Color(0xFFB3A2DC).withValues(alpha: 0.22));
+      final z = w.zone;
+      final zonePaint = Paint()..color = const Color(0xFFB3A2DC).withValues(alpha: 0.22);
+      if (z != null) {
+        canvas.drawRect(Rect.fromPoints(g.toPx(z.x0, z.y0), g.toPx(z.x1, z.y1)), zonePaint);
+      } else {
+        canvas.drawCircle(tp, w.tol * g.k, zonePaint);
+      }
       canvas.drawCircle(
         tp,
         9,

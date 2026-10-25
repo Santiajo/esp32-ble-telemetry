@@ -481,6 +481,26 @@ Tras probar los niveles 1–6: el punto «tiritaba» al moverse hasta que el sti
 3. **Lectura desde la inserción:** `InsertV2Screen` abre los sticks y se los pasa a `PlayEjeScreen`; en esos 6 s, con los sticks quietos, se mide el bias. Aviso: «Mientras colocan el celular, dejen los sticks quietos.»
 4. El banco y el estado del stick dicen «giro guardado» cuando el bias viene del valor guardado.
 
+## 15. Opciones para jugar sin ver el plano (25-10-2026)
+
+Video de prueba (banco, niveles 1–6): con el plano a la vista los niveles salen en 15–30 s, pero muchas veces con los dos puntos **estacionados en una esquina** (el adulto pasaba 41–48 % del tiempo en el borde). En el eje, sin ver, «rara vez coincidía»: el niño tiene que acertar un círculo de radio 1,2 (10 % del plano) alrededor de un punto que no ve, el lado (x) no suena y la misma altura no suena relacionada (adulto con 9 notas, niño con 11).
+
+Todo es **elegible en el banco** (Ajuste) y viene **apagado**: los valores de fábrica y la paridad no cambian. El botón **«Sin vista»** (`SyncParams.blind()`) los enciende juntos, con tolerancia 1,3×, pérdida al salir 0,4×, sin peso de velocidad y rango mínimo del adulto 25°. Los parámetros del banco valen también para el juego.
+
+| Parámetro | Qué hace |
+|---|---|
+| `matchMode` | Cómo se mide la sincronía en Juntos, Espejo, Iguales, Sube y baja y Libre: 0 punto · 1 zonas · 2 trazo · 3 zonas y trazo. «Mismo pulso» y «Sígueme» no cambian. |
+| `zoneCount` (3) | Zonas: el plano se parte en franjas por eje; `d` = 0 si el niño está en la franja que le toca, si no, lo que le falta para entrar. El banco dibuja la franja en vez del círculo. |
+| `traceWinMs` (1500), `traceMin` (0,6) | Trazo: parecido (coseno) entre las velocidades del adulto, con la transformación de la relación, y las del niño en la ventana, con desfase de hasta ±`syncLagMs`. No mira posición ni amplitud. Si alguno casi no se mueve (menos de la mitad de `onSpeed`), no hay trazo. `d = tol·(1 − parecido)/(1 − traceMin)`. Con zonas y trazo, `d` = el mayor de los dos. |
+| `sideOnly` | En Espejo e Iguales solo cuenta el lado; la altura queda libre. |
+| `edgeNoSync` | Si los dos están pegados al borde en un eje que se mide, no es sincronía (se oye la ondulación). |
+| `guideChime` | Campanita (`ChimeEvent`) cuando cambia quién guía. |
+| `sharedScale` | El niño usa la escala del adulto una octava arriba (do4–sol5): a la misma altura, la misma nota. |
+| `sideTimbre` | El lado se oye: el niño suena marimba a la izquierda y glock a la derecha; el 2.º armónico del adulto va de 0,06 (izquierda) a 0,5 (derecha). |
+| `fifthRamp` | La quinta sube de a poco entre `2·tol` y `tol`, en vez de aparecer solo afinada. |
+
+Pruebas: `blind_test.dart` (15).
+
 ## 11. Registro
 
 | Fecha | Fase | Nota |
@@ -499,5 +519,6 @@ Tras probar los niveles 1–6: el punto «tiritaba» al moverse hasta que el sti
 | 18-10-2026 | 12 | «Pruebas 3»: tras calibrar, los puntos quedaban pegados a un borde. Calibración robusta por eje con muestras en movimiento (§12.6), descarte de la calibración al cambiar de fuente, % en el borde desde la calibración. 3 pruebas nuevas (incluye el stick apoyado al empezar). 2.0.0-dev.7+10. |
 | 18-10-2026 | 6 | «Pruebas 5»: con la calibración robusta el nivel 1 se logra bien con ambos sticks. Flujo del prototipo en `lib/balancin_v2/`: `app_v2.dart` (raíz: un `StickHub`, un `AudioEngineV2`, voz y parámetros del banco compartidos; preparación la primera vez), `screens/home_v2.dart` (Jugar con esfera animada, sesiones pasadas, idea para hoy, repasar la preparación, herramientas del equipo: banco, prueba de audio, app v1), `mode_screen`, `levels_screen` (2–7 «Próximamente»), `pre_level_screen`, `insert_v2_screen` (animación y iris), `play_eje_screen` (calibra al empezar, solo luz, destello, pérdida de stick con `LostScreen` de v1, salida manteniendo 2 s la esquina superior derecha, inmersivo y pantalla siempre encendida), `final_screen` (recuerdo, canción, quién guió, escuchar, guardar como PNG en la galería). `widgets/v2_ui.dart` (paleta, barra de la canción, pictogramas de los 7 niveles, dibujo del recuerdo, cápsula de guía); `platform/progress_store.dart` (claves del prototipo). La preparación y la pérdida de v1 aceptan `onFinished`/`onChime`/`onResume`. `main.dart` abre la v2. Sin Google (V2). Luz en dos mitades con el degradado del prototipo. Controles «Rango mínimo» en el banco. `screens_test.dart`: 10 pruebas (incluye 360 × 740 sin desbordes). 2.0.0-dev.8+11. |
 | 24-10-2026 | 13 | Niveles 2 y 3 habilitados, «seguir al siguiente nivel», asistente de ejes por MAC en el banco, aviso de calibración en la inserción, selector de nivel en el banco. 213/213. 2.0.0-dev.9+12. |
+| 25-10-2026 | 15 | Opciones para jugar sin vista, todas elegibles en Ajuste y apagadas por defecto: medir por punto, zonas, trazo o zonas y trazo; solo el lado en Espejo e Iguales; pegados al borde no cuenta; campanita de guía; escala común; timbre por lado; quinta gradual; botón «Sin vista» (§15). 15 pruebas nuevas; 232/232. 2.0.0-dev.12+15. |
 | 25-10-2026 | 14 | El punto tiritaba hasta 5–6 s de quietud: bias del giroscopio guardado por MAC, suavizado del modo solo acelerómetro, lectura de los sticks desde la inserción con aviso de quietud (§14). 4 pruebas nuevas; 217/217. 2.0.0-dev.11+14. |
 | 24-10-2026 | 13 | Banco: selector con los 7 niveles (los que en la app dicen «Próximamente» llevan *; el banco puede jugarlos todos) y línea «Por detrás» que explica qué mide el motor en cada relación (incluida la parte actual de «La canción»). 2.0.0-dev.10+13. |

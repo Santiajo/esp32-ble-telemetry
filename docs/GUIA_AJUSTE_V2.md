@@ -49,6 +49,25 @@ En estos niveles importa también **hacia qué lado** se inclina cada stick, no 
 | Quiero ver el final después de cada nivel, sin seguir al siguiente | Seguir al siguiente nivel = **0** |
 | «Iguales» cuesta demasiado | Tolerancia (× nivel): subir a 1,1–1,2. «Iguales» tiene una tolerancia más estricta (1,0) que «Juntos» y «Espejo» (1,2). |
 
+## 1c. Jugar sin ver el plano (en el eje)
+
+Con el teléfono en el eje nadie ve el punto del otro: acertar un círculo chico a ciegas es casi imposible y las esquinas se vuelven un atajo. Estos controles cambian **qué se mide** y **qué se oye**. Para probarlos todos juntos, toca **«Sin vista»** arriba del panel; para volver, **«Valores iniciales»**.
+
+| Lo que pasa | Qué mover |
+|---|---|
+| A ciegas casi nunca coinciden | **Medir la sincronía por** → «zonas» (basta la misma franja), «trazo» (basta moverse hacia el mismo lado al mismo tiempo) o «zonas y trazo» (las dos cosas) |
+| Con zonas, igual cuesta | **Zonas: franjas por eje** → bajar a 2 (arriba / abajo) |
+| Con trazo, cuenta aunque no vayan tan parejos | **Trazo: parecido mínimo** → subir: 0,6 → 0,75 |
+| Con trazo, no cuenta aunque se mueven juntos | **Trazo: parecido mínimo** → bajar a 0,45, o **Trazo: ventana** → bajar a 1000 ms |
+| En Espejo o Iguales no logran la altura y el lado a la vez | **Espejo e Iguales: solo el lado** = 1 |
+| Ganan dejando los dos sticks en una esquina | **Pegados al borde no cuenta** = 1 |
+| No se dan cuenta de que cambió quién guía (voz apagada) | **Campanita al cambiar de guía** = 1 |
+| El niño no sabe dónde está el adulto | **Niño en la escala del adulto** = 1: a la misma altura suenan la misma nota (una octava arriba) |
+| No se sabe hacia qué lado está cada uno | **El lado cambia el timbre** = 1: el niño suena marimba a la izquierda y campana a la derecha; el adulto, más brillante a la derecha |
+| No se oye si se están acercando | **Quinta gradual al acercarse** = 1 |
+
+En el banco, la línea «Por detrás» dice cómo se está midiendo y, con trazo, el parecido actual.
+
 ## 2. La frase que se arma durante el nivel
 
 | Lo que pasa | Qué mover |
