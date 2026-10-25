@@ -27,10 +27,20 @@ import 'final_screen.dart';
 /// final. Si se pierde un stick, abre la pantalla de pérdida y la sesión sigue
 /// al volver. Para terminar a mano: mantener 2 s la esquina superior derecha.
 class PlayEjeScreen extends StatefulWidget {
-  const PlayEjeScreen({super.key, required this.s, required this.mode, this.levelIndex = 0});
+  const PlayEjeScreen({super.key, required this.s, required this.mode, this.levelIndex = 0, this.sticks});
   final V2Services s;
   final PlayMode mode;
   final int levelIndex;
+
+  /// Sticks ya abiertos por la inserción (llevan unos segundos leyendo). La
+  /// pantalla pasa a ser su dueña. Si faltan, los abre ella.
+  final Map<Role, TiltStick>? sticks;
+
+  /// Un [TiltStick] por rol sobre los enlaces del hub.
+  static Map<Role, TiltStick> openSticks(V2Services s) => {
+        for (final r in Role.values)
+          r: TiltStick(s.hub.ensureLink(r == Role.adult ? StickRole.adult : StickRole.child), params: s.params),
+      };
 
   @override
   State<PlayEjeScreen> createState() => _PlayEjeScreenState();
@@ -55,8 +65,8 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
     super.initState();
     final s = widget.s;
     _e = SyncEngine(params: s.params, closeOnIdle: true, isLevelEnabled: enabledLevelIds.contains);
+    _sticks.addAll(widget.sticks ?? PlayEjeScreen.openSticks(s));
     for (final r in Role.values) {
-      _sticks[r] = TiltStick(s.hub.ensureLink(_sr(r)), params: s.params);
       s.hub.arm(_sr(r));
     }
     _e.drive = (now) {

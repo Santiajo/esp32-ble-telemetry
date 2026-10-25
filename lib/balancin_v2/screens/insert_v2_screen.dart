@@ -6,11 +6,16 @@ import 'package:flutter/material.dart';
 import '../app_v2.dart';
 import '../core/levels.dart';
 import '../core/sync_engine.dart';
+import '../platform/tilt_stick.dart';
 import '../widgets/v2_ui.dart';
 import 'play_eje_screen.dart';
 
 /// «Coloca el celular en el eje» (`#insert` del prototipo): animación del
 /// teléfono entrando al eje, barra de 6 s y transición circular («iris») al juego.
+///
+/// Los sticks se empiezan a leer aquí: mientras colocan el teléfono, con los
+/// sticks quietos, el lector mide el error del giroscopio y el juego empieza
+/// sin que el punto tirite. Los [TiltStick] pasan al [PlayEjeScreen].
 class InsertV2Screen extends StatefulWidget {
   const InsertV2Screen({super.key, required this.s, required this.mode, this.levelIndex = 0});
   final V2Services s;
@@ -27,10 +32,12 @@ class _InsertV2ScreenState extends State<InsertV2Screen> with TickerProviderStat
   late final AnimationController _bar = AnimationController(vsync: this, duration: wait)..forward();
   late final AnimationController _iris = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
   bool _leaving = false;
+  Map<Role, TiltStick>? _sticks;
 
   @override
   void initState() {
     super.initState();
+    _sticks = PlayEjeScreen.openSticks(widget.s);
     _bar.addStatusListener((st) {
       if (st == AnimationStatus.completed) unawaited(_go());
     });
@@ -41,9 +48,12 @@ class _InsertV2ScreenState extends State<InsertV2Screen> with TickerProviderStat
     _leaving = true;
     await _iris.forward();
     if (!mounted) return;
+    final sticks = _sticks;
+    _sticks = null; // desde aquí son del juego
     await Navigator.of(context).pushReplacement(PageRouteBuilder<void>(
       transitionDuration: const Duration(milliseconds: 400),
-      pageBuilder: (_, _, _) => PlayEjeScreen(s: widget.s, mode: widget.mode, levelIndex: widget.levelIndex),
+      pageBuilder: (_, _, _) =>
+          PlayEjeScreen(s: widget.s, mode: widget.mode, levelIndex: widget.levelIndex, sticks: sticks),
       transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
     ));
   }
@@ -53,6 +63,9 @@ class _InsertV2ScreenState extends State<InsertV2Screen> with TickerProviderStat
     _scene.dispose();
     _bar.dispose();
     _iris.dispose();
+    for (final st in _sticks?.values ?? const <TiltStick>[]) {
+      st.dispose();
+    }
     super.dispose();
   }
 
@@ -94,10 +107,13 @@ class _InsertV2ScreenState extends State<InsertV2Screen> with TickerProviderStat
                 const SizedBox(height: 8),
                 Text(l == null ? 'Modo libre' : 'Nivel ${l.id} · ${l.name}', style: V2.kicker),
                 const SizedBox(height: 8),
-                // Sin voz de consignas, este es el único aviso de la calibración (6 s al entrar al eje).
+                // Sin voz de consignas, este es el único aviso: quietos ahora (giroscopio) y
+                // movimiento libre al entrar al eje (rango, 6 s).
                 const SizedBox(
                   width: 300,
-                  child: Text('Al empezar, muévanse libremente unos segundos: arriba, abajo y hacia los lados.',
+                  child: Text(
+                      'Mientras colocan el celular, dejen los sticks quietos. '
+                      'Al empezar, muévanse libremente unos segundos: arriba, abajo y hacia los lados.',
                       textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: V2.mute, fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(height: 16),

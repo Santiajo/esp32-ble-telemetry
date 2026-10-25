@@ -472,6 +472,15 @@ Rama `niveles-2-3` (desde `flujo-v2`).
 - **Banco:** selector Libre / 1 / 2 / 3 que sigue al nivel que juega el motor.
 - Pruebas: `levels23_test.dart` (9: espejo y retraso sí, copiar no; iguales sí, espejo no; sesión 1 → 2 → 3 → final), navegación al 2 y ejes por MAC en `screens_test.dart`.
 
+## 14. El punto ya no tirita al empezar (25-10-2026)
+
+Tras probar los niveles 1–6: el punto «tiritaba» al moverse hasta que el stick quedaba quieto unos 5–6 s. Causa: hasta medir el error del giroscopio (bias), `TiltReader` usaba **solo el acelerómetro**, que suma el empujón de la mano a la gravedad; y medirlo pide 0,5 s de quietud estricta (giro < 3 °/s y gravedad ±2°), difícil con el stick en la mano. Además, cada partida creaba un lector nuevo y perdía la medición, y la partida empieza pidiendo movimiento.
+
+1. **Bias guardado por stick** (`platform/bias_store.dart`, por MAC, junto con el |a| de reposo). `TiltReader.seedBias` parte con él: el giroscopio se usa desde la primera muestra y la primera quietud real lo reemplaza (`biasSeeded`). Se guarda al medirlo (como mucho cada 30 s) y al cerrar el stick.
+2. **Suavizado mientras no hay bias:** el modo solo acelerómetro pasa por un filtro de τ = 50 ms (200 ms si |a| sale de la compuerta, referida a un |a| promedio de 1 s). Con temblor de 0,3 g a 8 Hz, los saltos entre muestras bajan más de 2,5 veces.
+3. **Lectura desde la inserción:** `InsertV2Screen` abre los sticks y se los pasa a `PlayEjeScreen`; en esos 6 s, con los sticks quietos, se mide el bias. Aviso: «Mientras colocan el celular, dejen los sticks quietos.»
+4. El banco y el estado del stick dicen «giro guardado» cuando el bias viene del valor guardado.
+
 ## 11. Registro
 
 | Fecha | Fase | Nota |
@@ -490,4 +499,5 @@ Rama `niveles-2-3` (desde `flujo-v2`).
 | 18-10-2026 | 12 | «Pruebas 3»: tras calibrar, los puntos quedaban pegados a un borde. Calibración robusta por eje con muestras en movimiento (§12.6), descarte de la calibración al cambiar de fuente, % en el borde desde la calibración. 3 pruebas nuevas (incluye el stick apoyado al empezar). 2.0.0-dev.7+10. |
 | 18-10-2026 | 6 | «Pruebas 5»: con la calibración robusta el nivel 1 se logra bien con ambos sticks. Flujo del prototipo en `lib/balancin_v2/`: `app_v2.dart` (raíz: un `StickHub`, un `AudioEngineV2`, voz y parámetros del banco compartidos; preparación la primera vez), `screens/home_v2.dart` (Jugar con esfera animada, sesiones pasadas, idea para hoy, repasar la preparación, herramientas del equipo: banco, prueba de audio, app v1), `mode_screen`, `levels_screen` (2–7 «Próximamente»), `pre_level_screen`, `insert_v2_screen` (animación y iris), `play_eje_screen` (calibra al empezar, solo luz, destello, pérdida de stick con `LostScreen` de v1, salida manteniendo 2 s la esquina superior derecha, inmersivo y pantalla siempre encendida), `final_screen` (recuerdo, canción, quién guió, escuchar, guardar como PNG en la galería). `widgets/v2_ui.dart` (paleta, barra de la canción, pictogramas de los 7 niveles, dibujo del recuerdo, cápsula de guía); `platform/progress_store.dart` (claves del prototipo). La preparación y la pérdida de v1 aceptan `onFinished`/`onChime`/`onResume`. `main.dart` abre la v2. Sin Google (V2). Luz en dos mitades con el degradado del prototipo. Controles «Rango mínimo» en el banco. `screens_test.dart`: 10 pruebas (incluye 360 × 740 sin desbordes). 2.0.0-dev.8+11. |
 | 24-10-2026 | 13 | Niveles 2 y 3 habilitados, «seguir al siguiente nivel», asistente de ejes por MAC en el banco, aviso de calibración en la inserción, selector de nivel en el banco. 213/213. 2.0.0-dev.9+12. |
+| 25-10-2026 | 14 | El punto tiritaba hasta 5–6 s de quietud: bias del giroscopio guardado por MAC, suavizado del modo solo acelerómetro, lectura de los sticks desde la inserción con aviso de quietud (§14). 4 pruebas nuevas; 217/217. 2.0.0-dev.11+14. |
 | 24-10-2026 | 13 | Banco: selector con los 7 niveles (los que en la app dicen «Próximamente» llevan *; el banco puede jugarlos todos) y línea «Por detrás» que explica qué mide el motor en cada relación (incluida la parte actual de «La canción»). 2.0.0-dev.10+13. |

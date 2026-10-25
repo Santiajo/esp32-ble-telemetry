@@ -107,7 +107,7 @@ Cuando el niño se mueve rápido, su nota puede saltar varias notas de golpe. La
 | Con el stick quieto, el punto **se desliza lento** hacia un lado | Stick: corrección con gravedad | Subir: 0,02 → 0,04 |
 | El punto **salta** cuando se sacude el stick sin inclinarlo | Stick: corrección con gravedad | Bajar: 0,02 → 0,01 |
 | | Stick: compuerta de \|a\| | Bajar: 0,15 → 0,1 g |
-| Recién conectado, el punto **gira solo** | Ningún control: deja el stick **quieto 1 s** para que mida el error del giroscopio, o toca «Recalibrar giro» en su panel. | |
+| Recién conectado, el punto **gira solo** o **tirita** al moverlo | Ningún control: deja el stick **quieto 1–2 s** para que mida el error del giroscopio, o toca «Recalibrar giro» en su panel. La medición queda guardada para esa placa: las partidas siguientes empiezan con «giro guardado» y no tiritan. | |
 
 Si algo del stick se ve raro, usa **Grabar traza** en su panel, repite el gesto unos 30 s, toca «Detener y compartir» y mándame el archivo: lo convierto en prueba automática.
 

@@ -211,6 +211,58 @@ void main() {
       expect(err, lessThan(3));
     });
 
+    // Temblor de la mano: empujones de 0,3 g a 8 Hz hacia el costado, sin girar el stick.
+    V3 tremor(double t) => V3(0.3 * math.sin(2 * math.pi * 8 * t), 0, 0);
+
+    test('sin calibrar, el temblor de la mano se suaviza (antes: acelerómetro crudo)', () {
+      final r = TiltReader();
+      final sim = StickSim();
+      // Sin quietud: un balanceo lento con temblor, para que nunca mida el bias.
+      double th(double t) => 20 * deg * math.sin(t * 0.7);
+      final trace = sim.run(0, 6, k: kSide, theta: th, lin: tremor);
+      final out = feed(r, trace);
+      expect(r.calibrated, isFalse);
+      final raw = trace.map((s) => math.atan2(s.sample.axG, s.sample.azG) / deg).toList();
+      double wobble(List<double> xs) {
+        var m = 0.0;
+        for (var i = 1; i < xs.length; i++) {
+          m = math.max(m, (xs[i] - xs[i - 1]).abs());
+        }
+        return m;
+      }
+
+      final smooth = wobble(out.map((p) => p.x).toList());
+      expect(smooth, lessThan(wobble(raw) / 2.5), reason: 'salto máximo entre muestras: $smooth° vs ${wobble(raw)}° crudo');
+      double maxErr(Iterable<({double t, double x})> xs) =>
+          xs.where((p) => p.t > 1).map((p) => (p.x - th(p.t) / deg).abs()).reduce(math.max);
+      final err = maxErr(out.map((p) => (t: p.t, x: p.x)));
+      final rawErr = maxErr([for (var i = 0; i < raw.length; i++) (t: trace[i].arrivalMs / 1000, x: raw[i])]);
+      expect(err, lessThan(rawErr / 2), reason: 'error $err° vs $rawErr° crudo');
+    });
+
+    test('con el bias guardado usa el giroscopio desde la primera muestra', () {
+      final r = TiltReader()..seedBias(const V3(41.6, 0, 0), 1);
+      double th(double t) => 20 * deg * math.sin(t * 0.7);
+      final out = feed(r, StickSim().run(0, 6, k: kSide, theta: th, lin: tremor));
+      expect(r.calibrated, isTrue);
+      expect(r.biasSeeded, isTrue, reason: 'sin quietud no hay medición nueva');
+      final err = out.map((p) => (p.x - th(p.t) / deg).abs()).reduce(math.max);
+      expect(err, lessThan(2));
+    });
+
+    test('la primera quietud reemplaza el bias guardado y avisa para guardarlo', () {
+      var avisos = 0;
+      final r = TiltReader()
+        ..seedBias(const V3(30, 0, 0), 1)
+        ..onBiasMeasured = () => avisos++;
+      feed(r, StickSim().run(0, 2));
+      expect(r.biasSeeded, isFalse);
+      expect(r.biasDps.x, closeTo(41.6, 0.5));
+      expect(avisos, greaterThan(0));
+      r.seedBias(const V3(1, 2, 3), 1);
+      expect(r.biasDps.x, closeTo(41.6, 0.5), reason: 'un valor guardado no pisa uno medido');
+    });
+
     test('vuelta del reloj del ESP32 (2^30 ms) sin saltos', () {
       final r = TiltReader();
       final sim = StickSim(startTicks: ImuFrameParser.ticksPeriod - 2500);
@@ -328,12 +380,17 @@ void main() {
     test('vertical = +Z: el mapa por defecto lo toma y los ángulos salen de la gravedad', () {
       expect(trace.length, 182);
       final r = TiltReader();
+      final errs = <double>[];
       for (final s in trace) {
         r.addSample(s.sample, s.arrivalMs);
-        // A 5 Hz nunca hay 0,5 s con 20 muestras: queda en modo solo acelerómetro (exacto).
+        // A 5 Hz nunca hay 0,5 s con 20 muestras: queda en modo solo acelerómetro,
+        // suavizado (τ 50 ms; 200 ms si |a| sale de la compuerta).
         final x = math.atan2(s.sample.axG, s.sample.azG) / deg;
-        expect(r.tiltX, closeTo(x, 1.5));
+        errs.add((r.tiltX - x).abs());
       }
+      errs.sort();
+      expect(errs[errs.length ~/ 2], lessThan(0.5));
+      expect(errs.last, lessThan(4));
       expect(r.calibrated, isFalse);
       expect(r.axes!.g0.z, 1);
       expect(r.axes!.right.x, 1);

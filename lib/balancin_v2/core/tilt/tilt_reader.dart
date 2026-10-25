@@ -13,7 +13,12 @@
 /// `ImuGestureReader`) Y la gravedad sin cambiar más de 2° en esa ventana. Lo
 /// segundo evita confundir un giro lento y constante con el bias.
 /// Hasta la primera estimación del bias, `ĝ` sale solo del acelerómetro (el
-/// stick B tiene ~41,6 °/s de bias: integrarlo sin restar derivaría en segundos).
+/// stick B tiene ~41,6 °/s de bias: integrarlo sin restar derivaría en segundos),
+/// suavizado con τ = [uncalTauS] y aún más fuera de la compuerta de |a|, para que
+/// el punto no tirite con el empujón de la mano.
+///
+/// [seedBias] parte con el bias guardado de la placa (por MAC): el giroscopio se
+/// usa desde la primera muestra, y la primera quietud real lo reemplaza.
 ///
 /// `dt` sale del reloj del ESP32 (`t_ms`), con vuelta de reloj y un tope de
 /// 0,1 s para huecos de BLE.
@@ -53,11 +58,20 @@ class TiltReader {
   static const double biasAlpha = 0.2;
   static const double maxDtS = 0.1;
 
+  /// Suavizado del modo solo acelerómetro (s); fuera de la compuerta de |a| la
+  /// constante de tiempo se divide por [uncalGateWeight] (4 veces más lenta).
+  static const double uncalTauS = 0.05;
+  static const double uncalGateWeight = 0.25;
+
+  /// Se llama cada vez que una quietud real mide el bias (para guardarlo).
+  void Function()? onBiasMeasured;
+
   AxisMap? _axes;
   bool _axesFromDefault;
 
   V3 _bias = V3.zero;
   bool _calibrated = false;
+  bool _seeded = false;
   double _restMag = 1;
   final ListQueue<_Still> _still = ListQueue<_Still>();
 
@@ -66,6 +80,7 @@ class TiltReader {
   double _tU = 0;
   bool _correcting = false;
   double _accMag = 1;
+  double? _magAvg; // |a| promedio (τ 1 s): referencia de la compuerta antes de medir el reposo
 
   ImuSample? _lastSample;
   double _lastArrival = -1e9;
@@ -89,6 +104,9 @@ class TiltReader {
   // ---------------- diagnóstico (banco) ----------------
 
   bool get calibrated => _calibrated;
+
+  /// El bias viene del valor guardado de la placa y aún no se midió en esta sesión.
+  bool get biasSeeded => _seeded;
   V3 get biasDps => _bias;
   double get restMagG => _restMag;
   double get accelMagG => _accMag;
@@ -123,9 +141,20 @@ class TiltReader {
   /// Olvida el bias: vuelve a esperar 0,5 s de quietud (y usa solo el acelerómetro).
   void resetCalibration() {
     _calibrated = false;
+    _seeded = false;
     _bias = V3.zero;
     _restMag = 1;
     _still.clear();
+  }
+
+  /// Parte con el bias y el |a| de reposo guardados de esta placa. No hace nada
+  /// si ya se midió en esta sesión.
+  void seedBias(V3 biasDps, double restMagG) {
+    if (_calibrated) return;
+    _bias = biasDps;
+    _restMag = restMagG;
+    _calibrated = true;
+    _seeded = true;
   }
 
   /// [arrivalMs] = hora de llegada en el reloj del teléfono.
@@ -148,16 +177,24 @@ class TiltReader {
     final prev = _prevT;
     var dt = prev == null ? 0.0 : ImuFrameParser.ticksDiff(s.tMs, prev) / 1000;
     if (dt < 0) dt = 0;
+    final gapS = dt; // sin tope: tras un hueco el suavizado no debe arrastrar la lectura vieja
     if (dt > maxDtS) dt = maxDtS;
     _prevT = s.tMs;
     _tU += dt * 1000;
 
     _updateStill(w, mag, ah);
+    final avg = _magAvg;
+    _magAvg = avg == null ? mag : avg + (mag - avg) * (1 - math.exp(-dt));
 
     final g = _g;
-    if (g == null || !_calibrated) {
+    if (g == null) {
       _g = ah;
       _correcting = true;
+    } else if (!_calibrated) {
+      _correcting = (mag - _magAvg!).abs() < params.accelGate;
+      final tau = _correcting ? uncalTauS : uncalTauS / uncalGateWeight;
+      final k = gapS > 0 ? 1 - math.exp(-gapS / tau) : 1.0;
+      _g = (g + (ah - g) * k).normalized() ?? ah;
     } else {
       var next = g;
       final om = (w - _bias) * (math.pi / 180);
@@ -202,13 +239,15 @@ class TiltReader {
     }
     const lim = stillStdDps * stillStdDps;
     if (vx / n >= lim || vy / n >= lim || vz / n >= lim) return;
-    if (!_calibrated) {
+    if (!_calibrated || _seeded) {
       _bias = m;
       _restMag = mm;
       _calibrated = true;
+      _seeded = false;
     } else {
       _bias = _bias + (m - _bias) * biasAlpha;
       _restMag += (mm - _restMag) * biasAlpha;
     }
+    onBiasMeasured?.call();
   }
 }

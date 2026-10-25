@@ -10,6 +10,7 @@ import 'package:esp32_ble_telemetry/balancin_v2/core/telemetry.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/tilt/axis_map.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/tilt/vec3.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/platform/axis_store.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/platform/bias_store.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/platform/audio_engine_v2.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/platform/progress_store.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/platform/voice_prompts.dart';
@@ -168,6 +169,19 @@ void main() {
     expect(await AxisStore.load(null), isNull);
     await AxisStore.clear('aa:bb:cc:dd:ee:ff');
     expect(await AxisStore.load('aa:bb:cc:dd:ee:ff'), isNull);
+  });
+
+  test('error del giroscopio por stick: se guarda y se lee por MAC', () async {
+    SharedPreferences.setMockInitialValues({});
+    await BiasStore.save('aa:bb:cc:dd:ee:ff', const V3(41.6, -0.2, 0.3), 1.16);
+    final back = await BiasStore.load('AA:BB:CC:DD:EE:FF');
+    expect(back, isNotNull);
+    expect(back!.bias.x, 41.6);
+    expect(back.restMag, 1.16);
+    expect(await BiasStore.load('11:22:33:44:55:66'), isNull);
+    expect(await BiasStore.load(null), isNull);
+    await BiasStore.save('aa:bb:cc:dd:ee:ff', V3.zero, 0); // |a| imposible: se descarta al leer
+    expect(await BiasStore.load('aa:bb:cc:dd:ee:ff'), isNull);
   });
 
   test('progreso y sesiones: guardar y leer', () async {

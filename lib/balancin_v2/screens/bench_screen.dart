@@ -621,7 +621,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     // Lo más importante primero: en el teléfono el panel es chico (prueba del 18-10-2026).
     final lines = [
       s.statusText(now),
-      'giro ${r.calibrated ? 'calibrado' : 'SIN calibrar: déjalo quieto 1 s'} · borde ${(st.edgeFraction * 100).round()} %${st.atEdge ? ' (ahora)' : ''}',
+      'giro ${!r.calibrated ? 'SIN calibrar: déjalo quieto 1 s' : r.biasSeeded ? 'guardado (se afina al dejarlo quieto)' : 'calibrado'} · borde ${(st.edgeFraction * 100).round()} %${st.atEdge ? ' (ahora)' : ''}',
       st.cal != null
           ? 'calibrado ±${st.cal!.hrX.toStringAsFixed(0)}° / ±${st.cal!.hrY.toStringAsFixed(0)}°'
           : 'sin calibrar ±${st.range(_e.params).hr.toStringAsFixed(0)}°',

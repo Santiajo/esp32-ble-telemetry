@@ -7,16 +7,45 @@ import '../core/tilt/axis_map.dart';
 import '../core/tilt/imu_trace.dart';
 import '../core/tilt/tilt_reader.dart';
 import 'axis_store.dart';
+import 'bias_store.dart';
 
 /// Un stick real visto por la mecánica v2 (plan v2 §4.1 y fase 4).
 ///
 /// Se cuelga del [BleStickLink] de v1 (misma conexión, misma MAC guardada) y le
 /// pasa cada muestra a un [TiltReader]. También graba trazas: las líneas v2
 /// crudas con su hora de llegada, para convertir pruebas reales en tests.
+///
+/// El bias del giroscopio medido se guarda por MAC ([BiasStore]) y el siguiente
+/// `TiltStick` de la misma placa parte con él.
 class TiltStick {
   TiltStick(this.link, {SyncParams? params}) : reader = TiltReader(params: params) {
     link.sampleListeners.add(_onSample);
+    reader.onBiasMeasured = _onBiasMeasured;
     unawaited(loadSavedAxes());
+    unawaited(_loadSavedBias());
+  }
+
+  /// Cada cuánto se guarda el bias mientras se sigue afinando (ms).
+  static const int biasSaveEveryMs = 30000;
+  DateTime? _biasSavedAt;
+  bool _biasDirty = false;
+
+  Future<void> _loadSavedBias() async {
+    final b = await BiasStore.load(link.savedMac);
+    if (b != null) reader.seedBias(b.bias, b.restMag);
+  }
+
+  void _onBiasMeasured() {
+    _biasDirty = true;
+    final last = _biasSavedAt;
+    if (last == null || DateTime.now().difference(last).inMilliseconds > biasSaveEveryMs) _saveBias();
+  }
+
+  void _saveBias() {
+    if (!_biasDirty) return;
+    _biasDirty = false;
+    _biasSavedAt = DateTime.now();
+    unawaited(BiasStore.save(link.savedMac, reader.biasDps, reader.restMagG));
   }
 
   /// Ejes del asistente guardados para esta placa (por MAC), si los hay.
@@ -82,11 +111,17 @@ class TiltStick {
     if (!link.connected) return link.statusText;
     if (reader.lastSample == null) return 'Conectado · esperando datos';
     if (stale(now)) return 'Conectado · sin datos hace más de 1 s';
-    final cal = reader.calibrated ? '' : ' · déjalo quieto para calibrar';
+    final cal = !reader.calibrated
+        ? ' · déjalo quieto para calibrar'
+        : reader.biasSeeded
+            ? ' · giro guardado'
+            : '';
     return 'Conectado · ${reader.sampleRateHz.toStringAsFixed(0)} Hz$cal';
   }
 
   void dispose() {
     link.sampleListeners.remove(_onSample);
+    reader.onBiasMeasured = null;
+    _saveBias();
   }
 }
