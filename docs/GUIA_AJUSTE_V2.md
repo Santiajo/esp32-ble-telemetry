@@ -7,10 +7,11 @@ Cómo mover los controles de **Banco de prueba v2 → Ajuste** según lo que qui
 1. **Cambia un control a la vez.** Si mueves dos, no sabrás cuál produjo el efecto.
 2. **Prueba uno o dos minutos** con la misma persona y el mismo gesto antes de decidir.
 3. **Anota** el valor y lo que sentiste. Ejemplo: «Pérdida al salir 1,5: se siente justo; 2: frustra».
-4. Los cambios se guardan solos en el teléfono. Hay tres botones arriba del panel:
+4. Los cambios se guardan solos en el teléfono y valen también para el juego. Cada control tiene un **?** que explica qué es, para qué sirve, cómo ajustarlo y su valor de fábrica; el valor se pinta de oliva cuando no es el de fábrica. Arriba del panel hay cuatro botones:
+   - **Valores de fábrica:** vuelve a lo recomendado (mide por zonas y trazo).
+   - **Sin vista:** enciende todas las ayudas para jugar sin ver el plano (§1c).
+   - **Como el prototipo:** apaga los cambios desde el 18-10-2026 para comparar con el original (mide por punto).
    - **Copiar valores:** copia todo como texto. Pégamelo y lo dejo como valores de fábrica.
-   - **Valores iniciales:** vuelve a lo recomendado.
-   - **Como el prototipo:** apaga los cambios del 18-10-2026 para comparar con el original.
 5. El progreso, las salidas de sincronía y el tiempo en sincronía de cada intento quedan en **Telemetría**.
 
 ---
@@ -51,7 +52,7 @@ En estos niveles importa también **hacia qué lado** se inclina cada stick, no 
 
 ## 1c. Jugar sin ver el plano (en el eje)
 
-Con el teléfono en el eje nadie ve el punto del otro: acertar un círculo chico a ciegas es casi imposible y las esquinas se vuelven un atajo. Estos controles cambian **qué se mide** y **qué se oye**. Para probarlos todos juntos, toca **«Sin vista»** arriba del panel; para volver, **«Valores iniciales»**.
+Con el teléfono en el eje nadie ve el punto del otro: acertar un círculo chico a ciegas es casi imposible y las esquinas se vuelven un atajo. Estos controles cambian **qué se mide** y **qué se oye**. Para probarlos todos juntos, toca **«Sin vista»** arriba del panel; para volver, **«Valores de fábrica»**. De fábrica ya se mide por **zonas y trazo** (lo que mejor funcionó en el eje); el resto de esta tabla viene apagado.
 
 | Lo que pasa | Qué mover |
 |---|---|
@@ -149,3 +150,6 @@ Si algo del stick se ve raro, usa **Grabar traza** en su panel, repite el gesto 
 | Inactividad antes de decaer | 3 s | Duración de la escala de paso | 120 ms |
 | Stick: corrección con gravedad | 0,02 | Volumen de las notas de paso | 0,6× |
 | Stick: compuerta de \|a\| | 0,15 g | | |
+| Medir la sincronía por | zonas y trazo | Zonas: franjas por eje | 3 |
+| Trazo: ventana | 1500 ms | Trazo: parecido mínimo | 0,6 |
+| Ayudas sin vista (solo el lado, borde, campanita, escala común, timbre por lado, quinta gradual) | No | | |

@@ -6,8 +6,9 @@
 /// frase se arma durante el nivel y las notas del niño recorren la escala en
 /// vez de saltar. [SyncParams.prototype] apaga esos cambios (paridad).
 ///
-/// §15 agrega opciones para jugar sin ver el plano (todas apagadas por
-/// defecto); [SyncParams.blind] las enciende juntas.
+/// §15 agrega opciones para jugar sin ver el plano; de ellas, solo «zonas y
+/// trazo» viene encendida (§16, lo que mejor funcionó en el eje).
+/// [SyncParams.blind] las enciende todas juntas.
 ///
 /// Son mutables para el panel de ajuste del banco; se persisten con
 /// [toJson] / [SyncParams.fromJson].
@@ -23,7 +24,8 @@ class SyncParams {
     ..syncLagMs = 0
     ..calMode = 0
     ..phraseSteps = 0
-    ..runMaxNotes = 0;
+    ..runMaxNotes = 0
+    ..matchMode = 0;
 
   /// §15 · para jugar sin vista: zonas + trazo, solo el lado en «Espejo» e
   /// «Iguales», el borde no cuenta, campanita de guía, sonidos que ubican y
@@ -142,8 +144,8 @@ class SyncParams {
 
   /// Cómo se mide la sincronía en las relaciones de posición (Juntos, Espejo,
   /// Iguales, Sube y baja, Libre): 0 = punto (prototipo), 1 = zonas, 2 = trazo,
-  /// 3 = zonas y trazo a la vez.
-  double matchMode = 0;
+  /// 3 = zonas y trazo a la vez (por defecto desde el 25-10-2026, §16).
+  double matchMode = 3;
 
   /// Franjas por eje en el modo zonas (3 = arriba, medio, abajo).
   double zoneCount = 3;

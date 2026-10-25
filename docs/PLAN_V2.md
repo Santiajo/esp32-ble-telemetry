@@ -501,6 +501,16 @@ Todo es **elegible en el banco** (Ajuste) y viene **apagado**: los valores de f�
 
 Pruebas: `blind_test.dart` (15).
 
+## 16. Niveles 1 a 5, «zonas y trazo» de fábrica y Ajuste legible (25-10-2026)
+
+Con «Sin vista», el usuario y su hermano lograron los niveles 1 a 5 **sin ver la pantalla**; lo que mejor funcionó fue medir por **zonas y trazo**.
+
+- `enabledLevelIds = {1, 2, 3, 4, 5}`; el 6 «Sígueme» y el 7 «La canción» siguen «Próximamente».
+- `matchMode = 3` (zonas y trazo) de fábrica. `SyncParams.prototype()` vuelve a punto (paridad). Las demás ayudas de §15 siguen apagadas y se encienden con «Sin vista». `BenchStore` guarda una versión de los valores: lo guardado antes de esta versión pasa una vez a «zonas y trazo».
+- **Ajuste** rediseñado (`widgets/tuning_sheet.dart`): las hojas del banco se abrían con el tema oscuro de la app (texto blanco sobre el papel gris). Ahora usa la paleta de la app, secciones (Cómo se mide la sincronía, Lograr el nivel, Sonido, Movimiento y rango, Sensor del stick), interruptores para lo que es sí/no, selector para la medición, el valor en palabras (en oliva si cambió) y un **«?»** en cada control con qué es, para qué sirve, cómo ajustarlo y el valor de fábrica. Están los 37 parámetros (antes faltaban 4). Telemetría también usa el tema claro.
+- Pruebas: las de punto (prototipo, §12, §13) fijan `matchMode = 0`; `blind_test.dart` prueba los niveles 1–5 con los valores de fábrica; `tuning_sheet_test.dart` (3).
+- Manual de usuario: `docs/manual/manual.html` → `entregable/Balancin_Manual_de_usuario.pdf`.
+
 ## 11. Registro
 
 | Fecha | Fase | Nota |
@@ -519,6 +529,7 @@ Pruebas: `blind_test.dart` (15).
 | 18-10-2026 | 12 | «Pruebas 3»: tras calibrar, los puntos quedaban pegados a un borde. Calibración robusta por eje con muestras en movimiento (§12.6), descarte de la calibración al cambiar de fuente, % en el borde desde la calibración. 3 pruebas nuevas (incluye el stick apoyado al empezar). 2.0.0-dev.7+10. |
 | 18-10-2026 | 6 | «Pruebas 5»: con la calibración robusta el nivel 1 se logra bien con ambos sticks. Flujo del prototipo en `lib/balancin_v2/`: `app_v2.dart` (raíz: un `StickHub`, un `AudioEngineV2`, voz y parámetros del banco compartidos; preparación la primera vez), `screens/home_v2.dart` (Jugar con esfera animada, sesiones pasadas, idea para hoy, repasar la preparación, herramientas del equipo: banco, prueba de audio, app v1), `mode_screen`, `levels_screen` (2–7 «Próximamente»), `pre_level_screen`, `insert_v2_screen` (animación y iris), `play_eje_screen` (calibra al empezar, solo luz, destello, pérdida de stick con `LostScreen` de v1, salida manteniendo 2 s la esquina superior derecha, inmersivo y pantalla siempre encendida), `final_screen` (recuerdo, canción, quién guió, escuchar, guardar como PNG en la galería). `widgets/v2_ui.dart` (paleta, barra de la canción, pictogramas de los 7 niveles, dibujo del recuerdo, cápsula de guía); `platform/progress_store.dart` (claves del prototipo). La preparación y la pérdida de v1 aceptan `onFinished`/`onChime`/`onResume`. `main.dart` abre la v2. Sin Google (V2). Luz en dos mitades con el degradado del prototipo. Controles «Rango mínimo» en el banco. `screens_test.dart`: 10 pruebas (incluye 360 × 740 sin desbordes). 2.0.0-dev.8+11. |
 | 24-10-2026 | 13 | Niveles 2 y 3 habilitados, «seguir al siguiente nivel», asistente de ejes por MAC en el banco, aviso de calibración en la inserción, selector de nivel en el banco. 213/213. 2.0.0-dev.9+12. |
+| 25-10-2026 | 16 | Niveles 1 a 5 habilitados; «zonas y trazo» de fábrica; Ajuste rediseñado con ayuda (?) por control y tema claro; manual de usuario en PDF (§16). 238/238. 2.0.0-dev.13+16. |
 | 25-10-2026 | 15 | Opciones para jugar sin vista, todas elegibles en Ajuste y apagadas por defecto: medir por punto, zonas, trazo o zonas y trazo; solo el lado en Espejo e Iguales; pegados al borde no cuenta; campanita de guía; escala común; timbre por lado; quinta gradual; botón «Sin vista» (§15). 15 pruebas nuevas; 232/232. 2.0.0-dev.12+15. |
 | 25-10-2026 | 14 | El punto tiritaba hasta 5–6 s de quietud: bias del giroscopio guardado por MAC, suavizado del modo solo acelerómetro, lectura de los sticks desde la inserción con aviso de quietud (§14). 4 pruebas nuevas; 217/217. 2.0.0-dev.11+14. |
 | 24-10-2026 | 13 | Banco: selector con los 7 niveles (los que en la app dicen «Próximamente» llevan *; el banco puede jugarlos todos) y línea «Por detrás» que explica qué mide el motor en cada relación (incluida la parte actual de «La canción»). 2.0.0-dev.10+13. |

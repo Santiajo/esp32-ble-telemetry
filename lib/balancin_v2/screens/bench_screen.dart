@@ -4,7 +4,6 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -29,6 +28,7 @@ import '../platform/voice_prompts.dart';
 import '../widgets/axis_wizard_sheet.dart';
 import '../widgets/sync_plane.dart';
 import '../widgets/two_halves_light.dart';
+import '../widgets/tuning_sheet.dart';
 
 enum BenchSource { finger, synthetic, stick }
 
@@ -762,7 +762,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
       context: context,
       isScrollControlled: true,
       backgroundColor: paper,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
+      builder: (ctx) => Theme(data: _theme, child: StatefulBuilder(builder: (ctx, setSheet) {
         final rows = _e.levelTelemetry;
         String lead(LevelTelemetry lt) => lt.lagN == 0
             ? '–'
@@ -824,128 +824,15 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
             ]),
           ),
         );
-      }),
+      })),
     );
   }
 
   static String e2(double v) => v.toStringAsFixed(1);
 
-  static const List<(String, String, double, double, double, String, int)> _tune = [
-    ('tolScale', 'Tolerancia (× nivel)', 0.5, 1.5, 0.05, '×', 2),
-    ('alpha', 'Suavizado de posición α', 0.05, 0.6, 0.01, '', 2),
-    ('rangeA', 'Rango por defecto · adulto', 10, 60, 1, '°', 0),
-    ('rangeC', 'Rango por defecto · niño', 15, 80, 1, '°', 0),
-    ('minA', 'Rango mínimo · adulto', 5, 40, 1, '°', 0),
-    ('minC', 'Rango mínimo · niño', 5, 50, 1, '°', 0),
-    ('onSpeed', 'Umbral de actividad', 0.5, 6, 0.1, ' u/s', 1),
-    ('maxDetune', 'Desafinación máxima', 1, 8, 0.1, ' Hz', 1),
-    ('secScale', 'Segundos por nivel (×)', 0.25, 2, 0.05, '×', 2),
-    ('idleAfter', 'Inactividad antes de decaer', 1, 8, 0.5, ' s', 1),
-    ('kAccel', 'Stick: corrección con gravedad', 0.005, 0.1, 0.005, '', 3),
-    ('accelGate', 'Stick: compuerta de |a|', 0.05, 0.5, 0.01, ' g', 2),
-    // §12: cambios del 18-10-2026 (guía: docs/GUIA_AJUSTE_V2.md)
-    ('slipGrace', 'Margen al salir de la zona', 0, 1.5, 0.05, ' s', 2),
-    ('slipDrain', 'Pérdida al salir (× velocidad)', 0, 3, 0.1, '×', 1),
-    ('velWeight', 'Peso de la velocidad en d', 0, 0.3, 0.01, ' s', 2),
-    ('syncLagMs', 'Tolerancia de retraso', 0, 300, 10, ' ms', 0),
-    ('calMode', 'Calibración robusta (0 / 1)', 0, 1, 1, '', 0),
-    ('autoNext', 'Seguir al siguiente nivel (0 / 1)', 0, 1, 1, '', 0),
-    ('hyst', 'Histéresis de la sincronía', 1, 2, 0.05, '×', 2),
-    ('phraseSteps', 'Frase nota a nota (0 / 1)', 0, 1, 1, '', 0),
-    ('runMaxNotes', 'Notas de paso (máximo)', 0, 10, 1, '', 0),
-    ('runMs', 'Duración de la escala de paso', 40, 300, 10, ' ms', 0),
-    ('runGain', 'Volumen de las notas de paso', 0.2, 1, 0.05, '×', 2),
-    // §15: jugar sin vista (botón «Sin vista» los enciende juntos)
-    ('matchMode', 'Medir la sincronía por', 0, 3, 1, '', 0),
-    ('zoneCount', 'Zonas: franjas por eje', 2, 6, 1, '', 0),
-    ('traceWinMs', 'Trazo: ventana', 600, 3000, 100, ' ms', 0),
-    ('traceMin', 'Trazo: parecido mínimo', 0.2, 0.95, 0.05, '', 2),
-    ('sideOnly', 'Espejo e Iguales: solo el lado (0 / 1)', 0, 1, 1, '', 0),
-    ('edgeNoSync', 'Pegados al borde no cuenta (0 / 1)', 0, 1, 1, '', 0),
-    ('guideChime', 'Campanita al cambiar de guía (0 / 1)', 0, 1, 1, '', 0),
-    ('sharedScale', 'Niño en la escala del adulto (0 / 1)', 0, 1, 1, '', 0),
-    ('sideTimbre', 'El lado cambia el timbre (0 / 1)', 0, 1, 1, '', 0),
-    ('fifthRamp', 'Quinta gradual al acercarse (0 / 1)', 0, 1, 1, '', 0),
-  ];
-
   static const List<String> matchModeNames = ['punto', 'zonas', 'trazo', 'zonas y trazo'];
 
-  static String _tuneValue(String k, double v, int dec, String unit) =>
-      k == 'matchMode' ? matchModeNames[v.round().clamp(0, 3)] : '${v.toStringAsFixed(dec)}$unit';
-
-  void _openTuning() {
-    final p = _params!;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: paper,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-                const Text('Ajuste   ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                TextButton(
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: const JsonEncoder.withIndent('  ').convert(p.toJson())));
-                    _snack('Valores copiados.');
-                  },
-                  child: const Text('Copiar valores'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    p.resetToDefaults();
-                    unawaited(BenchStore.saveParams(p));
-                    setSheet(() {});
-                  },
-                  child: const Text('Valores iniciales'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    p.setAll(SyncParams.prototype());
-                    unawaited(BenchStore.saveParams(p));
-                    setSheet(() {});
-                  },
-                  child: const Text('Como el prototipo'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    p.setAll(SyncParams.blind());
-                    unawaited(BenchStore.saveParams(p));
-                    setSheet(() {});
-                  },
-                  child: const Text('Sin vista'),
-                ),
-              ]),
-              for (final (k, label, min, max, step, unit, dec) in _tune)
-                Row(children: [
-                  SizedBox(width: 150, child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
-                  Expanded(
-                    child: Slider(
-                      value: p[k].clamp(min, max).toDouble(),
-                      min: min,
-                      max: max,
-                      divisions: ((max - min) / step).round(),
-                      onChanged: (v) {
-                        p[k] = v;
-                        setSheet(() {});
-                      },
-                      onChangeEnd: (_) => unawaited(BenchStore.saveParams(p)),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 56,
-                    child: Text(_tuneValue(k, p[k], dec, unit),
-                        textAlign: TextAlign.right, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-                  ),
-                ]),
-            ]),
-          ),
-        );
-      }),
-    );
-  }
+  void _openTuning() => unawaited(TuningSheet.open(context, _params!, save: BenchStore.saveParams));
 
   void _openLog() {
     showModalBottomSheet<void>(

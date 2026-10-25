@@ -11,6 +11,10 @@ import 'package:esp32_ble_telemetry/balancin_v2/core/sync_engine.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/synthetic_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Estas pruebas son de la medición por punto (prototipo, §12 y §13). Desde el
+/// 25-10-2026 el valor de fábrica es «zonas y trazo» (§16, ver blind_test.dart).
+SyncParams pointParams() => SyncParams()..matchMode = 0;
+
 const fps = 1000 / 60;
 
 /// Adulto balanceándose ±4 a 0,8 Hz; el niño según [childY] (función de s y la y del adulto).
@@ -36,13 +40,13 @@ void main() {
     test('cruzarse en sentido contrario ya no cuenta como «juntos»', () {
       double opposite(double s, double ay) => -ay;
       final proto = run(SyncParams.prototype(), 10, opposite);
-      final nuevo = run(SyncParams(), 10, opposite);
+      final nuevo = run(pointParams(), 10, opposite);
       expect(proto.current!.sinc, greaterThan(0.5), reason: 'el prototipo suma tiempo en cada cruce');
       expect(nuevo.current!.sinc, lessThan(0.1));
     });
 
     test('moverse juntos sigue contando, aunque haya un pequeño desfase', () {
-      final nuevo = run(SyncParams(), 6, (s, ay) => 4 * math.sin(2 * math.pi * 0.8 * (s - 0.05)));
+      final nuevo = run(pointParams(), 6, (s, ay) => 4 * math.sin(2 * math.pi * 0.8 * (s - 0.05)));
       expect(nuevo.current!.sinc / nuevo.current!.juego, greaterThan(0.8));
     });
   });
@@ -71,8 +75,8 @@ void main() {
       return inSync / n;
     }
 
-    final antes = SyncParams()..syncLagMs = 0; // como estaba ayer
-    final ahora = SyncParams();
+    final antes = pointParams()..syncLagMs = 0; // como estaba ayer
+    final ahora = pointParams();
 
     test('rápido (1,7 Hz) con el niño 80 ms detrás: antes casi nunca, ahora casi siempre', () {
       expect(syncShare(antes, 1.7, 80), lessThan(0.4));
@@ -92,7 +96,7 @@ void main() {
     });
 
     test('moverse en sentido contrario sigue sin contar', () {
-      final e = run(SyncParams(), 10, (s, ay) => -ay);
+      final e = run(pointParams(), 10, (s, ay) => -ay);
       expect(e.current!.sinc, lessThan(0.1));
     });
   });
@@ -101,7 +105,7 @@ void main() {
     double syncThenOff(double s, double ay) => s < 5 ? ay : -ay;
 
     test('fuera de la zona, tras el margen, el progreso baja', () {
-      final p = SyncParams();
+      final p = pointParams();
       final at5 = run(p, 5, syncThenOff).prog;
       final at8 = run(p, 8, syncThenOff).prog;
       expect(at5, greaterThan(3));
@@ -116,7 +120,7 @@ void main() {
 
     test('un tropiezo más corto que el margen no cuesta nada', () {
       // Fuera solo 0,3 s (margen 0,4 s).
-      final p = SyncParams();
+      final p = pointParams();
       final e = run(p, 6, (s, ay) => (s > 3 && s < 3.3) ? -ay : ay);
       final ref = run(p, 6, (s, ay) => ay);
       expect(e.prog, closeTo(ref.prog, 0.5));
@@ -124,7 +128,7 @@ void main() {
     });
 
     test('las salidas quedan en la telemetría', () {
-      final e = run(SyncParams(), 8, syncThenOff);
+      final e = run(pointParams(), 8, syncThenOff);
       expect(e.current!.salidas, greaterThanOrEqualTo(1));
       final niveles = e.report()['niveles'] as List;
       expect((niveles.first as Map)['salidas_de_sincronia'], e.current!.salidas);
@@ -134,7 +138,7 @@ void main() {
   group('§12.3 · la frase se arma por cuartos', () {
     test('suenan do, re y mi a los 2, 4 y 6 s; el nivel completa con sol', () {
       final ev = <SyncEvent>[];
-      run(SyncParams(), 20, (s, ay) => ay, events: ev);
+      run(pointParams(), 20, (s, ay) => ay, events: ev);
       // Solo el nivel 1 (después sigue el 2, con su propia frase).
       final done1 = ev.whereType<LevelCompletedEvent>().first;
       final steps = ev.whereType<PhraseStepEvent>().where((x) => x.at <= done1.at).toList();
@@ -145,7 +149,7 @@ void main() {
     test('si el progreso vuelve a bajar de un cuarto, esa nota «cae»', () {
       final ev = <SyncEvent>[];
       // Juntos 4,5 s (pasa el cuarto 2), luego desincronizados 4 s.
-      run(SyncParams(), 9, (s, ay) => s < 4.5 ? ay : -ay, events: ev);
+      run(pointParams(), 9, (s, ay) => s < 4.5 ? ay : -ay, events: ev);
       final steps = ev.whereType<PhraseStepEvent>().toList();
       expect(steps.where((x) => x.up).map((x) => x.step), [1, 2]);
       expect(steps.where((x) => !x.up).map((x) => x.step).first, 2);
@@ -153,7 +157,7 @@ void main() {
 
     test('apagada (0) no emite nada', () {
       final ev = <SyncEvent>[];
-      run(SyncParams()..phraseSteps = 0, 20, (s, ay) => ay, events: ev);
+      run(pointParams()..phraseSteps = 0, 20, (s, ay) => ay, events: ev);
       expect(ev.whereType<PhraseStepEvent>(), isEmpty);
     });
   });
@@ -194,7 +198,7 @@ void main() {
     });
 
     test('en juego, un movimiento rápido del niño produce notas de paso', () {
-      final e = SyncEngine(params: SyncParams());
+      final e = SyncEngine(params: pointParams());
       final l = AudioLayers();
       e.drive = (now) {
         final s = now / 1000;
@@ -215,7 +219,7 @@ void main() {
   });
 
   test('parámetros: claves nuevas en JSON y preajuste del prototipo', () {
-    final j = SyncParams().toJson();
+    final j = pointParams().toJson();
     for (final k in ['slipGrace', 'slipDrain', 'velWeight', 'phraseSteps', 'runMaxNotes', 'runMs', 'runGain']) {
       expect(j.containsKey(k), isTrue, reason: k);
     }

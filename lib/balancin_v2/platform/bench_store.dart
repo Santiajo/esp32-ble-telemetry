@@ -8,13 +8,23 @@ import '../core/params.dart';
 abstract final class BenchStore {
   static const String _paramsKey = 'balancin_v2_params';
   static const String _voiceKey = 'balancin_v2_voz_on'; // clave nueva: por defecto apagada
+  static const String _versionKey = 'balancin_v2_params_version';
+
+  /// Versión de los valores de fábrica. 2 = «zonas y trazo» por defecto (§16): los
+  /// valores guardados antes pasan a medir así una vez; después se respeta lo elegido.
+  static const int paramsVersion = 2;
 
   static Future<SyncParams> loadParams() async {
     try {
       final p = await SharedPreferences.getInstance();
       final raw = p.getString(_paramsKey);
       if (raw == null) return SyncParams();
-      return SyncParams.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      final params = SyncParams.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      if ((p.getInt(_versionKey) ?? 1) < 2) {
+        params.matchMode = SyncParams().matchMode;
+        await saveParams(params);
+      }
+      return params;
     } catch (_) {
       return SyncParams();
     }
@@ -24,6 +34,7 @@ abstract final class BenchStore {
     try {
       final p = await SharedPreferences.getInstance();
       await p.setString(_paramsKey, jsonEncode(params.toJson()));
+      await p.setInt(_versionKey, paramsVersion);
     } catch (_) {}
   }
 

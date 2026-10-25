@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Balancín · Manual de usuario</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm; }
+  :root {
+    --paper: #EFECE4; --ink: #2B2536; --soft: #4A445A; --mute: #5A536B;
+    --lila: #B3A2DC; --lilaInk: #7B5FCB; --coral: #E85E45; --coralSoft: #F4C3B6;
+    --yellow: #F2E44A; --olive: #7A8B34; --line: #DCD8CF; --night: #1D1927;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.5; }
+  h1, h2, h3 { font-weight: 800; letter-spacing: -0.01em; color: var(--ink); }
+  h2 { font-size: 19pt; margin: 0 0 4mm; padding-top: 2mm; }
+  h3 { font-size: 12.5pt; margin: 6mm 0 2mm; }
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+  .chapter { break-before: page; }
+  .kicker { font-size: 8.5pt; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); margin-bottom: 1mm; }
+  .lead { font-size: 11.5pt; color: var(--soft); }
+  .note { background: #fff; border-left: 4px solid var(--olive); padding: 3mm 4mm; border-radius: 0 3mm 3mm 0; margin: 3mm 0 4mm; }
+  .warn { border-left-color: var(--coral); }
+  .tip { background: var(--yellow); border-left: none; border-radius: 3mm; }
+  b, strong { font-weight: 800; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.5pt; }
+  th { text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .05em; color: var(--mute); border-bottom: 1.5px solid var(--ink); padding: 1.5mm 2mm; }
+  td { border-bottom: 1px solid var(--line); padding: 2mm; vertical-align: top; }
+  tr { break-inside: avoid; }
+  .row { display: flex; gap: 8mm; align-items: flex-start; }
+  .row > .text { flex: 1; }
+  .figs { display: flex; gap: 6mm; justify-content: center; flex-wrap: wrap; margin: 3mm 0 5mm; break-inside: avoid; }
+  figure { margin: 0; text-align: center; break-inside: avoid; }
+  figcaption { font-size: 8.5pt; color: var(--mute); margin-top: 2mm; font-weight: 600; max-width: 62mm; margin-left: auto; margin-right: auto; }
+  .step { display: inline-flex; width: 6mm; height: 6mm; border-radius: 50%; background: var(--ink); color: #fff; font-size: 8.5pt; font-weight: 800; align-items: center; justify-content: center; margin-right: 2mm; }
+
+  /* ---------- Portada ---------- */
+  .cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; padding: 8mm 2mm; }
+  .brand { display: flex; gap: 5mm; }
+  .brand span { width: 13mm; height: 13mm; display: block; }
+  .cover h1 { font-size: 46pt; line-height: 1; margin: 18mm 0 4mm; letter-spacing: -0.03em; }
+  .cover .sub { font-size: 16pt; color: var(--soft); font-weight: 600; }
+  .cover .meta { font-size: 10pt; color: var(--mute); }
+
+  /* ---------- Teléfono ---------- */
+  .phone { width: 58mm; height: 120mm; background: var(--night); border-radius: 8mm; padding: 2.2mm; display: inline-block; }
+  .screen { width: 100%; height: 100%; background: var(--paper); border-radius: 6mm; overflow: hidden; position: relative; padding: 4mm 3.6mm; font-size: 7pt; line-height: 1.3; color: var(--soft); text-align: left; }
+  .screen.dark { background: #000; padding: 0; }
+  .sb { display: flex; justify-content: space-between; font-size: 6pt; color: var(--ink); font-weight: 700; margin: -1mm 0 3mm; }
+  .t1 { font-size: 13pt; font-weight: 900; color: var(--ink); line-height: 1.05; letter-spacing: -.02em; margin-bottom: 1.5mm; }
+  .t2 { font-size: 9.5pt; font-weight: 900; color: var(--ink); margin-bottom: 1mm; }
+  .sm { font-size: 6.5pt; font-weight: 700; color: var(--mute); }
+  .kk { font-size: 6pt; font-weight: 900; letter-spacing: .05em; color: var(--mute); text-transform: uppercase; }
+  .card { background: #fff; border-radius: 3.5mm; padding: 2.6mm; margin-bottom: 2mm; }
+  .btn { background: var(--ink); color: #fff; border-radius: 3mm; text-align: center; font-weight: 800; font-size: 7.5pt; padding: 2.6mm 1mm; margin-top: 2mm; }
+  .btn2 { background: #fff; color: var(--ink); border: 1.2px solid rgba(43,37,54,.25); border-radius: 3mm; text-align: center; font-weight: 800; font-size: 7pt; padding: 2.2mm 1mm; margin-top: 1.6mm; }
+  .chip { display: inline-block; background: #fff; border: 1px solid rgba(43,37,54,.25); border-radius: 99px; padding: .6mm 2mm; font-size: 6pt; font-weight: 800; color: var(--ink); margin: 0 .8mm .8mm 0; }
+  .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .pill { display: inline-block; border-radius: 99px; padding: .5mm 2mm; font-size: 6pt; font-weight: 800; }
+  .bar { height: 1.8mm; border-radius: 1mm; background: var(--line); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--olive); }
+  .link { text-decoration: underline; font-weight: 700; color: var(--mute); text-align: center; font-size: 6.5pt; margin: 2mm 0; }
+  .sphere { width: 34mm; height: 34mm; border-radius: 50%; margin: 9mm auto 5mm; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 15pt;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(214,204,238,.95), rgba(214,204,238,0) 55%),
+      radial-gradient(circle at 72% 40%, rgba(244,195,182,.95), rgba(244,195,182,0) 50%),
+      radial-gradient(circle at 55% 78%, rgba(242,228,74,.7), rgba(242,228,74,0) 46%),
+      radial-gradient(circle at 25% 75%, rgba(232,94,69,.55), rgba(232,94,69,0) 44%),
+      radial-gradient(circle at 70% 75%, rgba(123,95,203,.8), rgba(123,95,203,0) 52%), var(--lila); }
+  .song { display: flex; gap: .8mm; margin: 1.5mm 0; }
+  .song i { flex: 1; height: 2.2mm; border-radius: 1mm; background: var(--line); }
+  .song i.ok { background: var(--olive); }
+  .lv { display: flex; align-items: center; gap: 1.4mm; background: #fff; border-radius: 3mm; padding: 2mm; margin-bottom: 1.4mm; }
+  .lv .ic { width: 5.5mm; height: 5.5mm; border-radius: 2mm; background: var(--paper); flex: none; position: relative; }
+  .lv .nm { flex: 1; font-weight: 900; color: var(--ink); font-size: 6pt; white-space: nowrap; min-width: 0; overflow: hidden; }
+  .lv .nm small { display: block; font-weight: 700; color: var(--mute); font-size: 5.8pt; }
+  .tag { font-size: 5pt; font-weight: 900; border-radius: 99px; padding: .3mm 1.2mm; white-space: nowrap; flex: none; }
+  .tag.ok { background: var(--olive); color: #fff; }
+  .tag.sug { background: var(--yellow); color: var(--ink); }
+  .tag.off { background: var(--line); color: var(--soft); }
+  .tag.lock { background: #fff; color: var(--mute); border: 1px solid var(--line); }
+  .halves { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .halves div { flex: 1; }
+  .corner { position: absolute; top: 3mm; width: 5mm; height: 5mm; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); }
+  .plane { background: #fff; border-radius: 3mm; height: 46mm; position: relative; margin: 1.6mm 0; overflow: hidden; }
+  .plane .frame { position: absolute; inset: 2.5mm; border: 1.2px solid rgba(43,37,54,.45);
+    background-image: linear-gradient(rgba(43,37,54,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(43,37,54,.07) 1px, transparent 1px);
+    background-size: calc(100%/12) calc(100%/12); }
+  .plane .ax { position: absolute; background: rgba(43,37,54,.28); }
+  .dot { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 18mm; background: var(--paper); border-radius: 5mm 5mm 0 0; padding: 3mm; box-shadow: 0 -1mm 4mm rgba(0,0,0,.25); }
+  .scrim { position: absolute; inset: 0; background: rgba(29,25,39,.45); }
+  .ctl { padding: 1.6mm 0; border-top: 1px solid var(--line); }
+  .ctl:first-child { border-top: none; }
+  .ctlh { display: flex; align-items: center; gap: 1.5mm; }
+  .ctlh b { flex: 1; color: var(--ink); font-size: 6.6pt; }
+  .val { background: var(--paper); color: var(--ink); border-radius: 99px; padding: .3mm 1.6mm; font-size: 6pt; font-weight: 900; }
+  .val.ch { background: var(--olive); color: #fff; }
+  .q { width: 3.6mm; height: 3.6mm; border-radius: 50%; border: 1.2px solid var(--mute); color: var(--mute); font-size: 5pt; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; }
+  .slider { height: 1mm; background: var(--line); border-radius: 1mm; margin: 1.6mm 1mm .6mm; position: relative; }
+  .slider i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); border-radius: 1mm; }
+  .slider b { position: absolute; top: 50%; width: 3mm; height: 3mm; border-radius: 50%; background: var(--ink); transform: translate(-50%, -50%); }
+  .sw { width: 7mm; height: 4mm; border-radius: 99px; background: var(--olive); position: relative; }
+  .sw::after { content: ""; position: absolute; right: .6mm; top: .6mm; width: 2.8mm; height: 2.8mm; border-radius: 50%; background: #fff; }
+  .sw.off { background: var(--line); }
+  .sw.off::after { right: auto; left: .6mm; }
+  .controls td:first-child { width: 21%; font-weight: 800; }
+  .controls td:nth-child(2) { width: 43%; }
+  .controls td:nth-child(3) { width: 26%; }
+  .controls .def { white-space: nowrap; color: var(--mute); font-weight: 700; }
+  .controls .sec td { background: var(--paper); font-weight: 900; text-transform: uppercase; letter-spacing: .05em; font-size: 8.5pt; }
+  .toc { columns: 2; column-gap: 10mm; }
+  .toc div { margin-bottom: 1.6mm; font-weight: 700; }
+  .toc span { color: var(--mute); font-weight: 800; margin-right: 2mm; }
+</style>
+</head>
+<body>
+
+<!-- ======================= PORTADA ======================= -->
+<section class="cover">
+  <div class="brand">
+    <span style="background:var(--lila);border-radius:3mm"></span>
+    <span style="background:var(--coral);border-radius:50%"></span>
+    <span style="background:var(--yellow);border-radius:50%"></span>
+    <span style="background:var(--olive);clip-path:polygon(50% 4%,100% 100%,0 100%)"></span>
+  </div>
+  <div>
+    <h1>Balancín</h1>
+    <div class="sub">Manual de usuario de la app</div>
+    <p class="lead" style="margin-top:8mm;max-width:130mm">Un instrumento sonoro de balanceo para un adulto y un niño. Dos sticks, un teléfono dentro de un eje y una canción que se arma moviéndose juntos.</p>
+  </div>
+  <div class="meta">
+    Versión {{VERSION}} · {{DATE}}<br>
+    Basado en la <i>Especificación funcional v0.1</i> de Joaquín Muñoz Quiroz (Escuela de Diseño UDP) y en el prototipo «mecánica v2».
+  </div>
+</section>
+
+<!-- ======================= ÍNDICE ======================= -->
+<section class="chapter">
+  <div class="kicker">Contenido</div>
+  <h2>Índice</h2>
+  <div class="toc">
+    <div><span>1</span>Qué es Balancín</div>
+    <div><span>2</span>Antes de empezar</div>
+    <div><span>3</span>La primera vez: preparación</div>
+    <div><span>4</span>El inicio</div>
+    <div><span>5</span>Jugar, paso a paso</div>
+    <div><span>6</span>Los niveles</div>
+    <div><span>7</span>Qué se oye y qué se ve</div>
+    <div><span>8</span>El final y el recuerdo</div>
+    <div><span>9</span>Si se pierde un stick</div>
+    <div><span>10</span>Banco de prueba (equipo)</div>
+    <div><span>11</span>Ajuste: todos los controles</div>
+    <div><span>12</span>Problemas frecuentes</div>
+    <div><span>13</span>Datos y privacidad</div>
+  </div>
+  <div class="note tip" style="margin-top:10mm">
+    <b>Para quien ajusta la experiencia.</b> Los capítulos 10 y 11 explican el banco de prueba y cada control de Ajuste. En la app, cada control tiene un botón <b>?</b> con la misma explicación.
+  </div>
+</section>
+
+<!-- ======================= 1 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 1</div>
+  <h2>Qué es Balancín</h2>
+  <p class="lead">Balancín es un juego sonoro para una díada: un adulto y un niño. Cada uno sostiene un <b>stick</b>. Al inclinarlo, el teléfono hace sonar música; cuando los dos se mueven de forma coordinada, el sonido se afina y se arma una canción.</p>
+  <h3>Las piezas</h3>
+  <table>
+    <tr><th>Pieza</th><th>Qué es</th></tr>
+    <tr><td><b>Stick grande</b> (adulto)</td><td>Una placa ESP32 con un sensor de movimiento. Se anuncia por Bluetooth como <code>ESP32-BAL-A</code>. Su color en la app es el <b style="color:var(--lilaInk)">lila</b>.</td></tr>
+    <tr><td><b>Stick pequeño</b> (niño)</td><td>Igual, más chico. Se anuncia como <code>ESP32-BAL-B</code>. Su color en la app es el <b style="color:var(--coral)">coral</b>.</td></tr>
+    <tr><td><b>Teléfono Android</b></td><td>Con la app Balancín. Hace todo el sonido y guarda las sesiones.</td></tr>
+    <tr><td><b>Eje</b></td><td>El soporte donde se inserta el teléfono con la pantalla hacia adentro. Durante el juego solo se ve una luz difusa por los bordes.</td></tr>
+  </table>
+  <h3>La idea</h3>
+  <ul>
+    <li><b>Nadie mira la pantalla.</b> El juego se sigue con el oído (y con una luz suave).</li>
+    <li><b>El adulto</b> tiene una voz continua que sube y baja con la inclinación de su stick.</li>
+    <li><b>El niño</b> toca notas al moverse.</li>
+    <li>Cuando los dos van juntos, la ondulación del sonido desaparece y aparece una nota de premio. Si siguen así, logran el nivel y suman una parte de la canción.</li>
+  </ul>
+  <div class="note">La app no da puntos ni dice «bien» o «mal». Solo cambia el sonido.</div>
+</section>
+
+<!-- ======================= 2 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 2</div>
+  <h2>Antes de empezar</h2>
+  <h3>Instalar la app</h3>
+  <ol>
+    <li>Copia el archivo <code>balancin-{{VERSION}}.apk</code> al teléfono (por Drive, WhatsApp o cable) y ábrelo.</li>
+    <li>Si Android lo pide, permite «Instalar apps desconocidas». Si aparece «Play Protect no reconoce esta app», elige <b>Más detalles → Instalar de todas formas</b>. Es normal en una app que no está en la tienda.</li>
+    <li>Al abrir Balancín, acepta los permisos de Bluetooth.</li>
+  </ol>
+  <h3>Preparar los sticks (una sola vez)</h3>
+  <p>Cada stick es una ESP32 DevKit V1 con un sensor MPU6050 conectado así: SDA → 21, SCL → 22, VCC → 3V3, GND → GND.</p>
+  <ol>
+    <li>Instala <b>Thonny</b> en un computador y conecta la placa por USB. En <i>Herramientas → Opciones → Intérprete</i> elige «MicroPython (ESP32)».</li>
+    <li>Abre <code>firmware/balancin_stick/main.py</code> y cambia la línea <code>STICK_ROLE</code>: <code>'A'</code> para el stick grande, <code>'B'</code> para el pequeño.</li>
+    <li>Guárdalo en la placa como <code>main.py</code> y reinicia con Ctrl+D.</li>
+  </ol>
+  <table>
+    <tr><th>Luz azul del stick</th><th>Significa</th></tr>
+    <tr><td>Parpadea lento</td><td>Encendido, esperando al teléfono.</td></tr>
+    <tr><td>Fija</td><td>Conectado al teléfono.</td></tr>
+    <tr><td>Parpadea rápido</td><td>No encuentra el sensor: revisa los cables.</td></tr>
+  </table>
+  <h3>Cómo se sostiene el stick</h3>
+  <p>Vertical, hacia arriba, en la mano. <b>Inclinarlo hacia adelante o atrás</b> sube y baja (altura). <b>Inclinarlo hacia los lados</b> mueve a izquierda o derecha.</p>
+</section>
+
+<!-- ======================= 3 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 3</div>
+  <h2>La primera vez: preparación</h2>
+  <div class="row">
+    <div class="text">
+      <p>La primera vez que se abre, la app muestra una preparación de cinco pasos. Se puede repetir desde el inicio con «Repasar la preparación».</p>
+      <ol>
+        <li><b>Permisos.</b> «Conceder permisos» para Bluetooth (y No Molestar).</li>
+        <li><b>No Molestar.</b> Durante el juego el teléfono no suena ni vibra por otras apps.</li>
+        <li><b>Inserta el celular en el eje,</b> con la pantalla hacia el interior.</li>
+        <li><b>Vincula los dos sticks.</b> Enciende cada stick y <b>mantén pulsado tres segundos</b> su botón en pantalla. Cuando conecta, el botón dice «Stick grande vinculado» y la luz del stick queda fija.</li>
+        <li><b>Entrega el stick pequeño al niño</b> y conserva el grande. Toca «Comenzar».</li>
+      </ol>
+      <div class="note">Si un stick no aparece: enciéndelo, muévelo cerca del teléfono y vuelve a mantener el botón. Si ya se había vinculado antes, la app lo reconecta sola al abrirse.</div>
+    </div>
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>12:20</span><span>● ▲ ▮</span></div>
+        <div class="kk">Paso 4 de 5</div>
+        <div class="t1" style="margin-top:1.5mm">Vincula los dos sticks</div>
+        <p style="font-size:6.5pt">Mantén pulsado tres segundos cada botón. El LED del stick parpadea mientras se vincula y queda fijo al terminar.</p>
+        <div class="card" style="display:flex;gap:2mm;justify-content:center;align-items:flex-end;height:30mm">
+          <div style="width:7mm;height:24mm;background:var(--lila);border-radius:3mm"></div>
+          <div style="width:5mm;height:15mm;background:var(--coral);border-radius:2.5mm"></div>
+        </div>
+        <div class="btn2" style="background:var(--olive);color:#fff;border-color:var(--olive)">Stick grande vinculado</div>
+        <div class="btn" style="position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:60%;background:rgba(255,255,255,.18)"></span>Mantener · stick pequeño</div>
+        <div class="link">Continuar sin el stick grande</div>
+      </div></div>
+      <figcaption>Paso 4: vincular. La barra muestra el tiempo que falta al mantener pulsado.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ======================= 4 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 4</div>
+  <h2>El inicio</h2>
+  <div class="row">
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>12:20</span><span>● ▲ ▮</span></div>
+        <div class="sphere">Jugar</div>
+        <div class="sm" style="text-align:center;margin-bottom:5mm">Elijan un nivel y coloquen el celular en el eje</div>
+        <div class="t2">Sesiones pasadas</div>
+        <div class="card"><div style="display:flex;justify-content:space-between"><b style="color:var(--ink);font-size:6.5pt">Hoy · 5 niveles</b><span class="sm">6 min</span></div><div class="bar" style="margin-top:1.4mm"><i style="width:64%"></i></div></div>
+        <div class="card" style="background:var(--yellow)"><div class="kk" style="color:var(--ink)">Idea para hoy</div><div style="font-weight:800;color:var(--ink);font-size:7.5pt;margin-top:1mm">Cuando el sonido deja de ondular, van juntos.</div></div>
+        <div class="link">Repasar la preparación</div>
+      </div></div>
+      <figcaption>Inicio: la esfera «Jugar», las sesiones pasadas y una idea para hoy.</figcaption>
+    </figure>
+    <div class="text">
+      <ul>
+        <li><b>Jugar</b> (la esfera de colores): empieza una partida.</li>
+        <li><b>Sesiones pasadas:</b> las últimas partidas, con su duración y una barra con el porcentaje del tiempo en sincronía. Al tocar una, se ve su recuerdo.</li>
+        <li><b>Idea para hoy:</b> un consejo corto. «Otra idea» muestra otro.</li>
+        <li><b>Repasar la preparación:</b> vuelve a los cinco pasos del capítulo 3.</li>
+        <li><b>Herramientas del equipo</b> (abajo del todo): <b>Banco de prueba</b>, <b>Prueba de audio</b> y la app v1. Son para el equipo de diseño, no para la díada (capítulo 10).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 5 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 5</div>
+  <h2>Jugar, paso a paso</h2>
+  <div class="figs">
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>12:20</span><span>● ▲ ▮</span></div>
+        <div class="t1" style="margin:4mm 0 4mm">¿Cómo quieren jugar?</div>
+        <div class="card" style="padding:3.4mm"><div class="t2">Libre</div><div style="font-size:6.5pt">Sin consignas. El sonido se afina cuando encuentran un movimiento en común.</div></div>
+        <div class="card" style="padding:3.4mm"><div class="t2">Niveles</div><div style="font-size:6.5pt">Siete movimientos en pareja. Cada uno suma una parte de la canción.</div><div class="song"><i class="ok"></i><i class="ok"></i><i class="ok"></i><i></i><i></i><i></i><i></i></div><div class="sm">3 de 7 partes de la canción</div></div>
+      </div></div>
+      <figcaption>1 · Elegir Libre o Niveles.</figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>12:20</span><span>● ▲ ▮</span></div>
+        <div class="t1">¿Qué van a jugar hoy?</div>
+        <div class="sm" style="margin-bottom:1mm">Terminen la canción juntos, nivel a nivel.</div>
+        <div class="song"><i class="ok"></i><i class="ok"></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="lv"><div class="ic"></div><div class="nm">1 · Juntos<small>Fácil</small></div><span class="tag ok">Lograda</span></div>
+        <div class="lv"><div class="ic"></div><div class="nm">2 · Espejo<small>Fácil</small></div><span class="tag ok">Lograda</span></div>
+        <div class="lv"><div class="ic"></div><div class="nm">3 · Iguales<small>Media</small></div><span class="tag sug">Sugerido</span></div>
+        <div class="lv"><div class="ic"></div><div class="nm">4 · Sube y baja<small>Media</small></div><span class="tag lock">Primero el nivel 3</span></div>
+        <div class="lv"><div class="ic"></div><div class="nm">5 · Mismo pulso<small>Media</small></div><span class="tag lock">Primero el nivel 4</span></div>
+        <div class="lv" style="opacity:.6"><div class="ic"></div><div class="nm">6 · Sígueme<small>Difícil</small></div><span class="tag off">Próximamente</span></div>
+      </div></div>
+      <figcaption>2 · Elegir el nivel. Se abren en orden.</figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>12:20</span><span>● ▲ ▮</span></div>
+        <div class="kk" style="margin-top:3mm">Nivel 1 de 7 · Fácil</div>
+        <div class="t1" style="font-size:18pt;margin:2mm 0">Juntos</div>
+        <div style="font-size:7.5pt;font-weight:700">Suban y bajen los sticks al mismo tiempo.</div>
+        <div class="card" style="height:36mm;margin-top:3mm;position:relative">
+          <div style="position:absolute;left:28%;top:20%;width:7mm;height:20mm;background:var(--lila);border-radius:3mm"></div>
+          <div style="position:absolute;left:58%;top:30%;width:5mm;height:14mm;background:var(--coral);border-radius:2.5mm"></div>
+          <div style="position:absolute;left:46%;top:12%;font-size:12pt;color:var(--olive);font-weight:900">↕</div>
+        </div>
+        <span class="pill" style="background:#fff;color:var(--ink)">Guía el adulto, luego el niño</span>
+        <div class="btn" style="margin-top:5mm">Insertar el teléfono y comenzar</div>
+      </div></div>
+      <figcaption>3 · La pantalla del nivel: qué hacer y quién guía.</figcaption>
+    </figure>
+  </div>
+  <div class="figs">
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>12:20</span><span>● ▲ ▮</span></div>
+        <div class="card" style="height:40mm;position:relative;margin-top:2mm">
+          <div style="position:absolute;left:8%;right:8%;bottom:12%;height:16mm;background:#D9D5CE;border-radius:6mm"></div>
+          <div style="position:absolute;left:24%;right:24%;bottom:28%;height:9mm;background:var(--ink);border-radius:2mm"></div>
+          <div style="position:absolute;left:14%;bottom:16%;width:8mm;height:2.6mm;background:var(--lila);border-radius:2mm"></div>
+          <div style="position:absolute;right:14%;bottom:16%;width:8mm;height:2.6mm;background:var(--coral);border-radius:2mm"></div>
+        </div>
+        <div class="t1" style="text-align:center;font-size:11pt">Coloca el celular en el eje</div>
+        <div style="text-align:center;font-size:6.5pt">Pantalla hacia adentro. Solo los bordes quedan a la vista.</div>
+        <div class="kk" style="text-align:center;margin:1.5mm 0">Nivel 1 · Juntos</div>
+        <div style="text-align:center;font-size:6pt;font-weight:800;color:var(--mute)">Mientras colocan el celular, dejen los sticks quietos. Al empezar, muévanse libremente unos segundos: arriba, abajo y hacia los lados.</div>
+        <div class="bar" style="margin-top:3mm;height:2mm;background:var(--line)"><i style="width:55%;background:var(--ink)"></i></div>
+      </div></div>
+      <figcaption>4 · Seis segundos para colocar el teléfono. Sticks quietos.</figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><div class="screen dark">
+        <div class="halves"><div style="background:#B3A2DC;opacity:.9"></div><div style="background:#E85E45;opacity:.85"></div></div>
+        <div class="corner" style="left:3mm"></div><div class="corner" style="right:3mm"></div>
+      </div></div>
+      <figcaption>5 · En el eje: luz arriba (adulto) y abajo (niño). Fuera de sincronía.</figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><div class="screen dark">
+        <div class="halves"><div style="background:#8FA33E;opacity:.95"></div><div style="background:#8FA33E;opacity:.95"></div></div>
+        <div class="corner" style="left:3mm"></div><div class="corner" style="right:3mm"></div>
+      </div></div>
+      <figcaption>En sincronía, las dos mitades se funden en oliva y laten.</figcaption>
+    </figure>
+  </div>
+  <h3>Lo que pasa al empezar</h3>
+  <ol>
+    <li><b>Colocar el teléfono</b> (6 s). Mientras tanto, los sticks quietos: así el sensor mide su error y el punto no tiembla.</li>
+    <li><b>Calibración</b> (6 s). Cada persona mueve su stick libremente, <b>por todo el recorrido que usará</b>: arriba, abajo y hacia los lados. La app aprende el rango de cada uno: un gesto pequeño del adulto llega tan lejos como uno amplio del niño.</li>
+    <li><b>Juego.</b> Siguen la consigna del nivel. Cada nivel pide unos 8 segundos acumulados de sincronía. A la mitad cambia quién guía.</li>
+    <li><b>Nivel logrado:</b> suena la frase del nivel y la luz destella. La app sigue sola al siguiente nivel abierto; después del último, va al final.</li>
+  </ol>
+  <h3>Terminar antes</h3>
+  <p>Mantén <b>2 segundos la esquina superior derecha</b> de la pantalla. Si nadie juega durante 30 segundos, la sesión se cierra sola y va al final.</p>
+</section>
+
+<!-- ======================= 6 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 6</div>
+  <h2>Los niveles</h2>
+  <p>Cada nivel es una forma de moverse juntos. Se abren en orden: el siguiente queda disponible al lograr el anterior. En esta versión se pueden jugar del 1 al 5; el 6 y el 7 aparecen como «Próximamente».</p>
+  <table>
+    <tr><th style="width:20%">Nivel</th><th>Qué hacer</th><th style="width:22%">Guía</th><th style="width:28%">Consejo sin mirar</th></tr>
+    <tr><td><b>1 · Juntos</b><br><span class="sm">Fácil</span></td><td>Suban y bajen los sticks al mismo tiempo.</td><td>El adulto, luego el niño.</td><td>Muevan lento al principio. Solo cuenta arriba y abajo.</td></tr>
+    <tr><td><b>2 · Espejo</b><br><span class="sm">Fácil</span></td><td>Frente a frente, como en un espejo: si uno se inclina a su derecha, el otro a su izquierda.</td><td>El niño, luego el adulto.</td><td>Pónganse frente a frente. Hagan antes el <b>asistente de ejes</b> de cada stick (capítulo 10).</td></tr>
+    <tr><td><b>3 · Iguales</b><br><span class="sm">Media</span></td><td>Inclínense hacia el mismo lado, a la misma altura.</td><td>El adulto, luego el niño.</td><td>Sentados uno al lado del otro es más fácil.</td></tr>
+    <tr><td><b>4 · Sube y baja</b><br><span class="sm">Media</span></td><td>Uno arriba, el otro abajo. Y cambien.</td><td>El adulto, luego el niño.</td><td>Como un balancín de plaza: cuando uno sube, el otro baja.</td></tr>
+    <tr><td><b>5 · Mismo pulso</b><br><span class="sm">Media</span></td><td>Balancéense al mismo ritmo. No importa la posición, sino la velocidad del vaivén.</td><td>El niño marca el ritmo.</td><td>Vaivenes amplios y parejos; cuenten en voz alta si ayuda.</td></tr>
+    <tr style="opacity:.6"><td><b>6 · Sígueme</b><br><span class="sm">Difícil · próximamente</span></td><td>Uno inventa, el otro copia. Luego cambian.</td><td>El adulto, luego el niño.</td><td>—</td></tr>
+    <tr style="opacity:.6"><td><b>7 · La canción</b><br><span class="sm">Difícil · próximamente</span></td><td>Todo junto, hasta terminar la canción.</td><td>Por turnos.</td><td>—</td></tr>
+  </table>
+  <h3>Modo Libre</h3>
+  <p>Sin consignas ni niveles. El sonido se afina cuando encuentran cualquier movimiento en común: juntos, espejo o sube y baja. Al final, «Sonaron juntos» y «Jugar otra vez».</p>
+  <div class="note"><b>Cómo se mide (valores de fábrica): zonas y trazo.</b> Para contar como «juntos», cada uno tiene que estar en la <b>franja</b> que le toca (arriba, medio o abajo) <b>y</b> moverse <b>hacia el mismo lado al mismo tiempo</b> que el otro, aunque uno haga el gesto más grande. Dos sticks quietos no cuentan. Se puede cambiar en Ajuste (capítulo 11).</div>
+</section>
+
+<!-- ======================= 7 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 7</div>
+  <h2>Qué se oye y qué se ve</h2>
+  <table>
+    <tr><th style="width:28%">Sonido</th><th>Qué lo produce</th></tr>
+    <tr><td><b>Voz del adulto</b></td><td>Un tono continuo que sube y baja con la altura del stick grande. Se apaga suave cuando el adulto se queda quieto.</td></tr>
+    <tr><td><b>Notas del niño</b></td><td>Notas de marimba cada vez que el stick pequeño cambia de lugar. Si salta lejos, recorre la escala rápido hasta llegar.</td></tr>
+    <tr><td><b>Ondulación</b></td><td>Un «wa-wa» que aparece cuando los dos se mueven pero <b>no</b> van juntos. Mientras más lejos, más rápida.</td></tr>
+    <tr><td><b>Quinta (premio)</b></td><td>Una nota limpia que se suma cuando van juntos. La ondulación desaparece.</td></tr>
+    <tr><td><b>Notas de la frase</b></td><td>Una nota por cada cuarto del nivel logrado (do, re, mi…). Si pierden avance, la nota «cae» suave.</td></tr>
+    <tr><td><b>Frase del nivel</b></td><td>Al lograr el nivel suena su frase completa y la luz destella.</td></tr>
+    <tr><td><b>Pad</b></td><td>De fondo, las frases de los niveles ya ganados.</td></tr>
+  </table>
+  <h3>Ayudas opcionales para jugar sin mirar</h3>
+  <p>Se encienden juntas con el botón <b>«Sin vista»</b> de Ajuste, o una por una:</p>
+  <ul>
+    <li><b>Niño en la escala del adulto:</b> a la misma altura suenan la misma nota, una octava arriba. El niño «oye» dónde está el adulto.</li>
+    <li><b>El lado cambia el timbre:</b> el niño suena a marimba a la izquierda y a campana a la derecha.</li>
+    <li><b>Quinta gradual:</b> la nota de premio aparece de a poco al acercarse («frío o caliente»).</li>
+    <li><b>Campanita al cambiar de guía:</b> avisa que ahora guía el otro.</li>
+  </ul>
+  <h3>La luz</h3>
+  <p>Con el teléfono en el eje, la pantalla es una luz en dos mitades: <b style="color:var(--lilaInk)">lila arriba</b> (adulto) y <b style="color:var(--coral)">coral abajo</b> (niño). Cada mitad brilla más cuando esa persona se mueve. Al acercarse a la sincronía se funden en <b style="color:var(--olive)">oliva</b> y laten.</p>
+  <h3>La voz de consignas</h3>
+  <p>Viene <b>apagada</b> porque tapaba el sonido del juego. Se enciende con «Voz» en el banco de prueba.</p>
+</section>
+
+<!-- ======================= 8 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 8</div>
+  <h2>El final y el recuerdo</h2>
+  <div class="row">
+    <div class="text">
+      <p>Al terminar (nivel logrado, 30 segundos sin juego o salida manual) aparece el final:</p>
+      <ul>
+        <li><b>Título</b> según lo que pasó: «Sumaron una parte de la canción», «Sonaron juntos», «Hoy fue de práctica»…</li>
+        <li><b>Duración</b> y <b>porcentaje del tiempo en sincronía</b>.</li>
+        <li><b>El recuerdo:</b> el dibujo de los dos recorridos, lila y coral.</li>
+        <li><b>La canción:</b> qué partes llevan, con las nuevas marcadas.</li>
+        <li><b>Quién guió:</b> «Esta vez el niño siguió más al adulto», «Se guiaron por turnos»…</li>
+        <li><b>Escuchar la canción</b> (Niveles) o <b>Jugar otra vez</b> (Libre).</li>
+        <li><b>Guardar el recuerdo:</b> lo guarda como imagen en la galería del teléfono.</li>
+      </ul>
+      <div class="note">Lo logrado no se pierde: la canción sigue donde quedó la próxima vez.</div>
+    </div>
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>12:20</span><span>● ▲ ▮</span></div>
+        <div class="t1" style="margin-top:2mm">Sumaron 5 partes de la canción.</div>
+        <div class="sm">6 min · 64 % del tiempo en sincronía</div>
+        <div class="card" style="margin-top:2.5mm;height:44mm;padding:0;overflow:hidden">
+          <svg viewBox="0 0 100 100" width="100%" height="100%" preserveAspectRatio="none">
+            <path d="M10 70 C 25 20, 35 20, 45 55 S 65 90, 75 40 S 90 20, 92 35" fill="none" stroke="#7B5FCB" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M8 76 C 22 34, 36 30, 46 60 S 64 86, 74 48 S 88 30, 93 42" fill="none" stroke="#E85E45" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="kk">La canción · 5 de 7 partes</div>
+        <div class="song"><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i><i></i><i></i></div>
+        <div style="font-size:6.5pt;font-weight:700;color:var(--ink)">Se guiaron por turnos.</div>
+        <div class="btn">Escuchar la canción</div>
+        <div class="btn2">Guardar el recuerdo</div>
+      </div></div>
+      <figcaption>El final con el recuerdo y la canción.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ======================= 9 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 9</div>
+  <h2>Si se pierde un stick</h2>
+  <div class="row">
+    <figure>
+      <div class="phone"><div class="screen">
+        <div class="sb"><span>12:20</span><span>● ▲ ▮</span></div>
+        <div style="height:32mm;display:flex;align-items:center;justify-content:center"><div style="width:20mm;height:20mm;border-radius:50%;border:2px solid var(--coralSoft);display:flex;align-items:center;justify-content:center"><div style="width:5mm;height:14mm;background:var(--coral);border-radius:2.5mm"></div></div></div>
+        <span class="pill" style="background:var(--coralSoft);color:var(--ink)">Fuera de alcance</span>
+        <div class="t1" style="margin-top:2mm">Se perdió el stick pequeño</div>
+        <div style="font-size:6.5pt">El juego quedó en pausa y el sonido se apagó suavemente. Acerca el stick al eje y mantén pulsado para reconectarlo.</div>
+        <div class="btn" style="margin-top:4mm">Mantener 3 s para reconectar</div>
+        <div class="link">Terminar y ver el recuerdo</div>
+      </div></div>
+      <figcaption>La pantalla de pérdida. La sesión no se pierde.</figcaption>
+    </figure>
+    <div class="text">
+      <p>Si un stick se apaga o se aleja durante el juego:</p>
+      <ol>
+        <li>El sonido baja suave y aparece esta pantalla.</li>
+        <li>Acerca el stick (o enciéndelo) y <b>mantén pulsado 3 segundos</b> el botón. Muchas veces reconecta solo.</li>
+        <li>Al volver, el juego sigue <b>en la misma sesión</b>, con lo que llevaban.</li>
+      </ol>
+      <p>Si no vuelve, «Terminar y ver el recuerdo» cierra la sesión y guarda lo jugado.</p>
+      <div class="note warn">Si la luz del stick no enciende, necesita carga.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 10 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 10 · Para el equipo</div>
+  <h2>Banco de prueba</h2>
+  <p class="lead">El banco muestra en una pantalla lo que el motor mide: dónde está cada uno, qué cuenta como sincronía y cuánto avanzan. Sirve para probar, ajustar y entender. Se abre desde <b>Inicio → Herramientas del equipo → Banco de prueba</b>.</p>
+  <div class="row">
+    <figure>
+      <div class="phone"><div class="screen" style="padding-top:3mm">
+        <div class="sb"><span>12:20</span><span>● ▲ ▮</span></div>
+        <div style="font-size:9pt;font-weight:800;color:var(--ink);margin-bottom:1.5mm">← Banco de prueba v2</div>
+        <div class="card" style="padding:1.6mm 2.4mm;font-size:6pt;color:var(--ink)"><b>Jugando</b> Nivel 1 · Juntos: Suban y bajen…</div>
+        <div class="plane" style="height:38mm"><div class="frame">
+          <div style="position:absolute;left:0;right:0;top:0;height:33.3%;background:rgba(179,162,220,.28)"></div>
+          <div class="ax" style="left:50%;top:0;bottom:0;width:1px"></div><div class="ax" style="top:50%;left:0;right:0;height:1px"></div>
+          <div class="dot" style="left:62%;top:18%;width:4.2mm;height:4.2mm;background:#7B5FCB"></div>
+          <div class="dot" style="left:38%;top:26%;width:3mm;height:3mm;background:#E85E45"></div>
+        </div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><b style="color:var(--ink);font-size:6.8pt">d = 0.00 · tolerancia 1.20</b><span class="pill" style="background:var(--olive);color:#fff">En sincronía</span></div>
+        <div class="bar" style="margin:1.2mm 0"><i style="width:45%"></i></div>
+        <div class="sm" style="font-size:5.4pt">Nivel 1 · guía el adulto · Van a la par<br>En el borde: adulto 8 % · niño 5 %<br>Por detrás: Juntos por zonas y trazo: misma franja (3 por eje) y mismo trazo en 1.5 s (parecido 0.91 de 0.60).</div>
+        <div style="display:flex;gap:1.4mm;margin-top:1.4mm">
+          <div class="card" style="flex:1;border:1.5px solid #7B5FCB;padding:1.6mm;font-size:5.6pt"><b style="color:var(--ink)">Adulto · stick grande</b><br>Stick ▾<br>Conectado · 100 Hz</div>
+          <div class="card" style="flex:1;border:1.5px solid var(--coral);padding:1.6mm;font-size:5.6pt"><b style="color:var(--ink)">Niño · stick pequeño</b><br>Stick ▾<br>Conectado · 100 Hz</div>
+        </div>
+        <div style="margin-top:1mm"><span class="chip">Calibrar rango</span><span class="chip">Modo eje</span><span class="chip">Telemetría</span><span class="chip on">Ajuste</span></div>
+      </div></div>
+      <figcaption>El banco: plano con la franja objetivo, medidores y un panel por stick.</figcaption>
+    </figure>
+    <div class="text">
+      <h3 style="margin-top:0">Qué muestra</h3>
+      <ul>
+        <li><b>Píldora de estado:</b> Listo, Calibrando, Jugando o Nivel logrado.</li>
+        <li><b>Plano:</b> el punto <b style="color:var(--lilaInk)">lila</b> es el adulto y el <b style="color:var(--coral)">coral</b> el niño, con su estela. La zona sombreada es dónde tiene que estar el niño (una franja con «zonas»; un círculo con «punto»). Si un stick se pasa de su rango, el punto queda pegado al marco con una marca.</li>
+        <li><b>d y tolerancia:</b> qué tan lejos están de la sincronía. Con <i>d</i> menor que la tolerancia, cuenta.</li>
+        <li><b>Barra:</b> el avance del nivel.</li>
+        <li><b>En el borde:</b> % del tiempo que cada stick pasó pegado al borde. Más de 15 %: calibrar o subir su rango.</li>
+        <li><b>Por detrás:</b> cómo mide el motor ahora, y con trazo, el parecido en vivo.</li>
+      </ul>
+      <h3>Paneles de cada stick</h3>
+      <p>El selector elige la <b>fuente</b>: <b>Dedo</b> (arrastrar en el panel), <b>Sintética</b> (un movimiento automático: sincronía, cerca, lejos o ciclo) o <b>Stick</b> (el real). Con «Stick» se ven sus datos y el menú <b>⋮</b>:</p>
+      <ul>
+        <li><b>Asistente de ejes</b> (ver abajo).</li>
+        <li><b>Vincular otro stick.</b></li>
+        <li><b>Recalibrar giro:</b> vuelve a medir el error del sensor. Deja el stick quieto 1–2 s.</li>
+        <li><b>Grabar traza:</b> guarda los datos crudos ~30 s para compartirlos con el equipo técnico.</li>
+      </ul>
+    </div>
+  </div>
+  <h3>Botones de abajo</h3>
+  <table>
+    <tr><td style="width:28%"><b>Selector de nivel</b></td><td>Libre o un nivel. En el banco se pueden probar los 7 (los «Próximamente» llevan *).</td></tr>
+    <tr><td><b>Calibrar rango</b></td><td>6 s de movimiento libre para medir el rango de cada persona. «Calibrar al empezar: sí» lo hace en cada sesión.</td></tr>
+    <tr><td><b>Reiniciar · Terminar</b></td><td>Empezar de nuevo o cerrar la sesión.</td></tr>
+    <tr><td><b>Modo eje</b></td><td>Muestra la luz en dos mitades, como en el juego.</td></tr>
+    <tr><td><b>Telemetría</b></td><td>Tabla por nivel (primera sincronía, % en sincronía, pausas…) y «Compartir JSON».</td></tr>
+    <tr><td><b>Ajuste</b></td><td>Todos los controles del motor y del sonido (capítulo 11).</td></tr>
+    <tr><td><b>Voz</b></td><td>Enciende o apaga la voz de consignas.</td></tr>
+    <tr><td><b>Registro</b></td><td>Lista de eventos: calibraciones, cambios de guía, niveles logrados.</td></tr>
+  </table>
+  <div class="row" style="margin-top:4mm">
+    <div class="text">
+      <h3 style="margin-top:0">Asistente de ejes</h3>
+      <p>Enseña a la app hacia dónde es «arriba» y «derecha» en cada placa. Es necesario para <b>Espejo</b> e <b>Iguales</b>: si un stick tiene el lado al revés, el espejo correcto nunca cuenta.</p>
+      <ol>
+        <li>Panel del stick → <b>⋮ → Asistente de ejes</b>.</li>
+        <li><b>Descanso:</b> sostén el stick como al jugar, quieto, y toca «Listo».</li>
+        <li><b>Arriba:</b> inclínalo hacia adelante, vuelve al descanso y toca «Listo».</li>
+        <li><b>Derecha:</b> inclínalo hacia tu derecha, vuelve y toca «Listo».</li>
+      </ol>
+      <p>Queda guardado para esa placa. El panel dice «ejes del asistente». Repítelo si cambias la placa de carcasa o de posición en la mano.</p>
+    </div>
+    <figure>
+      <div class="phone"><div class="screen" style="padding:0">
+        <div style="padding:4mm 3.6mm;opacity:.5"><div style="font-size:9pt;font-weight:800;color:var(--ink)">← Banco de prueba v2</div><div class="plane"></div></div>
+        <div class="scrim"></div>
+        <div class="sheet" style="top:76mm;background:#fff">
+          <div class="t2">Ejes del stick del adulto</div>
+          <div class="sm">Paso 2 de 3 · Arriba</div>
+          <div style="font-size:6.5pt;margin:1.6mm 0">Inclinado hacia arriba (hacia adelante), vuelve al descanso y toca «Listo».</div>
+          <div class="bar"><i style="width:66%"></i></div>
+          <div style="display:flex;gap:2mm"><div class="btn2" style="flex:1">Ejes de fábrica</div><div class="btn" style="flex:1">Listo</div></div>
+        </div>
+      </div></div>
+      <figcaption>El asistente de ejes, paso «Arriba».</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ======================= 11 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 11 · Para el equipo</div>
+  <h2>Ajuste: todos los controles</h2>
+  <div class="row">
+    <div class="text">
+      <p>En el banco, el botón <b>Ajuste</b> abre el panel con todos los controles del motor y del sonido. Lo que se cambia aquí <b>se guarda solo</b> en el teléfono y <b>vale también para el juego</b>.</p>
+      <ul>
+        <li>Cada control muestra su valor en palabras. Si no es el de fábrica, el valor se pinta de <b style="color:var(--olive)">oliva</b> y debajo dice el de fábrica.</li>
+        <li>Lo que es sí/no es un <b>interruptor</b>; la forma de medir se elige con <b>botones</b>; lo demás con un <b>deslizador</b>.</li>
+        <li>El botón <b>?</b> explica qué es, para qué sirve, cómo ajustarlo y el valor de fábrica. Ahí también está «Volver al de fábrica».</li>
+      </ul>
+      <h3>Botones de arriba</h3>
+      <table>
+        <tr><td style="width:36%"><b>Valores de fábrica</b></td><td>Vuelve a lo recomendado (mide por zonas y trazo).</td></tr>
+        <tr><td><b>Sin vista</b></td><td>Enciende todas las ayudas para jugar sin mirar, con valores más permisivos.</td></tr>
+        <tr><td><b>Como el prototipo</b></td><td>El comportamiento del prototipo HTML original, para comparar.</td></tr>
+        <tr><td><b>Copiar valores</b></td><td>Copia todo como texto, para mandarlo y dejarlo como nuevos valores de fábrica.</td></tr>
+      </table>
+      <div class="note"><b>Para probar sin perderse:</b> cambia un control a la vez, prueba uno o dos minutos con las mismas personas y anota el valor y lo que sentiste.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5mm">
+      <figure>
+        <div class="phone"><div class="screen" style="padding:0">
+          <div class="scrim" style="background:rgba(29,25,39,.55)"></div>
+          <div class="sheet" style="top:8mm;overflow:hidden">
+            <div style="width:9mm;height:1.1mm;background:var(--line);border-radius:1mm;margin:0 auto 2mm"></div>
+            <div class="t2" style="font-size:11pt">Ajuste</div>
+            <div style="font-size:6pt;font-weight:600;margin-bottom:1.6mm">Los cambios se guardan solos en el teléfono y valen también para el juego. Toca ? para saber qué hace cada control.</div>
+            <div><span class="chip">↺ Valores de fábrica</span><span class="chip">Sin vista</span><span class="chip">Como el prototipo</span><span class="chip">Copiar valores</span></div>
+            <div class="kk" style="margin-top:2.4mm">Cómo se mide la sincronía</div>
+            <div class="sm" style="font-size:5.6pt;margin-bottom:1.2mm">Qué cuenta como «van juntos». Es lo que más cambia la dificultad.</div>
+            <div class="card" style="padding:1.2mm 2.2mm">
+              <div class="ctl"><div class="ctlh"><b>Medir la sincronía por</b><span class="q">?</span></div>
+                <div style="margin-top:1mm"><span class="chip">Punto</span><span class="chip">Zonas</span><span class="chip">Trazo</span><span class="chip on">Zonas y trazo</span></div></div>
+              <div class="ctl"><div class="ctlh"><b>Zonas: franjas por eje</b><span class="val">3</span><span class="q">?</span></div><div class="slider"><i style="width:25%"></i><b style="left:25%"></b></div></div>
+              <div class="ctl"><div class="ctlh"><b>Tolerancia (× nivel)</b><span class="val ch">1,30 ×</span><span class="q">?</span></div><div class="slider"><i style="width:80%"></i><b style="left:80%"></b></div><div class="sm" style="font-size:5.4pt">De fábrica: 1,00 ×</div></div>
+              <div class="ctl"><div class="ctlh"><b>Espejo e Iguales: solo el lado</b><span class="sw off"></span><span class="q">?</span></div></div>
+              <div class="ctl"><div class="ctlh"><b>Pegados al borde no cuenta</b><span class="sw"></span><span class="q">?</span></div></div>
+            </div>
+          </div>
+        </div></div>
+        <figcaption>El panel Ajuste: secciones, valores y el botón ?.</figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="figs">
+    <figure>
+      <div class="phone" style="height:96mm"><div class="screen" style="padding:0">
+        <div class="scrim" style="background:rgba(29,25,39,.6)"></div>
+        <div style="position:absolute;left:3mm;right:3mm;top:10mm;background:var(--paper);border-radius:5mm;padding:3.4mm">
+          <div class="t2" style="font-size:10pt">Tolerancia (× nivel)</div>
+          <div><span class="val ch">Ahora: 1,30 ×</span> <span class="val">De fábrica: 1,00 ×</span></div>
+          <div style="margin-top:2mm;font-weight:900;color:var(--ink);font-size:6.5pt">Qué es</div>
+          <div style="font-size:6.2pt">Multiplica cuánta distancia se perdona en cada nivel.</div>
+          <div style="margin-top:1.6mm;font-weight:900;color:var(--ink);font-size:6.5pt">Para qué sirve</div>
+          <div style="font-size:6.2pt">Afecta a todas las formas de medir: el tamaño del círculo, el margen de las zonas y del trazo.</div>
+          <div style="margin-top:1.6mm;font-weight:900;color:var(--ink);font-size:6.5pt">Cómo ajustarlo</div>
+          <div style="font-size:6.2pt">Más alta = más fácil. Si frustra, súbela a 1,15–1,3. Si se logra sin esfuerzo, bájala a 0,85.</div>
+          <div style="display:flex;justify-content:flex-end;gap:2mm;align-items:center;margin-top:3mm"><span style="font-weight:800;color:var(--ink);font-size:6.5pt">Volver al de fábrica</span><span class="btn" style="margin:0;padding:1.6mm 3mm">Entendido</span></div>
+        </div>
+      </div></div>
+      <figcaption>La ayuda de un control (botón ?).</figcaption>
+    </figure>
+  </div>
+
+  <h3>Todos los controles</h3>
+  <p>La misma explicación que aparece en la app al tocar <b>?</b>, con su valor de fábrica.</p>
+  <table class="controls">
+    <tr><th>Control</th><th>Qué es y para qué sirve</th><th>Cómo ajustarlo</th><th>Fábrica</th></tr>
+    {{CONTROLS}}
+  </table>
+</section>
+
+<!-- ======================= 12 ======================= -->
+<section class="chapter">
+  <div class="kicker">Capítulo 12</div>
+  <h2>Problemas frecuentes</h2>
+  <table>
+    <tr><th style="width:38%">Lo que pasa</th><th>Qué hacer</th></tr>
+    <tr><td><b>El punto «tirita» al moverse</b> (en el banco), sobre todo al conectar.</td><td>Deja los sticks quietos 1–2 s: el sensor mide su error y queda guardado para esa placa. Las partidas siguientes empiezan sin temblor. En el panel del stick debe decir «giro calibrado» o «giro guardado».</td></tr>
+    <tr><td><b>Un stick no conecta.</b></td><td>Revisa que su luz parpadee (si no enciende, cárgalo). Acércalo al teléfono y vuelve a vincularlo desde «Repasar la preparación» o desde el banco (⋮ → Vincular otro stick).</td></tr>
+    <tr><td><b>En Espejo o Iguales nunca cuenta</b>, aunque lo hacen bien.</td><td>El lado de algún stick está al revés: haz el <b>asistente de ejes</b> de cada stick (capítulo 10).</td></tr>
+    <tr><td><b>Un punto vive pegado al borde.</b></td><td>Calibren moviendo los sticks por todo el recorrido. Si sigue, sube el «Rango mínimo» de esa persona en Ajuste.</td></tr>
+    <tr><td><b>El adulto llega al borde con un gesto muy chico.</b></td><td>Sube «Rango mínimo · adulto» a 20–25°.</td></tr>
+    <tr><td><b>Es muy difícil lograr los niveles sin mirar.</b></td><td>Ajuste → «Sin vista». Si aún cuesta, sube «Tolerancia» o baja «Trazo: parecido mínimo».</td></tr>
+    <tr><td><b>Se logra demasiado fácil.</b></td><td>Baja «Tolerancia», sube «Pérdida al salir» o «Trazo: parecido mínimo».</td></tr>
+    <tr><td><b>No se oye nada.</b></td><td>Sube el volumen multimedia del teléfono. Si dejó de sonar tras una pérdida de stick, vuelve al inicio y empieza otra partida.</td></tr>
+    <tr><td><b>La sesión se cierra sola.</b></td><td>Pasaron 30 s sin que los dos jugaran. Se puede subir en Ajuste → «Cerrar tras quietud».</td></tr>
+  </table>
+</section>
+
+<!-- ======================= 13 ======================= -->
+<section class="chapter" style="break-before:auto;margin-top:10mm">
+  <div class="kicker">Capítulo 13</div>
+  <h2>Datos y privacidad</h2>
+  <ul>
+    <li>Todo se guarda <b>solo en el teléfono</b>: progreso de la canción, las últimas 20 sesiones, ajustes, y los ejes y el error del sensor de cada stick. Nada se envía a internet.</li>
+    <li>No se graba audio ni imagen de las personas. Las sesiones guardan solo movimiento (posiciones de los puntos) y tiempos.</li>
+    <li>La telemetría del banco se comparte solo a mano, con «Compartir JSON».</li>
+    <li>El recuerdo se guarda en la galería solo al tocar «Guardar el recuerdo».</li>
+  </ul>
+</section>
+
+</body>
+</html>

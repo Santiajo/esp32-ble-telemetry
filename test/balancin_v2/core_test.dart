@@ -14,6 +14,10 @@ import 'package:esp32_ble_telemetry/balancin_v2/core/synthetic_source.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/telemetry.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Estas pruebas son de la medición por punto (prototipo, §12 y §13). Desde el
+/// 25-10-2026 el valor de fábrica es «zonas y trazo» (§16, ver blind_test.dart).
+SyncParams pointParams() => SyncParams()..matchMode = 0;
+
 const fps = 1000 / 60;
 
 /// Corre el motor de [from] a [to] ms a 60 fps y devuelve los eventos.
@@ -25,11 +29,11 @@ List<SyncEvent> runFor(SyncEngine e, double from, double to) {
   return out;
 }
 
-SyncEngine v2Engine() => SyncEngine(closeOnIdle: true, isLevelEnabled: enabledLevelIds.contains);
+SyncEngine v2Engine() => SyncEngine(params: pointParams(), closeOnIdle: true, isLevelEnabled: enabledLevelIds.contains);
 
 void main() {
   group('límite del plano', () {
-    final p = SyncParams();
+    final p = pointParams();
 
     test('inclinaciones extremas o inválidas dejan el punto dentro de ±6', () {
       final st = StickState(Role.child);
@@ -82,7 +86,7 @@ void main() {
   });
 
   group('calibración', () {
-    final p = SyncParams();
+    final p = pointParams();
 
     test('como el prototipo: centro del primer segundo, medio rango de los percentiles, mínimo por rol', () {
       final p = SyncParams.prototype();
@@ -112,11 +116,11 @@ void main() {
           c.add(Role.child, t, P2(5 + 4 * math.sin(s * 5), -3 + 30 * math.sin(s * 4)));
         }
       }
-      final robusta = c.result(Role.child, SyncParams())!;
+      final robusta = c.result(Role.child, pointParams())!;
       expect(robusta.cx, closeTo(5, 1));
       expect(robusta.cy, closeTo(-3, 1.5));
       expect(robusta.hrY, closeTo(30, 2));
-      expect(robusta.hrX, SyncParams().minC, reason: 'casi no se movió hacia los lados: mínimo');
+      expect(robusta.hrX, pointParams().minC, reason: 'casi no se movió hacia los lados: mínimo');
       final proto = c.result(Role.child, SyncParams.prototype())!;
       expect(proto.cy, closeTo(85, 1), reason: 'el prototipo toma la postura de la mesa como centro');
     });
@@ -126,11 +130,11 @@ void main() {
       for (var t = 0.0; t < 6000; t += 16) {
         c.add(Role.adult, t, const P2(0, 0), moving: t < 300);
       }
-      expect(c.result(Role.adult, SyncParams()), isNull);
+      expect(c.result(Role.adult, pointParams()), isNull);
     });
 
     test('tras calibrar con el stick apoyado al empezar, el punto ya no vive en el borde', () {
-      final e = SyncEngine(isLevelEnabled: (_) => false);
+      final e = SyncEngine(params: pointParams(), isLevelEnabled: (_) => false);
       e.drive = (now) {
         final s = now / 1000;
         for (final st in [e.adult, e.child]) {
@@ -185,7 +189,7 @@ void main() {
 
   group('nivel 1 «Juntos»', () {
     test('se logra con 8 s en sincronía, cambia la guía a los 4 s y (sin seguir) va al final', () {
-      final e = SyncEngine(params: SyncParams()..autoNext = 0, closeOnIdle: true, isLevelEnabled: enabledLevelIds.contains);
+      final e = SyncEngine(params: pointParams()..autoNext = 0, closeOnIdle: true, isLevelEnabled: enabledLevelIds.contains);
       e.drive = (now) => synthDrive(e, SynthQuality.sync, now);
       final start = e.start(mode: PlayMode.levels, now: 0);
       expect(start.whereType<SayEvent>().single.text,
@@ -244,7 +248,7 @@ void main() {
         return e.d;
       }
 
-      for (final p in [SyncParams(), SyncParams.prototype()]) {
+      for (final p in [pointParams(), SyncParams.prototype()]) {
         final quieto = dWith((s) => 0, (s) => 0, p: p);
         final lateral = dWith((s) => 5 * math.sin(s * 2), (s) => -5 * math.sin(s * 3), p: p);
         expect(lateral, closeTo(quieto, 1e-9));
@@ -278,14 +282,14 @@ void main() {
     });
 
     test('en el banco (closeOnIdle = false) no se cierra por quietud', () {
-      final e = SyncEngine(isLevelEnabled: enabledLevelIds.contains)..start(mode: PlayMode.levels, now: 0);
+      final e = SyncEngine(params: pointParams(), isLevelEnabled: enabledLevelIds.contains)..start(mode: PlayMode.levels, now: 0);
       expect(runFor(e, 0, 40000).whereType<SessionClosedEvent>(), isEmpty);
     });
   });
 
   group('modo Libre', () {
     test('d es bajo para juntos, espejo y sube y baja', () {
-      final e = SyncEngine()..start(mode: PlayMode.free, now: 0);
+      final e = SyncEngine(params: pointParams())..start(mode: PlayMode.free, now: 0);
       var now = 0.0;
       void place(double ax, double ay, double cx, double cy) {
         feedPlane(e.adult, ax, ay, e);
@@ -306,7 +310,7 @@ void main() {
     });
 
     test('no hay progreso ni guía, y el registro dice «free»', () {
-      final e = SyncEngine(closeOnIdle: true);
+      final e = SyncEngine(params: pointParams(), closeOnIdle: true);
       e.drive = (now) => synthDrive(e, SynthQuality.sync, now);
       final ev = e.start(mode: PlayMode.free, now: 0);
       expect(ev.whereType<SayEvent>().single.text, 'Juego libre. Busquen un movimiento en común.');
@@ -351,7 +355,7 @@ void main() {
 
   group('parámetros', () {
     test('JSON de ida y vuelta; claves desconocidas o inválidas se ignoran', () {
-      final p = SyncParams()
+      final p = pointParams()
         ..tolScale = 1.3
         ..kAccel = 0.05;
       final q = SyncParams.fromJson({...p.toJson(), 'vibMs': 80, 'alpha': 'x', 'onSpeed': double.nan});
@@ -367,7 +371,7 @@ void main() {
 
   group('luz', () {
     test('quietos: las dos mitades tenues y con su color', () {
-      final e = SyncEngine()..start(mode: PlayMode.levels, now: 0);
+      final e = SyncEngine(params: pointParams())..start(mode: PlayMode.levels, now: 0);
       e.tick(0);
       final l = lightFrame(e, 0);
       expect(l.topOpacity, closeTo(0.14, 1e-12));
@@ -377,7 +381,7 @@ void main() {
     });
 
     test('en sincronía las dos se acercan al oliva', () {
-      final e = SyncEngine();
+      final e = SyncEngine(params: pointParams());
       e.drive = (now) => synthDrive(e, SynthQuality.sync, now);
       e.start(mode: PlayMode.levels, now: 0);
       runFor(e, 0, 5000);

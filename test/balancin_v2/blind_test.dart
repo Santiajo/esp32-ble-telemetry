@@ -1,7 +1,7 @@
 // Opciones para jugar sin ver el plano (plan v2 §15): zonas, trazo, solo el
-// lado, borde que no cuenta, campanita de guía y sonidos que ubican. Todas
-// vienen apagadas; con los valores de fábrica el motor no cambia (la paridad
-// está en parity_test.dart).
+// lado, borde que no cuenta, campanita de guía y sonidos que ubican. De fábrica
+// solo viene «zonas y trazo» (§16); la paridad con el prototipo está en
+// parity_test.dart.
 
 import 'dart:math' as math;
 
@@ -47,9 +47,11 @@ Pos Function(double) wave(double amp, {double center = 0, double phase = 0, doub
     (s) => (x: x, y: center + amp * math.sin(2 * math.pi * 0.4 * s + phase));
 
 void main() {
-  test('los valores de fábrica dejan todo apagado; «Sin vista» lo enciende', () {
+  test('de fábrica: zonas y trazo, lo demás apagado; «Sin vista» lo enciende todo', () {
     final d = SyncParams();
-    for (final k in ['matchMode', 'sideOnly', 'edgeNoSync', 'guideChime', 'sharedScale', 'sideTimbre', 'fifthRamp']) {
+    expect(d.usesZones && d.usesTrace, isTrue);
+    expect(SyncParams.prototype().matchMode, 0, reason: 'el prototipo mide por punto');
+    for (final k in ['sideOnly', 'edgeNoSync', 'guideChime', 'sharedScale', 'sideTimbre', 'fifthRamp']) {
       expect(d[k], 0, reason: k);
     }
     final b = SyncParams.blind();
@@ -63,7 +65,7 @@ void main() {
       // Los dos entre 2,5 y 5,5 (franja de arriba), pero cuando uno sube el otro baja.
       final zonas = play(1, SyncParams()..matchMode = 1, wave(1.5, center: 4), wave(1.5, center: 4, phase: math.pi));
       expect(zonas.levelsDone, [1]);
-      final punto = play(1, SyncParams(), wave(1.5, center: 4), wave(1.5, center: 4, phase: math.pi));
+      final punto = play(1, SyncParams()..matchMode = 0, wave(1.5, center: 4), wave(1.5, center: 4, phase: math.pi));
       expect(punto.levelsDone, isEmpty, reason: 'con el punto, hasta 3 de diferencia queda fuera de la tolerancia');
     });
 
@@ -113,6 +115,26 @@ void main() {
     });
   });
 
+  group('valores de fábrica (zonas y trazo)', () {
+    test('niveles 1 a 4 con el gesto de cada relación', () {
+      expect(play(1, SyncParams(), wave(4), wave(2.5, center: -1)).levelsDone, [1], reason: 'Juntos');
+      Pos sway(double s) => (x: 4 * math.sin(2 * math.pi * 0.4 * s), y: 3 * math.sin(2 * math.pi * 0.4 * s));
+      expect(play(2, SyncParams(), sway, (s) => (x: -sway(s).x, y: sway(s).y)).levelsDone, [2], reason: 'Espejo');
+      expect(play(3, SyncParams(), sway, sway).levelsDone, [3], reason: 'Iguales');
+      expect(play(4, SyncParams(), wave(4), wave(4, phase: math.pi)).levelsDone, [4], reason: 'Sube y baja');
+    });
+
+    test('nivel 5 «Mismo pulso» no cambia: mismo ritmo cuenta', () {
+      Pos Function(double) beat(double amp, double phase) => (s) => (x: 0.0, y: amp * math.sin(2 * math.pi * 0.8 * s + phase));
+      expect(play(5, SyncParams(), beat(4, 0), beat(2, 1)).levelsDone, [5]);
+    });
+
+    test('el gesto equivocado no cuenta', () {
+      expect(play(1, SyncParams(), wave(4), wave(4, phase: math.pi)).levelsDone, isEmpty, reason: 'Juntos al revés');
+      expect(play(4, SyncParams(), wave(4), wave(4)).levelsDone, isEmpty, reason: 'Sube y baja copiando');
+    });
+  });
+
   group('solo el lado en «Espejo» e «Iguales»', () {
     Pos side(double s) => (x: 4 * math.sin(2 * math.pi * 0.4 * s), y: 0);
 
@@ -120,7 +142,7 @@ void main() {
       final p = SyncParams()..sideOnly = 1;
       final e = play(2, p, (s) => (x: side(s).x, y: 3), (s) => (x: -side(s).x, y: -3));
       expect(e.levelsDone, [2]);
-      expect(play(2, SyncParams(), (s) => (x: side(s).x, y: 3), (s) => (x: -side(s).x, y: -3)).levelsDone, isEmpty);
+      expect(play(2, SyncParams()..matchMode = 0, (s) => (x: side(s).x, y: 3), (s) => (x: -side(s).x, y: -3)).levelsDone, isEmpty);
     });
 
     test('«Iguales»: mismo lado cuenta; lado contrario, no', () {
@@ -133,8 +155,10 @@ void main() {
   test('pegados al borde no cuenta (el atajo de las esquinas)', () {
     // Los dos empujan más allá del borde de arriba y se mueven de lado (activos).
     Pos pinned(double s) => (x: 3 * math.sin(2 * math.pi * 0.5 * s), y: 9);
-    expect(play(1, SyncParams(), pinned, pinned).levelsDone, [1], reason: 'hoy el atajo funciona');
-    expect(play(1, SyncParams()..edgeNoSync = 1, pinned, pinned).levelsDone, isEmpty);
+    final punto = SyncParams()..matchMode = 0;
+    expect(play(1, punto.copy(), pinned, pinned).levelsDone, [1], reason: 'midiendo por punto, el atajo funciona');
+    expect(play(1, punto.copy()..edgeNoSync = 1, pinned, pinned).levelsDone, isEmpty);
+    expect(play(1, SyncParams(), pinned, pinned).levelsDone, isEmpty, reason: 'con trazo, quietos en el borde no hay trazo');
   });
 
   test('campanita al cambiar de guía, solo si está encendida', () {

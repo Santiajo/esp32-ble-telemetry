@@ -57,7 +57,7 @@ void main() {
       expect(find.text('0 de 7 partes'), findsOneWidget);
       expect(find.text('1 · Juntos'), findsOneWidget);
       expect(find.text('Sugerido'), findsOneWidget);
-      expect(find.text('Próximamente'), findsNWidgets(4), reason: 'del 4 al 7');
+      expect(find.text('Próximamente'), findsNWidgets(2), reason: 'el 6 y el 7');
       expect(find.text('Primero el nivel 1'), findsOneWidget);
       expect(find.text('Primero el nivel 2'), findsOneWidget);
       expect(tester.takeException(), isNull);

@@ -14,6 +14,11 @@ import 'package:esp32_ble_telemetry/balancin_v2/core/levels.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/sync_engine.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/synthetic_source.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/core/params.dart';
+
+/// Estas pruebas son de la medición por punto (prototipo, §12 y §13). Desde el
+/// 25-10-2026 el valor de fábrica es «zonas y trazo» (§16, ver blind_test.dart).
+SyncParams pointParams() => SyncParams()..matchMode = 0;
 
 double peakIn(Float64List s, double fromS, double toS) {
   var m = 0.0;
@@ -136,7 +141,7 @@ void main() {
 
     test('en sincronía suena la quinta; lejos, el batido', () {
       for (final q in [SynthQuality.sync, SynthQuality.lejos]) {
-        final e = SyncEngine();
+        final e = SyncEngine(params: pointParams());
         e.drive = (now) => synthDrive(e, q, now);
         final l = AudioLayers();
         e.start(mode: PlayMode.levels, now: 0);
@@ -180,7 +185,7 @@ void main() {
     });
 
     test('pad: sin frases ganadas no suena; con el nivel 1 recorre do-re-mi-sol', () {
-      final e = SyncEngine()..start(mode: PlayMode.levels, now: 0);
+      final e = SyncEngine(params: pointParams())..start(mode: PlayMode.levels, now: 0);
       final l = AudioLayers()..startPad(0);
       expect(l.firePad(500, e, const []), isEmpty);
       final notes = <int>[];
