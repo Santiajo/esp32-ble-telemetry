@@ -58,6 +58,12 @@ class TiltReader {
   static const double biasAlpha = 0.2;
   static const double maxDtS = 0.1;
 
+  /// Un hueco mayor a esto deja a `ĝ` sin giro integrado: se recupera con la gravedad.
+  static const double gapResyncS = 0.15;
+
+  /// Intervalo para el que está definido [SyncParams.kAccel] (100 Hz).
+  static const double kAccelDtS = 0.01;
+
   /// Suavizado del modo solo acelerómetro (s); fuera de la compuerta de |a| la
   /// constante de tiempo se divide por [uncalGateWeight] (4 veces más lenta).
   static const double uncalTauS = 0.05;
@@ -72,6 +78,7 @@ class TiltReader {
   V3 _bias = V3.zero;
   bool _calibrated = false;
   bool _seeded = false;
+  int _stillCount = 0;
   double _restMag = 1;
   final ListQueue<_Still> _still = ListQueue<_Still>();
 
@@ -81,6 +88,10 @@ class TiltReader {
   bool _correcting = false;
   double _accMag = 1;
   double? _magAvg; // |a| promedio (τ 1 s): referencia de la compuerta antes de medir el reposo
+  bool _resync = false; // hubo un hueco: la próxima lectura válida del acelerómetro manda
+  int _gaps = 0;
+  double? _offMin; // menor (llegada − reloj del ESP): el camino sin cola
+  double _lagMs = 0;
 
   ImuSample? _lastSample;
   double _lastArrival = -1e9;
@@ -107,6 +118,9 @@ class TiltReader {
 
   /// El bias viene del valor guardado de la placa y aún no se midió en esta sesión.
   bool get biasSeeded => _seeded;
+
+  /// Veces que una quietud real midió el bias (para saber si se midió ahora).
+  int get stillCount => _stillCount;
   V3 get biasDps => _bias;
   double get restMagG => _restMag;
   double get accelMagG => _accMag;
@@ -120,6 +134,12 @@ class TiltReader {
   ImuSample? get lastSample => _lastSample;
   double get lastArrivalMs => _lastArrival;
   int get samplesTotal => _samplesTotal;
+
+  /// Cortes en los datos (huecos mayores a [gapResyncS]).
+  int get gaps => _gaps;
+
+  /// Retraso de los datos respecto del mejor camino visto (ms): la cola del Bluetooth.
+  double get lagMs => _lagMs;
 
   /// Muestras recibidas en el último segundo (por hora de llegada).
   double get sampleRateHz => _arrivals.length.toDouble();
@@ -163,6 +183,14 @@ class TiltReader {
     _lastArrival = arrivalMs;
     _samplesTotal++;
     _arrivals.add(arrivalMs);
+    final off = arrivalMs - s.tMs;
+    final least = _offMin;
+    if (least == null || off < least || off - least > 60000) {
+      _offMin = off; // el último caso: el reloj del ESP se reinició o dio la vuelta
+      _lagMs = 0;
+    } else {
+      _lagMs += (off - least - _lagMs) * 0.02;
+    }
     while (_arrivals.isNotEmpty && arrivalMs - _arrivals.first > 1000) {
       _arrivals.removeFirst();
     }
@@ -178,6 +206,10 @@ class TiltReader {
     var dt = prev == null ? 0.0 : ImuFrameParser.ticksDiff(s.tMs, prev) / 1000;
     if (dt < 0) dt = 0;
     final gapS = dt; // sin tope: tras un hueco el suavizado no debe arrastrar la lectura vieja
+    if (gapS > gapResyncS) {
+      _gaps++;
+      _resync = true;
+    }
     if (dt > maxDtS) dt = maxDtS;
     _prevT = s.tMs;
     _tU += dt * 1000;
@@ -201,7 +233,16 @@ class TiltReader {
       final speed = om.length;
       if (speed > 0 && dt > 0) next = next.rotate(om * (1 / speed), -speed * dt);
       _correcting = (mag - _restMag).abs() < params.accelGate;
-      if (_correcting) next = next + (ah - next) * params.kAccel;
+      if (_correcting && _resync) {
+        // El giro de un hueco se perdió: integrar no lo recupera y corregir de a poco
+        // tardaba ~3 s, que se veían como deriva. Con la gravedad limpia se vuelve de una vez.
+        next = ah;
+        _resync = false;
+      } else if (_correcting) {
+        // Por tiempo: a 33 Hz la corrección tenía un tercio de la fuerza que a 100 Hz.
+        final k = 1 - math.pow(1 - params.kAccel, dt / kAccelDtS).toDouble();
+        next = next + (ah - next) * k;
+      }
       _g = next.normalized() ?? ah;
     }
     _axes ??= AxisMap.defaultFor(_g!, uprightAxis: uprightAxis, rightAxis: rightAxis);
@@ -248,6 +289,7 @@ class TiltReader {
       _bias = _bias + (m - _bias) * biasAlpha;
       _restMag += (mm - _restMag) * biasAlpha;
     }
+    _stillCount++;
     onBiasMeasured?.call();
   }
 }

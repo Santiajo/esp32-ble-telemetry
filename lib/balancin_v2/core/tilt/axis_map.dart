@@ -116,6 +116,9 @@ class AxisWizard {
     }
   }
 
+  /// Neutro medido en el paso de descanso (`null` hasta confirmarlo).
+  V3? get neutral => _g0;
+
   /// Inclinación alcanzada en el paso actual (°), para mostrar progreso.
   double get currentTiltDeg => (step == WizardStep.up ? _upAngle : _rightAngle) * 180 / math.pi;
 

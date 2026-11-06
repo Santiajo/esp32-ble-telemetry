@@ -47,6 +47,12 @@ class StickHub extends ChangeNotifier {
   final StreamController<LossEvent> _lossEvents = StreamController<LossEvent>.broadcast();
   final Set<StickRole> _pairing = {};
   bool _disposed = false;
+  int _holds = 0;
+
+  /// Una pantalla está leyendo los sticks: no soltarlos aunque la app quede de fondo.
+  void hold() => _holds++;
+  void unhold() => _holds--;
+  bool get held => _holds > 0;
 
   /// Pérdidas y recuperaciones de sticks armados.
   Stream<LossEvent> get lossEvents => _lossEvents.stream;

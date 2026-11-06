@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../../balancin/core/app_clock.dart';
 import '../../balancin/platform/ble_stick_link.dart';
@@ -13,6 +11,7 @@ import '../../balancin/platform/stick_hub.dart';
 import '../../balancin/session/board_session.dart' show StickRole;
 import '../../widgets/ble_scan_modal.dart';
 import '../core/audio/layers.dart';
+import '../core/diagnostics.dart';
 import '../core/levels.dart';
 import '../core/light_model.dart';
 import '../core/params.dart';
@@ -21,7 +20,9 @@ import '../core/sync_engine.dart';
 import '../core/synthetic_source.dart';
 import '../core/telemetry.dart';
 import '../platform/audio_engine_v2.dart';
+import '../platform/ble_permissions.dart';
 import '../platform/bench_store.dart';
+import '../platform/cal_store.dart';
 import '../platform/share_file.dart';
 import '../platform/tilt_stick.dart';
 import '../platform/voice_prompts.dart';
@@ -29,6 +30,7 @@ import '../widgets/axis_wizard_sheet.dart';
 import '../widgets/sync_plane.dart';
 import '../widgets/two_halves_light.dart';
 import '../widgets/tuning_sheet.dart';
+import 'stick_check_screen.dart';
 
 enum BenchSource { finger, synthetic, stick }
 
@@ -95,6 +97,8 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
   String _closedText = '';
   Map<String, Object?>? _lastReport;
   double _lastUi = 0;
+  double? _trialStart;
+  String _calText = 'Calibración: sin medir';
 
   // ---------------------------------------------------------------------------
   // Ciclo de vida
@@ -103,6 +107,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
+    widget.hub.hold();
     _ticker = createTicker((_) => _frame());
     unawaited(_init());
   }
@@ -112,8 +117,6 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
       final params = await BenchStore.loadParams();
       _voice.enabled = await BenchStore.loadVoice();
       _calOnStart = await BenchStore.loadCalOnStart();
-      // El banco puede jugar los 7 niveles para ver cómo se comportan; en la app
-      // siguen cerrados los que no están en enabledLevelIds.
       final e = SyncEngine(params: params, isLevelEnabled: (_) => true);
       e.drive = _drive;
       _params = params;
@@ -134,6 +137,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     for (final s in _sticks.values) {
       s.dispose();
     }
+    widget.hub.unhold();
     unawaited(_voice.stop());
     if (widget.audio == null) {
       unawaited(_audio.release());
@@ -153,6 +157,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
   void _restart() {
     final now = AppClock.nowMs();
     _closed = false;
+    _calText = _calOnStart ? 'Calibración: midiendo…' : 'Calibración: no se mide al empezar';
     _layers
       ..resetChild()
       ..startPad(now);
@@ -206,6 +211,12 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
               ? 'no se movió: rango por defecto'
               : 'centro ${c.cx.toStringAsFixed(0)}°/${c.cy.toStringAsFixed(0)}° · rango ±${c.hrX.toStringAsFixed(0)}° lados, ±${c.hrY.toStringAsFixed(0)}° adelante';
           _addLog('calibrado · adulto ${f(adult)} · niño ${f(child)}');
+          String short(Role r, StickCal? c) {
+            final n = _e.calSamples[r]?.moving ?? 0;
+            return c == null ? 'NO calibró ($n de 30 en movimiento)' : '±${c.hrY.round()}° adelante, ±${c.hrX.round()}° lado ($n)';
+          }
+
+          _calText = 'Adulto ${short(Role.adult, adult)}\nNiño ${short(Role.child, child)}';
         case SessionClosedEvent(:final record, :final byIdle):
           _layers
             ..silence()
@@ -227,7 +238,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
 
   void _addLog(String s) {
     _log.insert(0, s);
-    if (_log.length > 30) _log.removeLast();
+    if (_log.length > 200) _log.removeLast();
   }
 
   // ---------------------------------------------------------------------------
@@ -253,13 +264,9 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
   /// Permisos, Bluetooth encendido, enlace (reconexión a la MAC guardada o
   /// escaneo) y lector de inclinación. Mismo recorrido que el tablero de v1.
   Future<bool> _useStick(Role role) async {
-    if (Platform.isAndroid) {
-      final scan = await Permission.bluetoothScan.request();
-      final connect = await Permission.bluetoothConnect.request();
-      if (!scan.isGranted || !connect.isGranted) {
-        _snack('Se necesitan los permisos de Bluetooth para usar el stick.');
-        return false;
-      }
+    if (!await ensureBlePermissions()) {
+      _snack('Se necesitan los permisos de Bluetooth para usar el stick.');
+      return false;
     }
     final state = await FlutterBluePlus.adapterState.first;
     if (state == BluetoothAdapterState.off) {
@@ -283,6 +290,88 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     if (!await widget.hub.hasSavedStick(sr) && mounted) await _scan(link);
     _sticks[role] ??= TiltStick(link, params: _params);
     return true;
+  }
+
+  /// Chequeo guiado (§17). Al volver, el panel queda en «Stick» con lo medido.
+  Future<void> _openCheck(Role role) async {
+    if (_trialStart != null) return _snack('Primero termina la prueba grabada.');
+    if (!await _useStick(role) || !mounted) return;
+    final stick = _sticks[role]!;
+    final name = role == Role.adult ? 'A' : 'B';
+    _layers.silence();
+    _audio.frame(_layers, 0.3); // el banco no corre debajo: las voces bajan antes de salir
+    final cal = await Navigator.of(context).push<StickCal>(MaterialPageRoute(
+      builder: (_) => StickCheckScreen(
+        role: role,
+        params: _params!,
+        read: () => stick.snapshot(AppClock.nowMs()),
+        saveAxes: (axes) => unawaited(stick.saveAxes(axes)),
+        startTrace: () => stick.startRecording(AppClock.nowMs()),
+        stopTrace: () => stick.stopRecording(role: name, when: DateTime.now()),
+        share: (json) => _shareData('chequeo_stick_${name.toLowerCase()}', json),
+      ),
+    ));
+    if (!mounted) return;
+    await _setSource(role, BenchSource.stick);
+    if (cal == null) return;
+    _e.stick(role).cal = cal;
+    unawaited(CalStore.save(stick.link.savedMac, cal));
+    _addLog('chequeo de ${roleNames[role]}: rango ±${cal.hrY.round()}° adelante, ±${cal.hrX.round()}° a los lados');
+  }
+
+  Future<void> _shareData(String name, String json) async {
+    final ok = await shareTextFile('${name}_${diagnosticStamp(DateTime.now())}.json', json,
+        mimeType: 'application/json', text: 'Datos de la prueba de Balancín');
+    if (!ok) _snack('No se pudo compartir; los datos quedaron copiados al portapapeles.');
+  }
+
+  /// Prueba grabada (§17): reinicia el nivel con los dos sticks y guarda sus trazas.
+  /// Al terminar comparte un archivo con todo lo que el video no muestra.
+  Future<void> _toggleTrial() async {
+    final now = AppClock.nowMs();
+    if (_trialStart == null) {
+      if (Role.values.any((r) => _src[r] != BenchSource.stick || _sticks[r] == null)) {
+        return _snack('Primero haz el chequeo de los dos sticks.');
+      }
+      for (final s in _sticks.values) {
+        s.startRecording(now);
+      }
+      _log.clear();
+      setState(() {
+        _trialStart = now;
+        _restart();
+      });
+      return;
+    }
+    final when = DateTime.now();
+    final seconds = (now - _trialStart!) / 1000;
+    setState(() => _trialStart = null);
+    final json = diagnosticJson(
+      kind: 'prueba',
+      when: when,
+      params: _params!,
+      data: {
+        'duracion_s': seconds,
+        'reporte': _closed ? (_lastReport ?? _e.report()) : _e.report(),
+        'registro': _log.reversed.toList(),
+        'calibracion_muestras': {
+          for (final r in Role.values) r.name: {'en_movimiento': _e.calSamples[r]?.moving, 'total': _e.calSamples[r]?.total},
+        },
+        for (final r in Role.values)
+          r.name: {
+            'calibracion': _e.stick(r).cal?.toJson(),
+            'porcentaje_en_el_borde': _e.stick(r).edgeFraction * 100,
+            'ejes': _sticks[r]!.reader.axesFromDefault ? 'de fábrica' : 'del asistente',
+            'retraso_ms': _sticks[r]!.reader.lagMs,
+            'cortes': _sticks[r]!.reader.gaps,
+          },
+      },
+      traces: {
+        Role.adult.name: _sticks[Role.adult]!.stopRecording(role: 'A', when: when),
+        Role.child.name: _sticks[Role.child]!.stopRecording(role: 'B', when: when),
+      },
+    );
+    await _shareData('prueba_nivel_${_levelIndex + 1}', json);
   }
 
   Future<void> _scan(BleStickLink link) async {
@@ -344,7 +433,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     return Theme(
       data: _theme,
       child: Scaffold(
-        appBar: _eje ? null : AppBar(title: const Text('Banco de prueba v2'), backgroundColor: paper, foregroundColor: ink),
+        appBar: _eje ? null : AppBar(title: const Text('Banco de prueba · $appVersion', style: TextStyle(fontSize: 17)), backgroundColor: paper, foregroundColor: ink),
         body: _error != null
             ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('No se pudo iniciar:\n$_error')))
             : (e == null || !_audio.isReady)
@@ -378,6 +467,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (_trialStart != null) _trialBanner(e, now),
         _pill(e),
         const SizedBox(height: 6),
         LayoutBuilder(builder: (context, c) {
@@ -415,6 +505,29 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
         const SizedBox(height: 6),
         _controls(e),
       ]),
+    );
+  }
+
+  /// Queda en la grabación: tiempo de la prueba e inclinación que llega de cada stick.
+  Widget _trialBanner(SyncEngine e, double now) {
+    final s = ((now - _trialStart!) / 1000).floor();
+    String t(Role r) => '${e.stick(r).tilt.y.round()}°/${e.stick(r).tilt.x.round()}°';
+    String link(Role r) {
+      final q = _sticks[r]?.reader;
+      return q == null ? '–' : '${q.sampleRateHz.round()}/${q.lagMs.round()} ms';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(color: coral, borderRadius: BorderRadius.circular(12)),
+      child: Text(
+        'Grabando prueba ${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}\n'
+        'adelante/lado · adulto ${t(Role.adult)} · niño ${t(Role.child)}\n'
+        'datos/s y retraso · adulto ${link(Role.adult)} · niño ${link(Role.child)}\n'
+        '$_calText',
+        style: const TextStyle(fontSize: 12.5, color: Colors.white, fontWeight: FontWeight.w800),
+      ),
     );
   }
 
@@ -634,7 +747,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     final st = _e.stick(role);
     // Lo más importante primero: en el teléfono el panel es chico (prueba del 18-10-2026).
     final lines = [
-      s.statusText(now),
+      '${s.statusText(now)} · retraso ${r.lagMs.round()} ms · ${r.gaps} cortes',
       'giro ${!r.calibrated ? 'SIN calibrar: déjalo quieto 1 s' : r.biasSeeded ? 'guardado (se afina al dejarlo quieto)' : 'calibrado'} · borde ${(st.edgeFraction * 100).round()} %${st.atEdge ? ' (ahora)' : ''}',
       st.cal != null
           ? 'calibrado ±${st.cal!.hrX.toStringAsFixed(0)}° / ±${st.cal!.hrY.toStringAsFixed(0)}°'
@@ -680,8 +793,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
         // Libre o cualquiera de los 7 niveles. Muestra lo que juega el motor
-        // (con «seguir al siguiente nivel» avanza solo). Los que en la app dicen
-        // «Próximamente» llevan un asterisco.
+        // (con «seguir al siguiente nivel» avanza solo).
         DropdownButton<int>(
           value: e.mode == PlayMode.free ? 0 : e.levelIndex + 1,
           isDense: true,
@@ -689,10 +801,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
           items: [
             const DropdownMenuItem(value: 0, child: Text('Libre')),
             for (final l in levels)
-              DropdownMenuItem(
-                value: l.id,
-                child: Text('${l.id} · ${l.name}${enabledLevelIds.contains(l.id) ? '' : ' *'}'),
-              ),
+              DropdownMenuItem(value: l.id, child: Text('${l.id} · ${l.name}')),
           ],
           onChanged: (v) {
             if (v == null) return;
@@ -720,6 +829,9 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
       ]),
       const SizedBox(height: 4),
       Wrap(spacing: 6, runSpacing: 6, children: [
+        _mini('Chequear stick adulto', () => unawaited(_openCheck(Role.adult))),
+        _mini('Chequear stick niño', () => unawaited(_openCheck(Role.child))),
+        _mini(_trialStart == null ? 'Grabar prueba' : 'Terminar prueba', () => unawaited(_toggleTrial())),
         _mini('Calibrar rango', () => _handle(e.recalibrate(AppClock.nowMs()), AppClock.nowMs())),
         _mini(_calOnStart ? 'Calibrar al empezar: sí' : 'Calibrar al empezar: no', () {
           setState(() => _calOnStart = !_calOnStart);

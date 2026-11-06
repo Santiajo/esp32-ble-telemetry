@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
@@ -63,6 +65,19 @@ class BleStickLink extends ChangeNotifier {
   final List<void Function(ImuSample sample, double arrivalMs)> sampleListeners = [];
 
   bool _disposed = false;
+  Timer? _watch;
+
+  /// Menos de estas muestras por segundo es una conexión lenta (lo normal es 100, o 50
+  /// con el enlace congestionado).
+  static const double slowHz = 45;
+
+  /// Conectado y mandando, pero lento: los datos llegan tarde.
+  bool get slow => connected && reader.lastSample != null && !silent && reader.sampleRateHz < slowHz;
+
+  /// Mientras esté lento, vuelve a pedir la conexión rápida.
+  void _watchRate() => _watch ??= Timer.periodic(const Duration(seconds: 2), (_) {
+        if (connected && reader.sampleRateHz < 70) unawaited(controller.pedirConexionRapida());
+      });
 
   EstadoConexion get estado => controller.estado;
   bool get connected => controller.conectado;
@@ -73,10 +88,16 @@ class BleStickLink extends ChangeNotifier {
       role == StickRole.adult ? BleConstants.namesForA : BleConstants.namesForB;
 
   /// Reconecta a la MAC guardada, si existe.
-  Future<void> start() => controller.inicializarAutoConexion();
+  Future<void> start() {
+    _watchRate();
+    return controller.inicializarAutoConexion();
+  }
 
   /// Vincula un dispositivo elegido en el escaneo y guarda su MAC.
-  Future<void> adopt(BluetoothDevice device) => controller.adoptarDispositivo(device);
+  Future<void> adopt(BluetoothDevice device) {
+    _watchRate();
+    return controller.adoptarDispositivo(device);
+  }
 
   Future<void> disconnect() => controller.desconectar();
 
@@ -103,6 +124,7 @@ class BleStickLink extends ChangeNotifier {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _watch?.cancel();
     controller.onImuSample = null;
     sampleListeners.clear();
     controller.removeListener(notifyListeners);

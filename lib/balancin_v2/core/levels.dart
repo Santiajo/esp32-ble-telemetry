@@ -1,7 +1,7 @@
 /// Catálogo de niveles de la mecánica v2 (prototipo §11.1, `LEVELS`).
 ///
 /// Los siete niveles están definidos; cuáles se pueden jugar lo decide
-/// [enabledLevelIds] (del 1 al 5 desde el 25-10-2026; el 6 y el 7, «Próximamente»).
+/// [enabledLevelIds] (los siete desde el 05-11-2026).
 library;
 
 enum Role { adult, child }
@@ -164,8 +164,8 @@ const List<Level> levels = [
       difficulty: 3),
 ];
 
-/// Niveles que se pueden jugar en esta versión (plan v2, V4; el 2 y el 3 desde el 24-10-2026; el 4 y el 5
-/// desde el 25-10-2026, tras lograrlos sin ver la pantalla con zonas y trazo).
-const Set<int> enabledLevelIds = {1, 2, 3, 4, 5};
+/// Niveles que se pueden jugar. Desde el 05-11-2026 son los siete y se eligen en
+/// cualquier orden (plan v2 §17).
+const Set<int> enabledLevelIds = {1, 2, 3, 4, 5, 6, 7};
 
 Level levelById(int id) => levels[id - 1];

@@ -9,9 +9,8 @@ import '../widgets/v2_ui.dart';
 import 'pre_level_screen.dart';
 
 /// «¿Qué van a jugar hoy?» (`#levels` del prototipo): la canción y los siete
-/// niveles. Se avanza en orden (un nivel se abre al lograr el anterior) y en
-/// esta versión solo se puede jugar el nivel 1 (decisión V4): los demás dicen
-/// «Próximamente».
+/// niveles. Todos están abiertos y se eligen en cualquier orden (plan v2 §17); el
+/// primero sin lograr sale como «Sugerido».
 class LevelsScreen extends StatefulWidget {
   const LevelsScreen({super.key, required this.s});
   final V2Services s;
@@ -34,11 +33,9 @@ class _LevelsScreenState extends State<LevelsScreen> {
     if (mounted) setState(() => _got = g);
   }
 
-  bool _open(Level l) => l.id == 1 || _got.contains(l.id) || _got.contains(l.id - 1);
-
   @override
   Widget build(BuildContext context) {
-    final sug = levels.where((l) => !_got.contains(l.id) && enabledLevelIds.contains(l.id)).firstOrNull?.id;
+    final sug = levels.where((l) => !_got.contains(l.id)).firstOrNull?.id;
     return Theme(
       data: V2.theme,
       child: Scaffold(
@@ -47,7 +44,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
           child: ListView(padding: const EdgeInsets.fromLTRB(22, 0, 22, 28), children: [
             Text('¿Qué van a jugar hoy?', textAlign: TextAlign.center, style: V2.h1()),
             const SizedBox(height: 6),
-            const Text('Terminen la canción juntos, nivel a nivel.', textAlign: TextAlign.center, style: V2.sub),
+            const Text('Elijan cualquier nivel y sumen partes a la canción.', textAlign: TextAlign.center, style: V2.sub),
             const SizedBox(height: 18),
             Row(children: [
               const Expanded(child: Text('La canción', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: V2.mute))),
@@ -80,18 +77,12 @@ class _LevelsScreenState extends State<LevelsScreen> {
   }
 
   Widget _card(Level l, int? sug, {bool wide = false}) {
-    final enabled = enabledLevelIds.contains(l.id);
-    final locked = !_open(l) || !enabled;
     final got = _got.contains(l.id);
     final tag = got
         ? _tag('Lograda', V2.olive, Colors.white)
-        : !enabled
-            ? _tag('Próximamente', V2.line, V2.soft)
-            : l.id == sug
-                ? _tag('Sugerido', V2.ink, Colors.white)
-                : locked
-                    ? _tag('Primero el nivel ${l.id - 1}', V2.line, V2.soft)
-                    : null;
+        : l.id == sug
+            ? _tag('Sugerido', V2.ink, Colors.white)
+            : null;
     final text = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
       Text('${l.id} · ${l.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, height: 1.1, color: V2.ink)),
       const SizedBox(height: 4),
@@ -105,32 +96,27 @@ class _LevelsScreenState extends State<LevelsScreen> {
       ]),
     ]);
     final body = wide
-        ? Row(children: [LevelPictogram(level: l, locked: locked), const SizedBox(width: 14), Expanded(child: text)])
+        ? Row(children: [LevelPictogram(level: l), const SizedBox(width: 14), Expanded(child: text)])
         : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            LevelPictogram(level: l, locked: locked),
+            LevelPictogram(level: l),
             const SizedBox(height: 10),
             text,
           ]);
-    return Opacity(
-      opacity: locked ? 0.5 : 1,
-      child: Material(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
         borderRadius: BorderRadius.circular(22),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: locked
-              ? null
-              : () async {
-                  await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PreLevelScreen(s: widget.s, level: l)));
-                  await _load();
-                },
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: l.id == sug
-                ? BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: V2.ink, width: 2.5))
-                : null,
-            child: body,
-          ),
+        onTap: () async {
+          await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PreLevelScreen(s: widget.s, level: l)));
+          await _load();
+        },
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: l.id == sug
+              ? BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: V2.ink, width: 2.5))
+              : null,
+          child: body,
         ),
       ),
     );

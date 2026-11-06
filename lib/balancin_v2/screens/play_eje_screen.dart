@@ -13,11 +13,20 @@ import '../app_v2.dart';
 import '../core/audio/layers.dart';
 import '../core/levels.dart';
 import '../core/light_model.dart';
+import '../core/stick_state.dart';
 import '../core/sync_engine.dart';
+import '../platform/cal_store.dart';
 import '../platform/progress_store.dart';
 import '../platform/tilt_stick.dart';
 import '../widgets/two_halves_light.dart';
 import 'final_screen.dart';
+
+/// Aviso del final si algún stick no se calibró (`null` si los dos sí).
+String? calibrationNote({required bool adult, required bool child}) {
+  if (adult && child) return null;
+  final who = !adult && !child ? 'Los dos sticks no se movieron' : 'El stick del ${adult ? 'niño' : 'adulto'} no se movió';
+  return '$who lo suficiente en los primeros 6 s: no se calibró y jugó con el rango por defecto.';
+}
 
 /// Dentro del eje (`#ejeView` del prototipo): solo luz en dos mitades.
 ///
@@ -57,6 +66,8 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
   bool _lostOpen = false;
   bool _closing = false;
   Timer? _exitHold;
+  String? _calNote;
+  final Map<Role, StickCal> _savedCal = {};
 
   static StickRole _sr(Role r) => r == Role.adult ? StickRole.adult : StickRole.child;
 
@@ -64,6 +75,7 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
   void initState() {
     super.initState();
     final s = widget.s;
+    s.hub.hold();
     _e = SyncEngine(params: s.params, closeOnIdle: true, isLevelEnabled: enabledLevelIds.contains);
     _sticks.addAll(widget.sticks ?? PlayEjeScreen.openSticks(s));
     for (final r in Role.values) {
@@ -84,6 +96,10 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
 
   Future<void> _start() async {
     _progress = await ProgressStore.progress();
+    for (final r in Role.values) {
+      final c = await CalStore.load(_sticks[r]!.link.savedMac);
+      if (c != null) _savedCal[r] = c;
+    }
     if (!mounted) return;
     final now = AppClock.nowMs();
     _layers
@@ -91,7 +107,13 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
       ..startPad(now);
     _handle(_e.start(mode: widget.mode, levelIndex: widget.levelIndex, calibrate: true, now: now), now);
     _ticker.start();
+    // La pérdida solo avisa de conectado a desconectado: un stick caído antes de
+    // empezar no dispara ningún evento, así que se revisa aquí.
+    final missing = _firstMissing();
+    if (missing != null) unawaited(_onLoss(LossEvent(missing, lost: true)));
   }
+
+  StickRole? _firstMissing() => StickRole.values.where((r) => !widget.s.hub.isConnected(r)).firstOrNull;
 
   @override
   void dispose() {
@@ -103,6 +125,7 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
       widget.s.hub.disarm(_sr(r));
       _sticks[r]?.dispose();
     }
+    widget.s.hub.unhold();
     _layers.silence();
     widget.s.audio.frame(_layers, 0.3);
     unawaited(widget.s.voice.stop());
@@ -135,6 +158,13 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
         case LevelCompletedEvent(:final levelId):
           if (!_progress.contains(levelId)) _progress.add(levelId);
           unawaited(ProgressStore.addProgress(levelId));
+        case CalibrationDoneEvent():
+          s.audio.playChime(); // con el teléfono en el eje, es el aviso de que ya empezó
+          // Sin movimiento suficiente al empezar, vale la calibración de «Calibrar los sticks».
+          for (final r in Role.values) {
+            if (_e.stick(r).cal == null) _e.stick(r).cal = _savedCal[r];
+          }
+          _calNote = calibrationNote(adult: _e.adult.cal != null, child: _e.child.cal != null);
         case SessionClosedEvent(:final record):
           unawaited(_finish(record.levels, ev));
         default:
@@ -153,7 +183,7 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
     await ProgressStore.addSession(ev.record);
     if (!mounted) return;
     await Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
-      builder: (_) => FinalScreen(s: widget.s, record: ev.record, fresh: fresh),
+      builder: (_) => FinalScreen(s: widget.s, record: ev.record, fresh: fresh, calNote: _calNote),
     ));
   }
 
@@ -163,17 +193,22 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
 
   Future<void> _onLoss(LossEvent ev) async {
     if (!ev.lost || _lostOpen || _closing || !_e.running || !mounted) return;
-    _lostOpen = true;
     final s = widget.s;
     _e.pause();
     _layers.silence();
     s.audio.fadeOutForLoss();
+    await _showLost(ev.role);
+  }
+
+  Future<void> _showLost(StickRole role) async {
+    final s = widget.s;
+    _lostOpen = true;
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     var resumed = false;
     final res = await Navigator.of(context).push<String>(MaterialPageRoute(
       builder: (_) => LostScreen(
         hub: s.hub,
-        role: ev.role,
+        role: role,
         cause: LossCause.alcance,
         onResume: () => resumed = true,
       ),
@@ -183,6 +218,8 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
     final now = AppClock.nowMs();
     if (resumed || res == 'resumed') {
+      final other = _firstMissing();
+      if (other != null) return _showLost(other); // no se sigue con un solo stick
       s.audio.fadeInAfterLoss();
       _layers
         ..resetChild()

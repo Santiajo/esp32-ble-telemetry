@@ -4,7 +4,8 @@ import '../app_v2.dart';
 import '../core/levels.dart';
 import '../core/sync_engine.dart';
 import '../widgets/v2_ui.dart';
-import 'insert_v2_screen.dart';
+import 'calibrate_sticks_screen.dart';
+import 'sticks_gate_screen.dart';
 
 /// Antes de cada nivel (`#pre` del prototipo): dibujo, consigna, quién guía y
 /// «Insertar el teléfono y comenzar».
@@ -47,10 +48,9 @@ class PreLevelScreen extends StatelessWidget {
               const Spacer(),
               V2.primary(
                 'Insertar el teléfono y comenzar',
-                () => Navigator.of(context).push(MaterialPageRoute<void>(
-                  builder: (_) => InsertV2Screen(s: s, mode: PlayMode.levels, levelIndex: level.id - 1),
-                )),
+                () => openGame(context, s, mode: PlayMode.levels, levelIndex: level.id - 1),
               ),
+              Center(child: V2.link('Calibrar los sticks', () => openCalibration(context, s))),
             ]),
           ),
         ),

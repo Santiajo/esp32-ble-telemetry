@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../balancin/core/ble/imu_frame_parser.dart';
 import '../../balancin/platform/ble_stick_link.dart';
 import '../core/params.dart';
+import '../core/stick_check.dart';
 import '../core/tilt/axis_map.dart';
 import '../core/tilt/imu_trace.dart';
 import '../core/tilt/tilt_reader.dart';
@@ -105,6 +106,23 @@ class TiltStick {
       'Ejes: ${reader.axesFromDefault ? 'por defecto (vertical = Z, derecha = X)' : 'del asistente'}',
     ]);
   }
+
+  /// Lectura actual para el chequeo de sticks ([now] en el reloj de la app).
+  StickSnapshot snapshot(double now) => StickSnapshot(
+        connected: link.connected,
+        receiving: !stale(now),
+        hz: stale(now) ? 0 : reader.sampleRateHz,
+        tiltX: reader.tiltX,
+        tiltY: reader.tiltY,
+        gravity: reader.gravity,
+        accelMagG: reader.accelMagG,
+        restMagG: reader.restMagG,
+        gyroReady: reader.calibrated,
+        stillCount: reader.stillCount,
+        axes: reader.axes,
+        lagMs: reader.lagMs,
+        gaps: reader.gaps,
+      );
 
   /// Texto de estado para el banco.
   String statusText(double now) {

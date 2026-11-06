@@ -7,8 +7,8 @@ import '../core/levels.dart';
 import '../core/sync_engine.dart';
 import '../platform/progress_store.dart';
 import '../widgets/v2_ui.dart';
-import 'insert_v2_screen.dart';
 import 'levels_screen.dart';
+import 'sticks_gate_screen.dart';
 
 /// «¿Cómo quieren jugar?» (`#mode` del prototipo): Libre o Niveles.
 class ModeScreen extends StatefulWidget {
@@ -51,9 +51,7 @@ class _ModeScreenState extends State<ModeScreen> {
                   art: const _FreeArt(),
                   title: 'Libre',
                   text: 'Sin consignas. El sonido se afina cuando encuentran un movimiento en común.',
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                    builder: (_) => InsertV2Screen(s: s, mode: PlayMode.free),
-                  )),
+                  onTap: () => openGame(context, s, mode: PlayMode.free),
                 ),
               ),
               const SizedBox(height: 12),

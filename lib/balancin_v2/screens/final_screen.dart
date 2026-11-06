@@ -12,19 +12,22 @@ import '../core/sync_engine.dart';
 import '../core/telemetry.dart';
 import '../platform/progress_store.dart';
 import '../widgets/v2_ui.dart';
-import 'insert_v2_screen.dart';
+import 'sticks_gate_screen.dart';
 
 /// El recuerdo (`#final` del prototipo): título según lo logrado, duración y
 /// sincronía, la canción con la parte nueva marcada, el dibujo de lo que
 /// hicieron los sticks y quién guió. «Escuchar la canción» (o «Jugar otra vez»
 /// en Libre) y «Guardar el recuerdo» como imagen. Plan v2 §10.2.
 class FinalScreen extends StatefulWidget {
-  const FinalScreen({super.key, required this.s, required this.record, required this.fresh, this.fromHistory = false});
+  const FinalScreen({super.key, required this.s, required this.record, required this.fresh, this.fromHistory = false, this.calNote});
   final V2Services s;
   final SessionRecord record;
 
   /// Niveles logrados en esta sesión (con anillo en la barra).
   final List<int> fresh;
+
+  /// Aviso si algún stick no se calibró al empezar.
+  final String? calNote;
 
   /// Abierto desde «Sesiones pasadas».
   final bool fromHistory;
@@ -77,9 +80,7 @@ class _FinalScreenState extends State<FinalScreen> {
 
   void _primary() {
     if (r.isFree) {
-      Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
-        builder: (_) => InsertV2Screen(s: widget.s, mode: PlayMode.free),
-      ));
+      unawaited(openGame(context, widget.s, mode: PlayMode.free, replace: true));
       return;
     }
     final ids = _got.isEmpty ? [1] : (List.of(_got)..sort());
@@ -168,6 +169,10 @@ class _FinalScreenState extends State<FinalScreen> {
                 if (_lead.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(_lead, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: V2.soft, fontWeight: FontWeight.w700)),
+                ],
+                if (widget.calNote != null) ...[
+                  const SizedBox(height: 12),
+                  Text(widget.calNote!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: V2.coral, fontWeight: FontWeight.w800)),
                 ],
               ]),
             ),

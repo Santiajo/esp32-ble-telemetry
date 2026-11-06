@@ -70,14 +70,47 @@ class BalancinV2Root extends StatefulWidget {
   State<BalancinV2Root> createState() => _BalancinV2RootState();
 }
 
-class _BalancinV2RootState extends State<BalancinV2Root> {
+class _BalancinV2RootState extends State<BalancinV2Root> with WidgetsBindingObserver {
   V2Services? _s;
   String? _error;
+  Timer? _release;
+  bool _released = false;
+
+  /// Un stick se conecta a un solo teléfono y deja de verse: la app de fondo no lo retiene.
+  static const Duration releaseAfter = Duration(seconds: 60);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_init());
+  }
+
+  @override
+  void dispose() {
+    _release?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final hub = _s?.hub;
+    if (hub == null) return;
+    if (state == AppLifecycleState.paused) {
+      _release?.cancel();
+      _release = Timer(releaseAfter, () {
+        if (hub.held) return;
+        hub.releaseAll();
+        _released = true;
+      });
+    } else if (state == AppLifecycleState.resumed) {
+      _release?.cancel();
+      if (_released) {
+        _released = false;
+        unawaited(_reconnect(hub));
+      }
+    }
   }
 
   Future<void> _init() async {

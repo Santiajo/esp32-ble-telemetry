@@ -185,6 +185,9 @@ class SyncEngine {
   Calibration? _cal;
   double _calT0 = 0;
 
+  /// Muestras de la última calibración: en movimiento y en total, por rol.
+  final Map<Role, ({int moving, int total})> calSamples = {};
+
   // Lo que vio el último tick (para la luz y el banco).
   bool adultActive = false;
   bool childActive = false;
@@ -283,6 +286,8 @@ class SyncEngine {
     child.reset();
     _idleSince = null;
     if (state == EngineState.idle) _beginPlay(now);
+    // Una calibración cortada no vale: su reloj siguió corriendo y le faltarían datos.
+    if (state == EngineState.calibrating) _startCal(now);
     running = true;
     _last = now;
     return _flush();
@@ -745,6 +750,9 @@ class SyncEngine {
 
   void _finishCal(double now) {
     final c = _cal!;
+    for (final r in Role.values) {
+      calSamples[r] = (moving: c.movingCount(r), total: c.count(r));
+    }
     adult.cal = c.result(Role.adult, params);
     child.cal = c.result(Role.child, params);
     adult.resetEdgeStats();

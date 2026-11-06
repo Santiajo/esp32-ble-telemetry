@@ -128,6 +128,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       await [
         Permission.bluetoothScan,
         Permission.bluetoothConnect,
+        Permission.locationWhenInUse, // Android 11 o anterior no escanea sin ubicación
       ].request();
     }
 

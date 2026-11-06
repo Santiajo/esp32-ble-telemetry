@@ -5,6 +5,11 @@
 #   - Lo envía por BLE (Nordic UART Service) como texto, una línea por muestra:
 #         v2,<t_ms>,<ax>,<ay>,<az>,<gx>,<gy>,<gz>\n
 #     t_ms = time.ticks_ms() del ESP32 (se reinicia cada 2^30 ms ≈ 12 días; la app lo maneja).
+#   - Junta 3 muestras por paquete BLE. Una por paquete son 100 paquetes por segundo, y el
+#     teléfono a veces da solo uno cada 30 ms: se formaba una cola de ~450 ms de retraso y
+#     cortes de 1 s (pruebas del 05-11-2026). Las líneas no cambian: la app las separa por '\n'.
+#   - Si el enlace se congestiona, manda la mitad de las muestras durante 2 s: mejor menos
+#     datos que datos viejos.
 #   - Si el teléfono negocia un MTU chico (la línea no cabe en un paquete), baja a 50 Hz
 #     para no saturar la pila BLE (el firmware antiguo documentó desconexiones sobre ~66 Hz).
 #   - LED azul (GPIO2): parpadea = esperando teléfono · fijo = conectado ·
@@ -28,6 +33,9 @@ SDA_PIN = 21                     # pines I2C por defecto de la DevKit V1
 SCL_PIN = 22
 LED_PIN = 2                      # LED azul integrado de la DevKit V1
 RATE_HZ = 100
+BATCH_SAMPLES = 3                # muestras por paquete BLE (3 líneas caben con MTU 185)
+CONGESTED_MS = 2000              # tiempo con la mitad de las muestras tras una congestión
+SLOW_SEND_MS = 50                # enviar un paquete no debería tardar más que esto
 DEBUG_PRINT_HZ = 5               # impresión en consola cuando no hay teléfono conectado
 
 # LEGACY_OUTPUT = True envía "rawX,rawY\n" (escalado a ±2 g, como el firmware antiguo) a 50 Hz,
@@ -95,6 +103,7 @@ class StickBLE:
         self.conn = None
         self.mtu = 23
         self.dropped = 0
+        self.slow_sends = 0
         self._ble = bluetooth.BLE()
         self._ble.active(True)
         self._ble.config(gap_name=name)
@@ -140,14 +149,56 @@ class StickBLE:
         chunk = self.mtu - 3
         conn = self.conn
         if conn is None:
-            return
+            return False
         try:
             for i in range(0, len(data), chunk):
                 self._ble.gatts_notify(conn, self._tx, data[i:i + chunk])
+            return True
         except OSError:
             # Cola BLE llena o conexión cayéndose: se descarta la muestra
             # (la app descarta la línea incompleta; el IRQ limpia la conexión).
             self.dropped += 1
+            return False
+
+
+class Batcher:
+    """Junta muestras en un paquete y aligera el envío si el enlace se congestiona."""
+
+    def __init__(self, ble):
+        self.ble = ble
+        self.buf = b''
+        self.count = 0
+        self.slow_until = None
+        self.skip = False
+
+    def clear(self):
+        self.buf = b''
+        self.count = 0
+
+    def add(self, data):
+        if self.slow_until is not None:
+            if time.ticks_diff(time.ticks_ms(), self.slow_until) >= 0:
+                self.slow_until = None
+            else:
+                self.skip = not self.skip
+                if self.skip:
+                    return
+        if self.count and not self.ble.fits(len(self.buf) + len(data)):
+            self.flush()
+        self.buf += data
+        self.count += 1
+        if self.count >= BATCH_SAMPLES:
+            self.flush()
+
+    def flush(self):
+        t0 = time.ticks_ms()
+        ok = self.ble.send(self.buf)
+        self.clear()
+        took = time.ticks_diff(time.ticks_ms(), t0)
+        if took > SLOW_SEND_MS:
+            self.ble.slow_sends += 1
+        if not ok or took > SLOW_SEND_MS:
+            self.slow_until = time.ticks_add(time.ticks_ms(), CONGESTED_MS)
 
 
 # ---------------- Bucle principal ----------------
@@ -168,6 +219,7 @@ def main():
     mpu = MPU6050(i2c, addr)
     print('[MPU] OK en dirección 0x%02X' % addr)
     stick = StickBLE(DEVICE_NAME)
+    batch = Batcher(stick)
 
     period_us = 1_000_000 // RATE_HZ
     debug_every = max(1, RATE_HZ // DEBUG_PRINT_HZ)
@@ -189,10 +241,12 @@ def main():
                 led.value(1)
                 data = line.encode()
                 # A 100 Hz solo si la línea cabe en un paquete; si no (o en modo legado), 50 Hz.
-                full_rate = stick.fits(len(data)) and not LEGACY_OUTPUT
-                if full_rate or n % 2 == 0:
+                if stick.fits(len(data)) and not LEGACY_OUTPUT:
+                    batch.add(data)
+                elif n % 2 == 0:
                     stick.send(data)
             else:
+                batch.clear()
                 led.value(time.ticks_ms() // 500 % 2)  # parpadeo = esperando teléfono
                 if n % debug_every == 0:
                     print(line, end='')
@@ -203,8 +257,8 @@ def main():
                 print('AVISO: 10 errores I2C seguidos - revisar cables del MPU6050')
 
         n += 1
-        if n % (RATE_HZ * 10) == 0 and stick.dropped:
-            print('[BLE] muestras descartadas por cola llena:', stick.dropped)
+        if n % (RATE_HZ * 10) == 0 and (stick.dropped or stick.slow_sends):
+            print('[BLE] descartadas por cola llena:', stick.dropped, '· envíos lentos:', stick.slow_sends)
 
         t_next = time.ticks_add(t_next, period_us)
         wait = time.ticks_diff(t_next, time.ticks_us())

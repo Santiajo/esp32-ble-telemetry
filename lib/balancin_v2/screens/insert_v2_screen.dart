@@ -37,6 +37,7 @@ class _InsertV2ScreenState extends State<InsertV2Screen> with TickerProviderStat
   @override
   void initState() {
     super.initState();
+    widget.s.hub.hold();
     _sticks = PlayEjeScreen.openSticks(widget.s);
     _bar.addStatusListener((st) {
       if (st == AnimationStatus.completed) unawaited(_go());
@@ -66,6 +67,7 @@ class _InsertV2ScreenState extends State<InsertV2Screen> with TickerProviderStat
     for (final st in _sticks?.values ?? const <TiltStick>[]) {
       st.dispose();
     }
+    widget.s.hub.unhold();
     super.dispose();
   }
 

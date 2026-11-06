@@ -200,6 +200,22 @@ class EspDeviceController extends ChangeNotifier {
     }
   }
 
+  /// Vuelve a pedir el intervalo de conexión corto: el teléfono puede no haberlo
+  /// dado al conectar, o quitarlo después (prueba del 05-11-2026: un stick quedó en
+  /// un paquete cada 30 ms toda la sesión).
+  Future<void> pedirConexionRapida() async {
+    if (!Platform.isAndroid || !conectado) return;
+    try {
+      await _dispositivo?.requestConnectionPriority(connectionPriorityRequest: ConnectionPriority.high);
+    } catch (_) {}
+  }
+
+  /// Corta y vuelve a conectar, para salir de una conexión lenta.
+  Future<void> reconectar() async {
+    await desconectar();
+    await conectarPersistente();
+  }
+
   void _manejarDesconexionInvoluntaria() {
     _actualizarEstado(EstadoConexion.buscando);
     if (_desconexionManual) return;

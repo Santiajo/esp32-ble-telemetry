@@ -511,6 +511,39 @@ Con «Sin vista», el usuario y su hermano lograron los niveles 1 a 5 **sin ver 
 - Pruebas: las de punto (prototipo, §12, §13) fijan `matchMode = 0`; `blind_test.dart` prueba los niveles 1–5 con los valores de fábrica; `tuning_sheet_test.dart` (3).
 - Manual de usuario: `docs/manual/manual.html` → `entregable/Balancin_Manual_de_usuario.pdf`.
 
+## 17. Los 7 niveles abiertos, sticks obligatorios y chequeo de sticks (05-11-2026)
+
+Usuarios reales no lograron pasar el nivel 1, y el usuario pidió poder probar cualquier nivel y descartar los sticks como causa.
+
+- **Niveles:** `enabledLevelIds` = los siete, y se eligen en cualquier orden (`LevelsScreen` ya no bloquea). El primero sin lograr sale «Sugerido». Con `autoNext` la sesión sigue hasta «La canción». Reemplaza a V4.
+- **Sticks antes de jugar:** toda partida entra por `openGame` (`screens/sticks_gate_screen.dart`). Si falta un stick, o está conectado sin mandar datos, «Conecten los sticks» no deja seguir. Antes nada lo revisaba, y `LossMonitor` solo avisa de conectado a desconectado: un stick que nunca conectó dejaba la partida muda hasta cerrarse a los 30 s.
+- **Al empezar la partida:** `PlayEjeScreen` revisa otra vez, por si un stick cayó durante la inserción, y la pantalla de pérdida no devuelve al juego mientras falte el otro.
+- **Calibración:** perder un stick mientras calibra la reinicia (antes terminaba al volver, con pocos datos). Al terminar suena la campanita, y si un stick no se calibró el final lo dice (antes era invisible).
+- **Chequeo de sticks** (`core/stick_check.dart`, `screens/stick_check_screen.dart`; botones «Chequear stick adulto/niño» en el banco): conexión → quieto → adelante → derecha → rango → llegar a los bordes, y un resultado en palabras. Guarda los ejes por MAC, y deja la calibración en el banco.
+- **Causas que mide**, porque ninguna se ve durante el juego:
+  1. levantar el stick sin inclinarlo (|a| cambia y la gravedad no): el sensor no mide altura, y la consigna dice «suban y bajen»;
+  2. stick girado en la mano: «Juntos» solo mira el eje adelante-atrás; a 90° ese gesto cae en el otro eje y a 180° se invierte;
+  3. calibración sin movimiento suficiente;
+  4. gesto lento (bajo `onSpeed` cuenta como quieto).
+- **Pruebas con grabación de pantalla:** en el eje la pantalla solo muestra luz, así que estas pruebas se hacen en el banco. El chequeo deja a la vista las lecturas del sensor y sus mediciones, y «Compartir datos» manda un JSON con la traza cruda. «Grabar prueba» reinicia el nivel con los dos sticks, muestra una franja con el tiempo y la inclinación, y al terminar comparte reporte, registro, calibración y trazas (`core/diagnostics.dart`). Con esas trazas se reproduce en tests lo que pasó en el teléfono. 2.0.0-dev.15+18.
+- **Confirmado en video (05-11-2026):** los usuarios levantaban el stick sin inclinarlo. Simulado por el lector y el motor reales (20 cm, 0,6 Hz): con 0–3° de muñeca la calibración falla en los dos sticks y el juego los cuenta quietos todo el tiempo; desde ~6° de muñeca sí calibra (al mínimo) y el nivel se logra. El chequeo sigue hasta la calibración aunque levanten, y el banco muestra su resultado con las muestras en movimiento. 2.0.0-dev.16+19.
+- **Límite:** los ejes corregidos valen para una forma de sujetar el stick. Sin magnetómetro la app no puede saber si después se gira en la mano.
+- Pruebas: `stick_check_test.dart` (14, con un stick simulado), `screens_test.dart`, `levels23_test.dart` (sesión completa de los 7 niveles). 260/260. 2.0.0-dev.14+17.
+
+## 18. Arreglos tras la prueba grabada (05-11-2026)
+
+Cinco archivos reales (2 chequeos, 3 pasadas del nivel 1). Rompe la decisión V6: el firmware cambia. Los niveles miden igual que antes; la señal de levantar queda para después (correlación de la aceleración vertical en ventanas de 3 s: 0,96 juntos, 0,12 desordenado, en una sola pareja).
+
+- **Causa del retraso y los cortes:** una línea por paquete son 100 paquetes por segundo. El stick B quedó toda una sesión en un paquete cada 30 ms: 32 datos/s y ~440 ms de cola. El stick A se quedó mudo 1,01 s hasta 25 veces por minuto.
+- **Firmware** (`firmware/balancin_stick/main.py`): `Batcher` junta 3 muestras por paquete (33 paquetes por segundo, cabe con MTU 185) y, si un envío falla o tarda más de 50 ms, manda la mitad de las muestras durante 2 s. El formato de línea no cambia. `test_batcher.py` lo prueba en el computador; falta probarlo en la placa, y falta confirmar qué causa el corte de 1 s.
+- **App:** `BleStickLink` vuelve a pedir la conexión rápida mientras llegan menos de 70 datos/s. «Conecten los sticks» avisa la conexión lenta y reconecta sola una vez. `TiltReader` mide `lagMs` y `gaps`, que se ven en el banco, el chequeo y los archivos.
+- **Filtro:** tras un hueco de más de 0,15 s, la primera lectura limpia del acelerómetro repone `ĝ` (antes tardaba ~2,8 s, y eso se veía como deriva). `kAccel` pasa a ser por tiempo: igual a 100 Hz y con la misma fuerza a 33 Hz.
+- **Chequeo:** tocar un borde exige llegar a 5,5 de 6 (antes 4). El resultado avisa retraso y cortes.
+- **Otros teléfonos:** se pide ubicación (Android 11 o anterior no escanea sin ella) y la app suelta los sticks tras 60 s de fondo, salvo que una pantalla los esté leyendo (`StickHub.hold`). Si un stick no aparece, el aviso dice que puede estar conectado a otro teléfono.
+- **«Calibrar los sticks»** (`screens/calibrate_sticks_screen.dart`, desde el inicio y antes de cada nivel): el chequeo sin lecturas técnicas. Guarda ejes y rango por MAC (`platform/cal_store.dart`). El juego sigue midiendo al empezar; si no hay movimiento suficiente, usa la calibración guardada.
+- **Límite:** sin magnetómetro, la app no sabe si el stick gira en la mano. Conviene marcar el frente del stick.
+- Pruebas: `real_trace_test.dart` con trazas reales (`golden/stick_a_inclinar_cortes.trace`, `golden/stick_b_retraso.trace`). 2.0.0-dev.17+20.
+
 ## 11. Registro
 
 | Fecha | Fase | Nota |
@@ -533,3 +566,5 @@ Con «Sin vista», el usuario y su hermano lograron los niveles 1 a 5 **sin ver 
 | 25-10-2026 | 15 | Opciones para jugar sin vista, todas elegibles en Ajuste y apagadas por defecto: medir por punto, zonas, trazo o zonas y trazo; solo el lado en Espejo e Iguales; pegados al borde no cuenta; campanita de guía; escala común; timbre por lado; quinta gradual; botón «Sin vista» (§15). 15 pruebas nuevas; 232/232. 2.0.0-dev.12+15. |
 | 25-10-2026 | 14 | El punto tiritaba hasta 5–6 s de quietud: bias del giroscopio guardado por MAC, suavizado del modo solo acelerómetro, lectura de los sticks desde la inserción con aviso de quietud (§14). 4 pruebas nuevas; 217/217. 2.0.0-dev.11+14. |
 | 24-10-2026 | 13 | Banco: selector con los 7 niveles (los que en la app dicen «Próximamente» llevan *; el banco puede jugarlos todos) y línea «Por detrás» que explica qué mide el motor en cada relación (incluida la parte actual de «La canción»). 2.0.0-dev.10+13. |
+| 05-11-2026 | 17 | Los 7 niveles abiertos y sin orden; sticks obligatorios antes de jugar; chequeo guiado de sticks en el banco; calibración cortada se reinicia; aviso si no se calibró (§17). 260/260. 2.0.0-dev.14+17. |
+| 05-11-2026 | 18 | Prueba grabada: firmware con 3 muestras por paquete, conexión lenta detectada, filtro recuperado tras cortes, bordes reales en el chequeo, permisos y soltar sticks de fondo, «Calibrar los sticks» para usuarios (§18). 2.0.0-dev.17+20. |

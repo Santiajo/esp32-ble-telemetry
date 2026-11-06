@@ -11,6 +11,7 @@ import '../widgets/v2_ui.dart';
 import 'audio_test_v2_screen.dart';
 import 'bench_screen.dart';
 import 'final_screen.dart';
+import 'calibrate_sticks_screen.dart';
 import 'mode_screen.dart';
 
 /// Inicio (`#home` del prototipo): «Jugar», sesiones pasadas, idea para hoy y
@@ -79,6 +80,7 @@ class _HomeV2State extends State<HomeV2> {
                   PlaySphere(onTap: () => _go(ModeScreen(s: s))),
                   const SizedBox(height: 44),
                   const Text('Elijan un nivel y coloquen el celular en el eje', style: TextStyle(fontSize: 14, color: V2.soft, fontWeight: FontWeight.w600)),
+                  V2.link('Calibrar los sticks', () => unawaited(openCalibration(context, s))),
                 ]),
               ),
               const SizedBox(height: 18),

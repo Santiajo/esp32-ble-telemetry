@@ -36,7 +36,7 @@ SyncEngine playLevel(int levelId, ({double x, double y}) Function(double s, doub
 
 void main() {
   test('los niveles del 1 al 5 están habilitados; el 6 y el 7, no', () {
-    expect(enabledLevelIds, {1, 2, 3, 4, 5});
+    expect(enabledLevelIds, {1, 2, 3, 4, 5, 6, 7});
   });
 
   group('nivel 2 «Espejo»', () {
@@ -82,16 +82,17 @@ void main() {
     });
   });
 
-  test('una sesión recorre del 1 al 5 y termina en el final', () {
+  test('una sesión recorre los 7 niveles, termina la canción y va al final', () {
     final e = SyncEngine(params: pointParams(), closeOnIdle: true, isLevelEnabled: enabledLevelIds.contains);
     e.drive = (now) => synthDrive(e, SynthQuality.sync, now);
     final ev = e.start(mode: PlayMode.levels, now: 0);
-    for (var now = 0.0; now < 90000 && e.running; now += fps) {
+    for (var now = 0.0; now < 300000 && e.running; now += fps) {
       ev.addAll(e.tick(now));
     }
-    expect(ev.whereType<LevelCompletedEvent>().map((x) => x.levelId), [1, 2, 3, 4, 5]);
+    expect(ev.whereType<LevelCompletedEvent>().map((x) => x.levelId), [1, 2, 3, 4, 5, 6, 7]);
     final closed = ev.whereType<SessionClosedEvent>().single;
-    expect(closed.record.levels, [1, 2, 3, 4, 5]);
-    expect(closed.byIdle, isFalse, reason: 'después del 5 no hay otro habilitado: va al final');
+    expect(closed.record.levels, [1, 2, 3, 4, 5, 6, 7]);
+    expect(closed.record.song, isTrue);
+    expect(closed.byIdle, isFalse);
   });
 }
