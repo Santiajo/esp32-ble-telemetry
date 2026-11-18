@@ -213,4 +213,9 @@ Se conecta a la primera (MTU 185, intervalo 15 ms). El retraso un poco mayor es 
   - Conclusión: un cable de alimentación, CS o datos hace mal contacto en el P1. **Para Simón.**
   - El firmware ahora reintenta cada 2 s (luz parpadeando rápido) en vez de trabarse, así que el P1 se recupera solo cuando el contacto vuelve. Además, el P1 no acepta escritura por USB mientras corre un programa: para cargarle firmware hay que borrarlo con esptool y subir `main.py` antes de que arranque.
 - **APK para probar en otros celulares y mandarle a Joaquín:** `entregas/Epu-2.1.0-dev.7.apk` (sin niño simulado ni registro). Las APK no van al repo (`.gitignore`). EPU-5 y EPU-6 vuelven a «En curso» para probar en otros teléfonos.
+- **Otros teléfonos (18-11, APK dev.7):**
+  - Xiaomi: «Conceder permisos» no encendía el Bluetooth y la búsqueda fallaba sin aviso.
+  - Tablet Samsung: no conectó y el stick quedó parpadeando, sin conexión. Causa probable: en Android 11 o anterior la búsqueda Bluetooth no devuelve nada con la Ubicación apagada.
+  - **Arreglo en dev.8** (`FuenteSticksBle.prepararBluetooth`, canal `epu/sistema` en `MainActivity.kt`): pide encender el Bluetooth con el aviso del sistema y, en Android 11 o anterior, si la Ubicación está apagada abre su ajuste. Se revisa al tocar «Conectar sticks» y cada dos búsquedas fallidas.
+  - **Sin probar en esos teléfonos todavía.** APK en `entregas/Epu-2.1.0-dev.8.apk`.
 

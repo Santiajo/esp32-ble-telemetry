@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../balancin/platform/stick_hub.dart';
 import '../balancin/session/board_session.dart' show StickRole;
@@ -69,7 +71,48 @@ class FuenteSticksBle implements FuenteSticks {
   }
 
   @override
-  Future<bool> pedirPermisos() => ensureBlePermissions();
+  Future<bool> pedirPermisos() => prepararBluetooth();
+
+  static const MethodChannel _sistema = MethodChannel('epu/sistema');
+  DateTime? _ultimoAviso;
+
+  /// Deja el teléfono listo para buscar sticks (pruebas en Xiaomi y tablet Samsung, 18-11):
+  /// 1. permisos de Bluetooth;
+  /// 2. si el Bluetooth está apagado, el aviso del sistema para encenderlo;
+  /// 3. en Android 11 o anterior, si la Ubicación está apagada, abre su ajuste: sin
+  ///    ella la búsqueda no devuelve nada aunque el permiso esté dado.
+  /// Repetir los avisos se limita a uno cada 20 s.
+  Future<bool> prepararBluetooth() async {
+    final ok = await ensureBlePermissions();
+    if (!Platform.isAndroid) return ok;
+    final ahora = DateTime.now();
+    if (_ultimoAviso != null && ahora.difference(_ultimoAviso!) < const Duration(seconds: 20)) return ok;
+    _ultimoAviso = ahora;
+    try {
+      final estado = await FlutterBluePlus.adapterState
+          .firstWhere((e) => e != BluetoothAdapterState.unknown)
+          .timeout(const Duration(seconds: 3), onTimeout: () => FlutterBluePlus.adapterStateNow);
+      if (estado != BluetoothAdapterState.on) {
+        await FlutterBluePlus.turnOn();
+        await FlutterBluePlus.adapterState
+            .firstWhere((e) => e == BluetoothAdapterState.on)
+            .timeout(const Duration(seconds: 20));
+      }
+    } catch (_) {
+      // La persona no aceptó encenderlo: se vuelve a pedir en el próximo intento.
+    }
+    try {
+      final sdk = await _sistema.invokeMethod<int>('versionAndroid') ?? 99;
+      if (sdk <= 30 && !(await _sistema.invokeMethod<bool>('ubicacionEncendida') ?? true)) {
+        await _sistema.invokeMethod<bool>('abrirAjusteUbicacion');
+      }
+    } catch (_) {}
+    return ok;
+  }
+
+  /// Hace falta volver a preparar: Bluetooth apagado (o, en Android 11 o anterior,
+  /// sin Ubicación, que se revisa en [prepararBluetooth]).
+  bool get _bluetoothApagado => FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on;
 
   @override
   Stream<Stick> conectar() {
@@ -81,9 +124,14 @@ class FuenteSticksBle implements FuenteSticks {
         await Future<void>.delayed(const Duration(milliseconds: 900));
       } else {
         // Uno a la vez: dos escaneos simultáneos se cortan entre sí.
+        var fallos = 0;
         while (vivo && !hub.isConnected(_rol(s))) {
           final r = await hub.pair(_rol(s));
-          if (r != PairOutcome.paired && vivo) await Future<void>.delayed(const Duration(seconds: 1));
+          if (r == PairOutcome.paired || !vivo) continue;
+          fallos++;
+          // Bluetooth apagado, o varias búsquedas sin nada: volver a revisar el teléfono.
+          if (r == PairOutcome.bluetoothOff || _bluetoothApagado || fallos % 2 == 0) await prepararBluetooth();
+          await Future<void>.delayed(const Duration(seconds: 1));
         }
       }
       if (!vivo) return;
@@ -92,7 +140,8 @@ class FuenteSticksBle implements FuenteSticks {
     }
 
     c.onListen = () async {
-      await pedirPermisos();
+      _ultimoAviso = null; // al tocar «Conectar sticks» se revisa todo de nuevo
+      await prepararBluetooth();
       await uno(Stick.grande);
       await uno(Stick.pequeno);
       if (!vivo) return;
