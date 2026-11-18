@@ -19,11 +19,15 @@ import 'bias_store.dart';
 /// El bias del giroscopio medido se guarda por MAC ([BiasStore]) y el siguiente
 /// `TiltStick` de la misma placa parte con él.
 class TiltStick {
-  TiltStick(this.link, {SyncParams? params}) : reader = TiltReader(params: params) {
+  TiltStick(this.link, {SyncParams? params, AxisMap? ejesFijos}) : reader = TiltReader(params: params, axes: ejesFijos) {
     link.sampleListeners.add(_onSample);
     reader.onBiasMeasured = _onBiasMeasured;
-    unawaited(loadSavedAxes());
-    unawaited(_loadSavedBias());
+    // Con ejes fijos (sticks Epu: el firmware ya manda derecho = +Z, derecha = +X,
+    // adelante = +Y) no se cargan los del asistente ni se deducen de la primera lectura.
+    if (ejesFijos == null) unawaited(loadSavedAxes());
+    // El bias guardado puede venir de otro firmware (otros ejes): con ejes fijos se
+    // vuelve a medir (con el ICM-42688-P basta medio segundo quieto).
+    if (ejesFijos == null) unawaited(_loadSavedBias());
   }
 
   /// Cada cuánto se guarda el bias mientras se sigue afinando (ms).

@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 
 import '../balancin/platform/stick_hub.dart';
 import '../balancin/session/board_session.dart' show StickRole;
+import '../balancin_v2/core/tilt/axis_map.dart';
+import '../balancin_v2/core/tilt/vec3.dart';
 import '../balancin_v2/platform/ble_permissions.dart';
 import '../balancin_v2/platform/tilt_stick.dart';
 import '../epu/juego/fuente_sticks.dart';
@@ -49,7 +51,12 @@ class FuenteSticksBle implements FuenteSticks {
 
   bool _simulado(Stick s) => unStick && s == Stick.pequeno;
 
-  TiltStick _ts(Stick s) => _tilt[s] ??= TiltStick(hub.ensureLink(_rol(s)));
+  TiltStick _ts(Stick s) => _tilt[s] ??= TiltStick(hub.ensureLink(_rol(s)), ejesFijos: ejesEpu);
+
+  /// Ejes de los sticks Epu: el firmware (`AXES` en firmware/epu_stick/main.py) ya
+  /// rota el sensor para mandar derecho = +Z, derecha = +X, adelante = +Y. Fijos:
+  /// no dependen de cómo estaba el stick al conectarlo ni de ejes guardados.
+  static final AxisMap ejesEpu = AxisMap.fromRight(const V3(0, 0, 1), const V3(1, 0, 0))!;
 
   bool conectado(Stick s) => _simulado(s) || hub.isConnected(_rol(s));
 

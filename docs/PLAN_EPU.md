@@ -97,7 +97,9 @@ Cada tarea dice cuándo está lista. Marca `[x]` al verificar.
   - **Frente a frente** (confirmado el 18-11): la pantalla se lee desde el adulto, así que el adelante y la derecha del niño van al revés. Es un ajuste (`AjustesEco.ninoEnfrente`).
   - La pantalla queda encendida durante el juego (`wakelock_plus`).
 - [x] Con un stick, el niño simulado juega solo: si sigue, va a su borde 0,6 s después; si guía, elige uno. Se activa con `EPU_UN_STICK`, igual que en el APK 2.1.0-dev.2 instalado.
-- [ ] Juego con el stick P2 y el niño simulado. *Listo cuando* el nivel 1 se completa de punta a punta en el teléfono y el trozo suena sin retraso notorio.
+- [ ] Juego con el stick P2 y el niño simulado.
+  - **Primera prueba (18-11, dev.2), falló:** la luz solo iba arriba, a la derecha o en diagonal; inclinar hacia uno mismo contaba como adelante. **Causa:** el lector deducía la vertical con el signo de la *primera* lectura; si el stick se conectó acostado o boca abajo, quedaba dada vuelta y todo salía cerca de 180° (el registro mostraba «lateral 215°»). **Arreglo (dev.3):** los sticks Epu usan ejes fijos (`FuenteSticksBle.ejesEpu`: derecho = +Z, derecha = +X, adelante = +Y, que es lo que manda el firmware), sin ejes ni sesgo guardados de antes. Probado en `test/epu/ejes_epu_test.dart`, y el error reproducido sin ejes fijos (180°).
+  - El niño simulado era demasiado rápido: ahora sigue 1,2 s después y elige 2 s después. *Listo cuando* el nivel 1 se completa de punta a punta en el teléfono y el trozo suena sin retraso notorio.
 - [ ] Niveles completados guardados en el teléfono (`shared_preferences`) y arranque sin datos de ejemplo.
 - [ ] APK 2.1.0 instalado en el teléfono de la prueba.
 

@@ -80,9 +80,12 @@ class JuegoEcoReal implements JuegoEco {
 }
 
 /// Niño de mentira para probar con un solo stick (`EPU_UN_STICK`): si sigue, va al
-/// borde que le toca 0,6 s después; si guía, elige un borde 1,2 s después de
+/// borde que le toca 1,2 s después; si guía, elige un borde 2 s después de
 /// volver al centro. Devuelve el vuelco en su propio marco (frente a frente).
 class _NinoSimulado {
+  /// Tiempos de una persona tranquila (con 0,6 s se sentía que imitaba al instante).
+  static const int seguirMs = 1200, elegirMs = 2000;
+
   int _paso = -1;
   double _desde = 0;
   Borde? _objetivoVisto;
@@ -99,7 +102,7 @@ class _NinoSimulado {
     if (guiaNino) {
       if (m.elegido != null) {
         b = m.elegido;
-      } else if (ahora - _desde > 1200) {
+      } else if (ahora - _desde > elegirMs) {
         final opciones = m.permitidos.toList();
         b = opciones[_eleccion % opciones.length];
       }
@@ -108,7 +111,7 @@ class _NinoSimulado {
         _objetivoVisto = m.objetivo;
         _desde = ahora;
       }
-      if (ahora - _desde > 600) b = m.objetivo;
+      if (ahora - _desde > seguirMs) b = m.objetivo;
     }
     if (m.elegido == null && guiaNino && b == null) _eleccion++;
     // Borde de la pantalla → marco del niño, que está enfrente: todo al revés.
