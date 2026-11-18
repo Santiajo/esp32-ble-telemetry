@@ -107,7 +107,12 @@ Cada tarea dice cuándo está lista. Marca `[x]` al verificar.
 - [ ] APK 2.1.0 instalado en el teléfono de la prueba.
 
 ### Sábado 21 · prueba
-- [ ] Dos sticks (P2 + el segundo con `STICK_ROLE = 'B'`) conectados y calibrados a la vez; medir el enlace con los dos en movimiento (§7).
+- [x] **Segundo stick (P1, niño)** listo el 18-11:
+  - Cableado distinto (SCK GPIO6, MISO GPIO7); su programa de prueba bloqueaba la escritura por USB, así que se regrabó con MicroPython 1.29.0 oficial (esptool de Thonny).
+  - El firmware ahora sirve para los dos: reconoce cada placa por su identificador (`PLACAS`) y detecta el cableado (`SPI_PINES`).
+  - Diagnóstico: 100 lecturas/s, ruido 1–2 mg, sesgo < 0,3 °/s, \|g\| 1,002.
+  - Ejes iguales a los del P2, medidos en la mano.
+- [ ] Dos sticks conectados y calibrados a la vez en la app; medir el enlace con los dos en movimiento (§7).
 - [ ] Prueba con una díada, niveles 1 a 4; ajustar umbral, 1 s y 0,3 s.
 - [ ] Colchón: arreglos e instalar la versión de la entrega.
 

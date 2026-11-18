@@ -38,7 +38,8 @@ EJES_DE_CANTO = ((-1, 0), (1, 2), (1, 1))  # X' = −X, Y' = +Z, Z' = +Y (sensor
 PLACAS = {
     # P2: medido en la mano el 18-11-2026: derecho = +Y, derecha = −X, adelante = +Z.
     '146393bdd92c': {'nombre': 'P2', 'rol': 'A', 'ejes': EJES_DE_CANTO},
-    # P1: llegó el 18-11-2026. Ejes por confirmar en la mano.
+    # P1: llegó el 18-11-2026, cableado distinto (SCK 6, MISO 7) pero sensor montado igual:
+    # medido en la mano el 18-11-2026 con EJES_DE_CANTO: derecho Z' +1,0, adelante Y' +1,05, derecha X' +0,95.
     'ac276e8148fc': {'nombre': 'P1', 'rol': 'B', 'ejes': EJES_DE_CANTO},
 }
 ROL_POR_DEFECTO = 'A'            # placa nueva que no está en PLACAS
