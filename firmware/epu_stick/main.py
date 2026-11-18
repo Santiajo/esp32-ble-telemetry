@@ -14,39 +14,54 @@
 #     lectura del sensor, ritmo real y ruido en reposo. Sirve para comparar con el MPU6050
 #     (docs/PLAN_EPU.md §7) y con tools/trace_stats.py.
 #
-# Para el otro stick solo cambia STICK_ROLE.
+# El mismo archivo sirve para los dos sticks: cada placa se reconoce por su
+# identificador (PLACAS) y el cableado del sensor se detecta solo (SPI_PINES).
 # Protocolo: docs/PLAN_BALANCIN.md §3. Plan: docs/PLAN_EPU.md.
 
 import time
 import math
 import struct
+import binascii
 import bluetooth
+import machine
 from machine import I2C, SPI, Pin
 from micropython import const
 
 # ---------------- Configuración ----------------
-STICK_ROLE = 'A'                 # 'A' = adulto · 'B' = niño
+# Ejes del stick. La app espera: stick derecho → gravedad en +Z; punta a la derecha →
+# la gravedad se corre a +X; punta adelante → a +Y (docs/PLAN_BALANCIN.md §3, axis_map.dart).
+# Cada salida es (signo, eje del sensor 0=X 1=Y 2=Z). Tiene que ser una rotación
+# (determinante +1) para que valga igual para el giroscopio.
+EJES_DE_CANTO = ((-1, 0), (1, 2), (1, 1))  # X' = −X, Y' = +Z, Z' = +Y (sensor de canto)
+
+# Cada placa por su identificador (= MAC de Bluetooth). Rol 'A' = adulto, 'B' = niño.
+PLACAS = {
+    # P2: medido en la mano el 18-11-2026: derecho = +Y, derecha = −X, adelante = +Z.
+    '146393bdd92c': {'nombre': 'P2', 'rol': 'A', 'ejes': EJES_DE_CANTO},
+    # P1: llegó el 18-11-2026. Ejes por confirmar en la mano.
+    'ac276e8148fc': {'nombre': 'P1', 'rol': 'B', 'ejes': EJES_DE_CANTO},
+}
+ROL_POR_DEFECTO = 'A'            # placa nueva que no está en PLACAS
+
+PLACA_ID = binascii.hexlify(machine.unique_id()).decode()
+PLACA = PLACAS.get(PLACA_ID, {'nombre': '¿?', 'rol': ROL_POR_DEFECTO, 'ejes': EJES_DE_CANTO})
+STICK_ROLE = PLACA['rol']
 DEVICE_NAME = 'Epu-Adulto' if STICK_ROLE == 'A' else 'Epu-Niño'
-BUS = 'spi'                      # 'spi' (así está cableado el stick P2) o 'i2c'
-# SPI · cableado del stick P2 (verificado en respaldo_p2/main.py y medido el 18-11-2026)
-CS_PIN = 5                       # D3
-SCK_PIN = 4                      # D2
-MISO_PIN = 6                     # D4
-MOSI_PIN = 10                    # D10
+AXES = PLACA['ejes']
+
+BUS = 'spi'                      # 'spi' (así están cableados los sticks) o 'i2c'
+# SPI · cableados conocidos (CS, SCK, MISO, MOSI); se usa el primero donde responde el sensor.
+SPI_PINES = (
+    (5, 4, 6, 10),               # P2: CS D3, SCK D2, MISO D4, MOSI D10 (respaldo_p2/main.py)
+    (5, 6, 7, 10),               # P1: CS D3, SCK D4, MISO D5, MOSI D10 (respaldo_p1/main.py)
+)
 SPI_HZ = 1_000_000               # a 8 MHz también funciona, pero solo ahorra 0,1 ms por lectura
 # I2C (otra forma de cablear el sensor): SDA = D4 (GPIO6), SCL = D5 (GPIO7)
 SDA_PIN = 6
 SCL_PIN = 7
-LED_PIN = 21                     # D6: LED del stick
+LED_PIN = 21                     # D6: LED del stick (igual en P1 y P2)
 LED_ACTIVE_LOW = False
 SELFTEST_MS = 3000               # autodiagnóstico al arrancar; 0 lo salta
-
-# Ejes del stick. La app espera: stick derecho → gravedad en +Z; punta a la derecha →
-# la gravedad se corre a +X; punta adelante → a +Y (docs/PLAN_BALANCIN.md §3, axis_map.dart).
-# En el stick P2 el sensor va de canto (medido en la mano el 18-11-2026): derecho = +Y,
-# derecha = −X, adelante = +Z. Cada salida es (signo, eje del sensor 0=X 1=Y 2=Z).
-# Es una rotación (determinante +1), así que vale igual para el giroscopio.
-AXES = ((-1, 0), (1, 2), (1, 1))  # X' = −X, Y' = +Z, Z' = +Y
 RATE_HZ = 100
 BATCH_SAMPLES = 3                # muestras por paquete BLE (3 líneas caben con MTU 185)
 CONGESTED_MS = 2000              # tiempo con la mitad de las muestras tras una congestión
@@ -150,19 +165,22 @@ class ICM42688:
 def open_bus():
     """Abre el bus configurado y comprueba que responda un ICM-42688-P. Devuelve el bus o None."""
     if BUS == 'spi':
-        spi = SPI(1, baudrate=SPI_HZ, polarity=0, phase=0,
-                  sck=Pin(SCK_PIN), mosi=Pin(MOSI_PIN), miso=Pin(MISO_PIN))
-        bus = BusSPI(spi, Pin(CS_PIN, Pin.OUT, value=1))
-        who = 0
-        for _ in range(3):       # la primera transacción pasa el sensor a modo SPI
-            bus.write(_REG_BANK_SEL, 0x00)
-            time.sleep_ms(10)
-            who = bus.read1(_WHO_AM_I)
+        for cs, sck, miso, mosi in SPI_PINES:
+            spi = SPI(1, baudrate=SPI_HZ, polarity=0, phase=0, sck=Pin(sck), mosi=Pin(mosi), miso=Pin(miso))
+            bus = BusSPI(spi, Pin(cs, Pin.OUT, value=1))
+            who = 0
+            for _ in range(3):   # la primera transacción pasa el sensor a modo SPI
+                bus.write(_REG_BANK_SEL, 0x00)
+                time.sleep_ms(10)
+                who = bus.read1(_WHO_AM_I)
+                if who == _ICM_ID:
+                    break
+                time.sleep_ms(50)
+            print('[SPI] WHO_AM_I = 0x%02X (CS %d, SCK %d, MISO %d, MOSI %d)' % (who, cs, sck, miso, mosi))
             if who == _ICM_ID:
-                break
-            time.sleep_ms(50)
-        print('[SPI] WHO_AM_I = 0x%02X (SCK %d, MISO %d, MOSI %d, CS %d)' % (who, SCK_PIN, MISO_PIN, MOSI_PIN, CS_PIN))
-        return bus if who == _ICM_ID else None
+                return bus
+            spi.deinit()
+        return None
     i2c = I2C(0, scl=Pin(SCL_PIN), sda=Pin(SDA_PIN), freq=400_000)
     found = i2c.scan()
     print('[I2C] detectado:', [hex(d) for d in found])
@@ -365,6 +383,7 @@ def fail_forever(led, msg):
 
 def main():
     led = Led(LED_PIN)
+    print('[PLACA] %s (%s) · rol %s · %s' % (PLACA['nombre'], PLACA_ID, STICK_ROLE, DEVICE_NAME))
     bus = open_bus()
     if bus is None:
         fail_forever(led, 'ERROR: ICM-42688-P no responde por %s. Revisar pines (arriba en Configuración), VCC->3V3, GND->GND'
