@@ -29,6 +29,23 @@ double peakIn(Float64List s, double fromS, double toS) {
 }
 
 void main() {
+  group('las voces no quedan sonando', () {
+    test('silence con un solo paso dejaba la voz sonando; mute la deja en 0', () {
+      final l = AudioLayers()
+        ..adultGain.value = 0.12
+        ..relGain.value = 0.045
+        ..fifthGain.value = 0.02;
+      l
+        ..silence()
+        ..advance(0.3);
+      expect(l.adultGain.value, greaterThan(0.04), reason: 'esto quedaba sonando al salir de la pantalla');
+      l.mute();
+      expect(l.voices.every((v) => v.amp == 0), isTrue);
+      l.advance(1);
+      expect(l.voices.every((v) => v.amp == 0), isTrue, reason: 'sigue en silencio');
+    });
+  });
+
   group('EQ del prototipo', () {
     test('casi plana en la zona media, corta graves y agudos', () {
       expect(eqGainDb(440).abs(), lessThan(1.5));

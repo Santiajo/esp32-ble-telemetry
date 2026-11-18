@@ -44,6 +44,7 @@ void _deepClose(String what, Object? actual, Object? expected) {
     }
   } else if (expected is Map && actual is Map) {
     for (final k in expected.keys) {
+      if (k == 'text') continue; // las consignas cambiaron a propósito (§21); su momento sí se compara
       _deepClose('$what.$k', actual[k], expected[k]);
     }
   } else {

@@ -22,7 +22,6 @@ import '../core/telemetry.dart';
 import '../platform/audio_engine_v2.dart';
 import '../platform/ble_permissions.dart';
 import '../platform/bench_store.dart';
-import '../platform/cal_store.dart';
 import '../platform/share_file.dart';
 import '../platform/tilt_stick.dart';
 import '../platform/voice_prompts.dart';
@@ -142,8 +141,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     if (widget.audio == null) {
       unawaited(_audio.release());
     } else {
-      _layers.silence();
-      _audio.frame(_layers, 0.3); // las voces continuas bajan a 0 antes de salir
+      _audio.hush(_layers);
     }
     super.dispose();
   }
@@ -298,8 +296,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     if (!await _useStick(role) || !mounted) return;
     final stick = _sticks[role]!;
     final name = role == Role.adult ? 'A' : 'B';
-    _layers.silence();
-    _audio.frame(_layers, 0.3); // el banco no corre debajo: las voces bajan antes de salir
+    _audio.hush(_layers);
     final cal = await Navigator.of(context).push<StickCal>(MaterialPageRoute(
       builder: (_) => StickCheckScreen(
         role: role,
@@ -315,7 +312,6 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     await _setSource(role, BenchSource.stick);
     if (cal == null) return;
     _e.stick(role).cal = cal;
-    unawaited(CalStore.save(stick.link.savedMac, cal));
     _addLog('chequeo de ${roleNames[role]}: rango ±${cal.hrY.round()}° adelante, ±${cal.hrX.round()}° a los lados');
   }
 
@@ -573,7 +569,12 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
           'mismo trazo en ${(p.traceWinMs / 1000).toStringAsFixed(1)} s '
               '(parecido ${e.traceSimilarity(rel, AppClock.nowMs()).toStringAsFixed(2)} de ${p.traceMin.toStringAsFixed(2)})',
       ];
-      final side = p.sideOnly > 0 && (rel == Relation.mirror || rel == Relation.same) ? ', solo el lado' : '';
+      final point = rel == Relation.same && p.samePoint > 0;
+      final side = point
+          ? ', mismo punto físico'
+          : p.sideOnly > 0 && (rel == Relation.mirror || rel == Relation.same)
+              ? ', solo el lado'
+              : '';
       return '${relationNames[rel] ?? 'Libre'} por ${matchModeNames[mode]}: ${parts.join(' y ')}$side. Guía ${roleNames[e.guide]}.';
     }
     final lag = p.syncLagMs.round();
@@ -582,8 +583,10 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
       Relation.free => 'Libre: d = la más cercana entre juntos, espejo y sube y baja (±$lag ms).',
       Relation.together => 'Juntos: d = diferencia de altura (y de velocidad), tolerando ±$lag ms de desfase. Guía $g.',
       Relation.mirror => 'Espejo: misma altura y lados opuestos (x del niño = −x del adulto), ±$lag ms. Guía $g.',
-      Relation.same => 'Iguales: misma altura y mismo lado (el punto del niño sobre el del adulto), ±$lag ms. Guía $g.',
-      Relation.seesaw => 'Sube y baja: alturas opuestas (y del niño = −y del adulto), ±$lag ms. Guía $g.',
+      Relation.same => p.samePoint > 0
+          ? 'Iguales: el mismo punto físico (lado y altura opuestos para cada uno), ±$lag ms. Guía $g.'
+          : 'Iguales: misma altura y mismo lado (el punto del niño sobre el del adulto), ±$lag ms. Guía $g.',
+      Relation.seesaw => 'Señalados: alturas opuestas (y del niño = −y del adulto), ±$lag ms. Guía $g.',
       Relation.pulse =>
         'Mismo pulso: compara el ritmo (vaivenes por segundo) de los dos, no la posición. Necesita balanceos de amplitud ≥ 1.',
       Relation.follow =>

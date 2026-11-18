@@ -18,8 +18,8 @@ const fps = 1000 / 60;
 
 /// Juega solo el nivel [levelId] (sin seguir al siguiente) con el adulto en una
 /// curva 2D y el niño según [child]. Devuelve el motor al final.
-SyncEngine playLevel(int levelId, ({double x, double y}) Function(double s, double ax, double ay) child, {double seconds = 20}) {
-  final e = SyncEngine(params: pointParams()..autoNext = 0, isLevelEnabled: enabledLevelIds.contains);
+SyncEngine playLevel(int levelId, ({double x, double y}) Function(double s, double ax, double ay) child, {double seconds = 20, SyncParams? params}) {
+  final e = SyncEngine(params: params ?? (pointParams()..autoNext = 0), isLevelEnabled: enabledLevelIds.contains);
   e.drive = (now) {
     final s = now / 1000;
     final ax = 4 * math.sin(2 * math.pi * 0.5 * s), ay = 3 * math.sin(2 * math.pi * 0.8 * s + 0.5);
@@ -66,19 +66,24 @@ void main() {
   });
 
   group('nivel 3 «Iguales»', () {
-    test('inclinándose igual se logra', () {
-      final e = playLevel(3, (s, ax, ay) => (x: ax, y: ay));
+    test('apuntando al mismo punto se logra: lado y altura opuestos para cada uno', () {
+      final e = playLevel(3, (s, ax, ay) => (x: -ax, y: -ay));
       expect(e.levelsDone, [3]);
     });
 
-    test('en espejo (lado contrario) no se logra', () {
+    test('la misma posición para cada uno son puntos opuestos: no se logra', () {
+      final e = playLevel(3, (s, ax, ay) => (x: ax, y: ay));
+      expect(e.levelsDone, isEmpty);
+    });
+
+    test('hay que acertar los dos ejes: solo el lado no basta si la altura no calza', () {
       final e = playLevel(3, (s, ax, ay) => (x: -ax, y: ay));
       expect(e.levelsDone, isEmpty);
     });
 
-    test('es más exigente que el 1: misma altura pero otro lado no basta', () {
-      final e = playLevel(3, (s, ax, ay) => (x: 0, y: ay));
-      expect(e.levelsDone, isEmpty);
+    test('apagado, mide como el prototipo', () {
+      final e = playLevel(3, (s, ax, ay) => (x: ax, y: ay), params: pointParams()..autoNext = 0..samePoint = 0);
+      expect(e.levelsDone, [3]);
     });
   });
 

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../app_v2.dart';
 import '../core/levels.dart';
+import '../core/stick_state.dart';
 import '../core/sync_engine.dart';
 import '../platform/tilt_stick.dart';
 import '../widgets/v2_ui.dart';
@@ -17,10 +18,13 @@ import 'play_eje_screen.dart';
 /// sticks quietos, el lector mide el error del giroscopio y el juego empieza
 /// sin que el punto tirite. Los [TiltStick] pasan al [PlayEjeScreen].
 class InsertV2Screen extends StatefulWidget {
-  const InsertV2Screen({super.key, required this.s, required this.mode, this.levelIndex = 0});
+  const InsertV2Screen({super.key, required this.s, required this.mode, required this.cals, this.levelIndex = 0});
   final V2Services s;
   final PlayMode mode;
   final int levelIndex;
+
+  /// Calibración recién hecha de cada stick.
+  final Map<Role, StickCal> cals;
 
   @override
   State<InsertV2Screen> createState() => _InsertV2ScreenState();
@@ -54,7 +58,7 @@ class _InsertV2ScreenState extends State<InsertV2Screen> with TickerProviderStat
     await Navigator.of(context).pushReplacement(PageRouteBuilder<void>(
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (_, _, _) =>
-          PlayEjeScreen(s: widget.s, mode: widget.mode, levelIndex: widget.levelIndex, sticks: sticks),
+          PlayEjeScreen(s: widget.s, mode: widget.mode, cals: widget.cals, levelIndex: widget.levelIndex, sticks: sticks),
       transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
     ));
   }
@@ -109,13 +113,12 @@ class _InsertV2ScreenState extends State<InsertV2Screen> with TickerProviderStat
                 const SizedBox(height: 8),
                 Text(l == null ? 'Modo libre' : 'Nivel ${l.id} · ${l.name}', style: V2.kicker),
                 const SizedBox(height: 8),
-                // Sin voz de consignas, este es el único aviso: quietos ahora (giroscopio) y
-                // movimiento libre al entrar al eje (rango, 6 s).
+                // Sin voz de consignas, este es el único aviso. La campanita marca el comienzo.
                 const SizedBox(
                   width: 300,
                   child: Text(
                       'Mientras colocan el celular, dejen los sticks quietos. '
-                      'Al empezar, muévanse libremente unos segundos: arriba, abajo y hacia los lados.',
+                      'Cuando suene la campanita, empiezan a jugar.',
                       textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: V2.mute, fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(height: 16),

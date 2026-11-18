@@ -153,6 +153,9 @@ class SyncEngine {
   int part = 0;
   EngineState state = EngineState.idle;
   double prog = 0;
+
+  /// Lo más lejos que llegaron en el nivel actual (0–1).
+  double bestProgress = 0;
   bool inSync = false;
   double d = 6;
   Role guide = Role.adult;
@@ -397,6 +400,14 @@ class SyncEngine {
           }
         }
       }
+      if (state == EngineState.playing && l != null) {
+        final done = l.isSong ? (part + progFraction) / l.parts.length : progFraction;
+        if (done > bestProgress) bestProgress = done;
+        if (closeOnIdle && p.levelLimit > 0 && lt.juego >= p.levelLimit) {
+          _close(now, byIdle: false);
+          return _flush();
+        }
+      }
       if (both && now - _lagT > 500) {
         _lagT = now;
         final ll = leadLag(adult, child, now);
@@ -428,16 +439,25 @@ class SyncEngine {
   double syncDistance(Relation rel, double t) {
     if (_positional(rel) && params.usesTrace) {
       final tr = _traceDistance(rel, t);
-      return params.usesZones ? math.max(tr, _pointDistance(rel, t)) : tr;
+      return params.usesZones ? math.max(tr, _zoned(rel, t)) : tr;
     }
-    return _pointDistance(rel, t);
+    return _positional(rel) ? _zoned(rel, t) : _pointDistance(rel, t);
   }
+
+  /// §20: en zonas exactas, salir de la franja queda fuera de la tolerancia y de la histéresis.
+  double _zoned(Relation rel, double t) {
+    final d = _pointDistance(rel, t);
+    return params.usesZones && params.zoneStrict > 0 && d > 0 ? d + params.hyst * tol : d;
+  }
+
+  /// La velocidad solo pesa al medir por punto: zonas y trazo no la usan.
+  double get _velWeight => params.usesZones ? 0 : params.velWeight;
 
   /// `d` por posición: punto (prototipo y §12) o zonas (§15).
   double _pointDistance(Relation rel, double t) {
     if (params.syncLagMs > 0 && rel != Relation.pulse && rel != Relation.follow) return _lagDistance(rel, t);
     final base = _positionDistance(rel, t);
-    final w = params.velWeight;
+    final w = _velWeight;
     if (w <= 0) return base;
     // §12.2: la sincronía mira también la velocidad (misma transformación que la posición).
     final pv = adult.vel, cv = child.vel;
@@ -445,7 +465,7 @@ class SyncEngine {
       Relation.together => (cv.y - pv.y).abs(),
       Relation.seesaw => (cv.y + pv.y).abs(),
       Relation.mirror => _side ? (cv.x + pv.x).abs() : _hypot(cv.x + pv.x, cv.y - pv.y),
-      Relation.same => _side ? (cv.x - pv.x).abs() : _hypot(cv.x - pv.x, cv.y - pv.y),
+      Relation.same => _samePoint ? _hypot(cv.x + pv.x, cv.y + pv.y) : (_side ? (cv.x - pv.x).abs() : _hypot(cv.x - pv.x, cv.y - pv.y)),
       Relation.free || Relation.song => [
           (cv.y - pv.y).abs(),
           _hypot(cv.x + pv.x, cv.y - pv.y),
@@ -463,7 +483,7 @@ class SyncEngine {
   /// medida en esos mismos 100 ms. Así un mismo gesto con un pequeño desfase
   /// cuenta como sincronía a cualquier velocidad; un gesto distinto, no.
   double _lagDistance(Relation rel, double t) {
-    final maxLag = params.syncLagMs, w = params.velWeight;
+    final maxLag = params.syncLagMs, w = _velWeight;
     const stepMs = 20.0, spanMs = 100.0;
     const offsets = [0.0, 25.0, 50.0, 75.0, 100.0];
     var best = double.infinity;
@@ -492,7 +512,7 @@ class SyncEngine {
       Relation.together => (c.y - p.y).abs(),
       Relation.seesaw => (c.y + p.y).abs(),
       Relation.mirror => _side ? (c.x + p.x).abs() : _hypot(c.x + p.x, c.y - p.y),
-      Relation.same => _side ? (c.x - p.x).abs() : _hypot(c.x - p.x, c.y - p.y),
+      Relation.same => _samePoint ? _hypot(c.x + p.x, c.y + p.y) : (_side ? (c.x - p.x).abs() : _hypot(c.x - p.x, c.y - p.y)),
       _ => [
           (c.y - p.y).abs() + (c.x - p.x).abs() * 0.5,
           _hypot(c.x + p.x, c.y - p.y),
@@ -505,7 +525,7 @@ class SyncEngine {
         Relation.together => (cv.y - pv.y).abs(),
         Relation.seesaw => (cv.y + pv.y).abs(),
         Relation.mirror => _side ? (cv.x + pv.x).abs() : _hypot(cv.x + pv.x, cv.y - pv.y),
-        Relation.same => _side ? (cv.x - pv.x).abs() : _hypot(cv.x - pv.x, cv.y - pv.y),
+        Relation.same => _samePoint ? _hypot(cv.x + pv.x, cv.y + pv.y) : (_side ? (cv.x - pv.x).abs() : _hypot(cv.x - pv.x, cv.y - pv.y)),
         _ => [(cv.y - pv.y).abs(), _hypot(cv.x + pv.x, cv.y - pv.y), (cv.y + pv.y).abs()].reduce(math.min),
       };
 
@@ -520,6 +540,7 @@ class SyncEngine {
       case Relation.mirror:
         return _side ? (c.x + p.x).abs() : _hypot(c.x + p.x, c.y - p.y);
       case Relation.same:
+        if (_samePoint) return _hypot(c.x + p.x, c.y + p.y);
         return _side ? (c.x - p.x).abs() : _hypot(c.x - p.x, c.y - p.y);
       case Relation.pulse:
         final ra = adult.rhythm(t, params), rc = child.rhythm(t, params);
@@ -555,7 +576,7 @@ class SyncEngine {
       Relation.together => P2(c.x, p.y),
       Relation.seesaw => P2(c.x, -p.y),
       Relation.mirror => P2(-p.x, _side ? c.y : p.y),
-      Relation.same => P2(p.x, _side ? c.y : p.y),
+      Relation.same => _samePoint ? P2(-p.x, -p.y) : P2(p.x, _side ? c.y : p.y),
       Relation.follow => guide == Role.adult ? adult.at(now - 500) : null,
       _ => null,
     };
@@ -565,12 +586,16 @@ class SyncEngine {
 
   bool get _side => params.sideOnly > 0;
 
+  /// §22: «Iguales» pide el mismo punto físico, con los dos ejes.
+  bool get _samePoint => params.samePoint > 0;
+
   static bool _positional(Relation rel) => rel != Relation.pulse && rel != Relation.follow;
 
   /// Ejes que mide la relación: (x, y).
   (bool, bool) _axesOf(Relation rel) => switch (rel) {
         Relation.together || Relation.seesaw => (false, true),
-        Relation.mirror || Relation.same => (true, !_side),
+        Relation.mirror => (true, !_side),
+        Relation.same => (true, _samePoint || !_side),
         Relation.free || Relation.song => (false, true),
         Relation.pulse || Relation.follow => (false, false),
       };
@@ -600,7 +625,9 @@ class SyncEngine {
         Relation.together => _zoneGap(p.y, c.y),
         Relation.seesaw => _zoneGap(-p.y, c.y),
         Relation.mirror => _side ? _zoneGap(-p.x, c.x) : _hypot(_zoneGap(-p.x, c.x), _zoneGap(p.y, c.y)),
-        Relation.same => _side ? _zoneGap(p.x, c.x) : _hypot(_zoneGap(p.x, c.x), _zoneGap(p.y, c.y)),
+        Relation.same => _samePoint
+            ? _hypot(_zoneGap(-p.x, c.x), _zoneGap(-p.y, c.y))
+            : (_side ? _zoneGap(p.x, c.x) : _hypot(_zoneGap(p.x, c.x), _zoneGap(p.y, c.y))),
         _ => [_zoneGap(p.y, c.y), _hypot(_zoneGap(-p.x, c.x), _zoneGap(p.y, c.y)), _zoneGap(-p.y, c.y)].reduce(math.min),
       };
 
@@ -613,7 +640,7 @@ class SyncEngine {
       Relation.together => (all, _band(p.y)),
       Relation.seesaw => (all, _band(-p.y)),
       Relation.mirror => (_band(-p.x), _side ? all : _band(p.y)),
-      Relation.same => (_band(p.x), _side ? all : _band(p.y)),
+      Relation.same => _samePoint ? (_band(-p.x), _band(-p.y)) : (_band(p.x), _side ? all : _band(p.y)),
       _ => null,
     };
     if (box == null) return null;
@@ -649,7 +676,8 @@ class SyncEngine {
       return [Relation.together, Relation.mirror, Relation.seesaw].map((r) => traceSimilarity(r, t)).reduce(math.max);
     }
     final (ax, ay) = _axesOf(rel);
-    final sx = rel == Relation.mirror ? -1.0 : 1.0, sy = rel == Relation.seesaw ? -1.0 : 1.0;
+    final point = rel == Relation.same && _samePoint;
+    final sx = rel == Relation.mirror || point ? -1.0 : 1.0, sy = rel == Relation.seesaw || point ? -1.0 : 1.0;
     final n = math.max(4, (params.traceWinMs / _traceStepMs).round());
     final maxShift = (params.syncLagMs / _traceStepMs).round();
     final a = _samples(adult, t, n + maxShift + 1), c = _samples(child, t, n + maxShift + 1);
@@ -701,6 +729,7 @@ class SyncEngine {
     final lags = levelTelemetry.where((l) => l.lagN > 0).toList();
     final lead = lags.isEmpty ? null : lags.map((l) => l.lagS / l.lagN).reduce((a, b) => a + b) / lags.length;
     final step = math.max(1, (traj.length / 300).ceil());
+    final unfinished = state == EngineState.playing ? level : null;
     return SessionRecord(
       t: wallClock().millisecondsSinceEpoch,
       mode: mode == PlayMode.free ? 'free' : 'levels',
@@ -710,6 +739,8 @@ class SyncEngine {
       song: song,
       lead: lead,
       traj: [for (var i = 0; i < traj.length; i += step) traj[i]],
+      levelId: unfinished?.id,
+      levelPct: unfinished == null ? null : bestProgress,
     );
   }
 
@@ -755,8 +786,12 @@ class SyncEngine {
     }
     adult.cal = c.result(Role.adult, params);
     child.cal = c.result(Role.child, params);
-    adult.resetEdgeStats();
-    child.resetEdgeStats();
+    adult
+      ..resetEdgeStats()
+      ..clearFollow();
+    child
+      ..resetEdgeStats()
+      ..clearFollow();
     _cal = null;
     _emit(CalibrationDoneEvent(now, adult.cal, child.cal));
     _beginPlay(now);
@@ -777,6 +812,7 @@ class SyncEngine {
     final l = level!;
     state = EngineState.playing;
     prog = 0;
+    bestProgress = 0;
     part = 0;
     guide = l.firstGuide;
     _guideSwitched = false;

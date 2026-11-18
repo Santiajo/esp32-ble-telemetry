@@ -78,6 +78,16 @@ class StickState {
   double timeWithData = 0;
   double timeAtEdge = 0;
 
+  /// §19: cuánto se corrió el rango (°) por pasarse del borde, y la última inclinación.
+  double _shiftX = 0, _shiftY = 0;
+  double _lastTx = 0, _lastTy = 0;
+
+  /// Lo corrido se devuelve al mover el stick, nunca estando quieto: el punto no deriva.
+  static const double followRecover = 0.25;
+
+  /// El rango se corre como mucho la mitad de su largo.
+  static const double followMax = 0.5;
+
   void reset() {
     tilt = P2.zero;
     raw = P2.zero;
@@ -85,6 +95,7 @@ class StickState {
     overflow = P2.zero;
     vel = P2.zero;
     history.clear();
+    clearFollow();
     lastActive = -1e9;
     speed = 0;
     has = false;
@@ -96,13 +107,42 @@ class StickState {
   /// Inclinación en grados. Las lecturas no finitas se descartan.
   void feedTilt(double tx, double ty, SyncParams p) {
     if (!tx.isFinite || !ty.isFinite) return;
+    final r = range(p);
+    if (p.edgeFollow > 0 && has) {
+      _shiftX = _follow(_shiftX, tx - r.cx, r.hrX, (tx - _lastTx).abs());
+      _shiftY = _follow(_shiftY, ty - r.cy, r.hrY, (ty - _lastTy).abs());
+    }
     has = true;
     tilt = P2(tx, ty);
-    final r = range(p);
+    _lastTx = tx;
+    _lastTy = ty;
     final ux = planeLimit * (tx - r.cx) / r.hrX;
     final uy = planeLimit * (ty - r.cy) / r.hrY;
-    raw = P2(_clamp(ux, -planeLimit, planeLimit), _clamp(uy, -planeLimit, planeLimit));
-    overflow = P2(ux - raw.x, uy - raw.y);
+    final sx = planeLimit * _shiftX / r.hrX, sy = planeLimit * _shiftY / r.hrY;
+    raw = P2(_clamp(ux - sx, -planeLimit, planeLimit), _clamp(uy - sy, -planeLimit, planeLimit));
+    // El desborde se mide contra el rango calibrado: la marca y el % en el borde no cambian.
+    overflow = P2(raw.x.abs() < planeLimit ? 0 : ux - raw.x, raw.y.abs() < planeLimit ? 0 : uy - raw.y);
+  }
+
+  /// [off] = inclinación respecto del centro (°), [hr] = medio rango, [moved] = lo que se
+  /// movió el stick desde la lectura anterior (°).
+  static double _follow(double shift, double off, double hr, double moved) {
+    final over = off - shift;
+    if (over > hr) {
+      shift = off - hr;
+    } else if (over < -hr) {
+      shift = off + hr;
+    } else {
+      final back = moved * followRecover;
+      shift = shift.abs() <= back ? 0 : shift - back * shift.sign;
+    }
+    return _clamp(shift, -hr * followMax, hr * followMax);
+  }
+
+  /// Vuelve al rango calibrado, sin corrimiento.
+  void clearFollow() {
+    _shiftX = 0;
+    _shiftY = 0;
   }
 
   bool get atEdge => overflow.x != 0 || overflow.y != 0;

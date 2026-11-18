@@ -63,7 +63,13 @@ class SessionRecord {
     required this.song,
     required this.lead,
     required this.traj,
+    this.levelId,
+    this.levelPct,
   });
+
+  /// Nivel que quedó sin lograr al cerrar y lo más lejos que llegaron en él (0–1).
+  final int? levelId;
+  final double? levelPct;
 
   /// Fin de la sesión (ms desde epoch).
   final int t;
@@ -92,6 +98,8 @@ class SessionRecord {
         'song': song,
         'lead': lead,
         'traj': traj,
+        if (levelId != null) 'levelId': levelId,
+        if (levelPct != null) 'levelPct': levelPct,
       };
 
   factory SessionRecord.fromJson(Map<String, Object?> j) => SessionRecord(
@@ -105,5 +113,7 @@ class SessionRecord {
         traj: [
           for (final p in j['traj'] as List) [for (final v in p as List) (v as num).toDouble()]
         ],
+        levelId: (j['levelId'] as num?)?.toInt(),
+        levelPct: (j['levelPct'] as num?)?.toDouble(),
       );
 }

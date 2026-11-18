@@ -544,6 +544,31 @@ Cinco archivos reales (2 chequeos, 3 pasadas del nivel 1). Rompe la decisión V6
 - **Límite:** sin magnetómetro, la app no sabe si el stick gira en la mano. Conviene marcar el frente del stick.
 - Pruebas: `real_trace_test.dart` con trazas reales (`golden/stick_a_inclinar_cortes.trace`, `golden/stick_b_retraso.trace`). 2.0.0-dev.17+20.
 
+## 19. Sonido, inicio directo, borde y calibración obligatoria (06-11-2026)
+
+- **Sonido que no paraba:** las voces continuas de SoLoud siguen sonando al último volumen hasta que alguien lo cambie. Al salir de una pantalla se hacía `silence()` y un solo paso de 0,3 s, que deja ~37 %; después nadie avanzaba las curvas. `AudioEngineV2.hush` las deja en 0. Con la app de fondo el `Ticker` se detiene: `didChangeAppLifecycleState` las silencia y `frame` no las vuelve a subir hasta `resumed`.
+- **Inicio:** «Jugar» va directo a los niveles. Se quitan la elección de modo (`mode_screen.dart`) y «Idea para hoy». Libre sigue en el banco.
+- **Borde** (`edgeFollow`, encendido; `SyncParams.prototype()` lo apaga): pasarse del rango corre el límite con el stick, hasta la mitad del rango. Al devolverse, el punto se mueve de inmediato en vez de esperar a reentrar. Lo corrido se recupera solo al mover el stick (25 % de cada grado), así que quieto no deriva. El desborde se sigue midiendo contra el rango calibrado.
+- **Calibración obligatoria:** la opción suelta se quita. Toda partida pasa por `openLevel`: sticks conectados → «Calibren los sticks» (los dos, sin guardar de una vez a otra) → inserción → juego. El juego usa esa calibración y ya no mide 6 s al empezar; suena la campanita al comenzar. Al lograr un nivel la sesión cierra, porque el siguiente también se entra calibrando. El banco no cambia. 2.0.0-dev.18+21.
+
+## 20. Solo zonas y trazo, y ejes revisados al calibrar (06-11-2026)
+
+- **Medición:** con `matchMode` 3 la sincronía ya no usa nada del punto. La velocidad no pesa en zonas (`velWeight` solo vale para punto) y con `zoneStrict` (encendido) salir de la franja es estar fuera, sin el margen de `tol` ni la histéresis. Sigue la tolerancia de retraso `syncLagMs`. «Mismo pulso» y «Sígueme» miden ritmo y copia, como antes.
+- **Ejes** (`StickCheck.verifyAxes`, en la calibración de usuarios; `axisCheck` lo apaga): el stick debe estar vertical, y el gesto de cada paso debe ir a menos de 50° del eje esperado. Si no, se avisa en el momento, el gesto no cuenta y al agotarse el paso queda «Eje incorrecto», sin calibrar. Ejes esperados, medidos en los chequeos reales de los sticks A y B: adelante = −X y derecha = +Y del sensor, con Z vertical. El banco no lo exige.
+- Un stick montado distinto no pasará: hay que medirlo y ajustar `expectedForward` y `expectedRight`, o apagar `axisCheck` en Ajuste.
+- **Al actualizar:** `BenchStore.paramsVersion` 3 pasa una vez a tercios y trazo lo guardado en cada teléfono; lo demás de Ajuste se conserva.
+- Pruebas: `chequeo_a.trace` y `chequeo_b.trace` (gestos reales, y los mismos con el sensor girado 90°). 2.0.0-dev.19+22.
+
+## 21. Textos nuevos y tiempo por nivel (06-11-2026)
+
+- **Textos:** consignas nuevas de los 7 niveles, y el nivel 4 pasa a llamarse «Señalados». La medición no cambia.
+- **Iguales quedaba desalineado:** el texto dice «al mismo punto de la pieza», pero medía la misma posición en el marco de cada persona. Se corrige en §22.
+- **Tiempo por nivel** (`levelLimit`, 40 s de juego, solo flujo de usuario): al pasar, la sesión cierra y el final muestra el % más alto alcanzado (`SessionRecord.levelId`, `levelPct`). En «La canción» el límite vale para las cuatro partes juntas. 2.0.0-dev.20+23.
+
+## 22. «Iguales» mide el mismo punto (06-11-2026)
+
+`samePoint` (encendido; `SyncParams.prototype()` lo apaga): frente a frente, apuntar al mismo punto físico deja lado y adelante-atrás opuestos en el marco de cada uno, así que Iguales compara `c = (−p.x, −p.y)`. Usa los dos ejes aunque `sideOnly` esté encendido. Cada uno hacia su propia derecha ya no cuenta. Se apaga en Ajuste con «Iguales: mismo punto». 2.0.0-dev.21+24, en un APK aparte de dev.20.
+
 ## 11. Registro
 
 | Fecha | Fase | Nota |
@@ -568,3 +593,7 @@ Cinco archivos reales (2 chequeos, 3 pasadas del nivel 1). Rompe la decisión V6
 | 24-10-2026 | 13 | Banco: selector con los 7 niveles (los que en la app dicen «Próximamente» llevan *; el banco puede jugarlos todos) y línea «Por detrás» que explica qué mide el motor en cada relación (incluida la parte actual de «La canción»). 2.0.0-dev.10+13. |
 | 05-11-2026 | 17 | Los 7 niveles abiertos y sin orden; sticks obligatorios antes de jugar; chequeo guiado de sticks en el banco; calibración cortada se reinicia; aviso si no se calibró (§17). 260/260. 2.0.0-dev.14+17. |
 | 05-11-2026 | 18 | Prueba grabada: firmware con 3 muestras por paquete, conexión lenta detectada, filtro recuperado tras cortes, bordes reales en el chequeo, permisos y soltar sticks de fondo, «Calibrar los sticks» para usuarios (§18). 2.0.0-dev.17+20. |
+| 06-11-2026 | 19 | Voces continuas que no quedan sonando; Jugar directo a niveles, sin Libre ni ideas; volver del borde sin espera; calibración obligatoria en cada nivel (§19). 2.0.0-dev.18+21. |
+| 06-11-2026 | 20 | Solo zonas y trazo; ejes revisados en la calibración de usuarios (§20). 2.0.0-dev.19+22. |
+| 06-11-2026 | 21 | Textos nuevos y «Señalados»; cierre a los 40 s con el % logrado (§21). 2.0.0-dev.20+23. |
+| 06-11-2026 | 22 | «Iguales» mide el mismo punto físico (§22). 2.0.0-dev.21+24. |

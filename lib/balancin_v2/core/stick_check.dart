@@ -78,7 +78,7 @@ class StickSnapshot {
 }
 
 class StickCheck {
-  StickCheck({required this.role, required this.params, this.onAxes}) : plane = StickState(role);
+  StickCheck({required this.role, required this.params, this.onAxes, this.verifyAxes = false}) : plane = StickState(role);
 
   final Role role;
   final SyncParams params;
@@ -86,8 +86,26 @@ class StickCheck {
   /// Los ejes medidos están listos: guardarlos y aplicarlos al lector.
   final void Function(AxisMap axes)? onAxes;
 
+  /// Exige los ejes del montaje del stick ([expectedForward], [expectedRight]). Para usuarios:
+  /// el banco lo deja apagado para poder diagnosticar un stick girado.
+  final bool verifyAxes;
+
   /// El punto del stick, para dibujarlo en los pasos de rango y bordes.
   final StickState plane;
+
+  /// Hacia dónde se mueve la gravedad, en el marco del sensor, al inclinar el stick
+  /// vertical hacia adelante y a la derecha (chequeos reales del 05-11-2026, sticks A y B).
+  static const V3 expectedForward = V3(-1, 0, 0);
+  static const V3 expectedRight = V3(0, 1, 0);
+
+  /// Desvío máximo del gesto respecto del eje esperado.
+  static const double axisTolDeg = 50;
+
+  /// Inclinación desde la que se juzga el eje del gesto.
+  static const double axisMinDeg = 12;
+
+  /// Cuánto se puede apartar de la vertical en el paso de quietud.
+  static const double uprightMaxDeg = 45;
 
   static const double linkTimeoutMs = 20000;
   static const double linkSettleMs = 500;
@@ -140,6 +158,8 @@ class StickCheck {
   final Map<String, int> _stepMs = {};
   double? _hz, _peakForward, _peakRight, _shiftDeg, _activePct;
   double _liftTotalMs = 0;
+  double _wrongTotalMs = 0, _wrongMs = 0, _uprightMs = 0;
+  String? _axisHint;
   int? _calMoving, _calTotal, _gaps0;
   int _gaps = 0;
   double _lagMs = 0;
@@ -195,6 +215,7 @@ class StickCheck {
   /// Aviso del momento, si lo hay.
   String? get hint {
     if (paused) return 'El stick dejó de mandar datos. Acércalo al teléfono.';
+    if (_axisHint != null) return _axisHint;
     if (lifting) return 'Eso es levantar el stick. El juego solo mide la inclinación: inclina la punta.';
     if ((step == CheckStep.forward || step == CheckStep.right) && _wizard.currentTiltDeg >= tiltGoalDeg) {
       return 'Bien. Ahora vuelve a la posición vertical.';
@@ -229,7 +250,7 @@ class StickCheck {
       case CheckStep.link:
         _link(s, dtMs, now);
       case CheckStep.rest:
-        _rest(s, now);
+        _rest(s, dtMs, now);
       case CheckStep.forward:
       case CheckStep.right:
         _tilt(s, dtMs, now);
@@ -270,6 +291,7 @@ class StickCheck {
         'inclino_derecha_grados': _peakRight,
         'giro_corregido_grados': _shiftDeg,
         'levanto_sin_inclinar_ms': _liftTotalMs,
+        'eje_incorrecto_ms': _wrongTotalMs,
         'calibracion': cal?.toJson(),
         'calibracion_muestras': {'en_movimiento': _calMoving, 'total': _calTotal, 'minimo': Calibration.minMovingSamples},
         'bordes': {'arriba': _top, 'abajo': _bottom, 'izquierda': _left, 'derecha': _right},
@@ -284,6 +306,8 @@ class StickCheck {
     _stepStart = now;
     _elapsed = 0;
     lifting = false;
+    _axisHint = null;
+    _wrongMs = 0;
   }
 
   void _add(CheckGrade g, String title, String detail) => findings.add(CheckFinding(g, title, detail));
@@ -317,11 +341,21 @@ class StickCheck {
     }
   }
 
-  void _rest(StickSnapshot s, double now) {
-    _wizard.feed(s.gravity!);
-    final measured = s.stillCount > (_still0 ?? s.stillCount);
+  void _rest(StickSnapshot s, double dtMs, double now) {
+    final g = s.gravity!;
     final over = _elapsed >= restTimeoutMs;
-    if (!(measured && _elapsed >= restMinMs) && !over) return;
+    if (verifyAxes && g.angleTo(V3.ez) * _deg > uprightMaxDeg) {
+      _axisHint = 'Sostén el stick vertical, con la punta hacia arriba.';
+      _uprightMs = 0;
+      if (over) _fail('El stick no estaba vertical', 'Hay que sostenerlo vertical, con la punta hacia arriba, como al jugar.');
+      return;
+    }
+    _axisHint = null;
+    _uprightMs += dtMs;
+    _wizard.feed(g);
+    final measured = s.stillCount > (_still0 ?? s.stillCount);
+    final held = verifyAxes ? _uprightMs : _elapsed;
+    if (!(measured && held >= restMinMs) && !over) return;
     if (measured) {
       _add(CheckGrade.ok, 'Giroscopio', 'Se midió su error con el stick quieto.');
     } else if (s.gyroReady) {
@@ -339,8 +373,14 @@ class StickCheck {
 
   void _tilt(StickSnapshot s, double dtMs, double now) {
     final g = s.gravity!;
-    _wizard.feed(g);
-    final cur = g.angleTo(_wizard.neutral!) * 180 / 3.141592653589793;
+    final cur = g.angleTo(_wizard.neutral!) * _deg;
+    _axisHint = _wrongAxis(g, cur);
+    if (_axisHint == null) {
+      _wizard.feed(g); // un gesto por el eje equivocado no cuenta para el paso
+    } else {
+      _wrongMs += dtMs;
+      _wrongTotalMs += dtMs;
+    }
     final moved = (s.accelMagG - s.restMagG).abs() > liftGateG;
     lifting = moved && cur < liftNoTiltDeg && _wizard.currentTiltDeg < tiltGoalDeg;
     if (lifting) {
@@ -361,6 +401,8 @@ class StickCheck {
     if (!_wizard.next()) {
       if (_wizard.step == WizardStep.failed) {
         _fail('Los dos gestos fueron casi iguales', 'Adelante y derecha deben ser gestos distintos. Repite el chequeo sin girar el stick en la mano.');
+      } else if (_wrongMs >= liftMinMs) {
+        _fail('Eje incorrecto', 'El stick se movió por otro eje. Sujétalo con el frente mirando lejos de ti y repite.');
       } else if (wasLifting) {
         // Sigue a la calibración: con este gesto, también hay que saber qué mide.
         _add(CheckGrade.fail, 'Levantas el stick sin inclinarlo', _liftAdvice);
@@ -384,10 +426,34 @@ class StickCheck {
   static const String _liftAdvice = 'El sensor mide la inclinación, no la altura. Subir el brazo con el stick derecho '
       'no mueve el punto: hay que inclinar la punta. Conviene explicarlo antes de jugar.';
 
+  /// Aviso si el gesto va por otro eje; `null` si va bien o aún es muy chico para juzgarlo.
+  String? _wrongAxis(V3 g, double cur) {
+    if (!verifyAxes || cur < axisMinDeg) return null;
+    final n = _wizard.neutral!;
+    final forward = step == CheckStep.forward;
+    final dir = g.rejectFrom(n).normalized();
+    final want = (forward ? expectedForward : expectedRight).rejectFrom(n).normalized();
+    if (dir == null || want == null) return null;
+    final off = dir.angleTo(want) * _deg;
+    if (off <= axisTolDeg) return null;
+    if (off >= 180 - axisTolDeg) {
+      return forward
+          ? 'Ese gesto es hacia atrás. Revisa que el frente del stick mire lejos de ti.'
+          : 'Ese gesto es hacia tu izquierda. Revisa que el frente del stick mire lejos de ti.';
+    }
+    return forward
+        ? 'Ese gesto es hacia el lado. Gira el stick en la mano: el frente debe mirar lejos de ti.'
+        : 'Ese gesto es adelante-atrás. Ahora inclínalo hacia tu derecha.';
+  }
+
+  static const double _deg = 180 / 3.141592653589793;
+
   void _axesDone() {
     final axes = _wizard.result!;
     final old = _oldAxes;
-    if (old != null) {
+    if (verifyAxes) {
+      _add(CheckGrade.ok, 'Orientación', 'Adelante y derecha son los correctos.');
+    } else if (old != null) {
       final deg = old.up.angleTo(axes.up) * 180 / 3.141592653589793;
       _shiftDeg = deg;
       if (deg >= flippedDeg) {

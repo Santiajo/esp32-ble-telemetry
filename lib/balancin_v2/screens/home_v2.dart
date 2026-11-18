@@ -11,11 +11,10 @@ import '../widgets/v2_ui.dart';
 import 'audio_test_v2_screen.dart';
 import 'bench_screen.dart';
 import 'final_screen.dart';
-import 'calibrate_sticks_screen.dart';
-import 'mode_screen.dart';
+import 'levels_screen.dart';
 
-/// Inicio (`#home` del prototipo): «Jugar», sesiones pasadas, idea para hoy y
-/// repasar la preparación. Abajo, las herramientas del equipo (banco, prueba de
+/// Inicio (`#home` del prototipo): «Jugar», sesiones pasadas y repasar la
+/// preparación. Abajo, las herramientas del equipo (banco, prueba de
 /// audio y la app v1), que no son parte del flujo de las familias.
 class HomeV2 extends StatefulWidget {
   const HomeV2({super.key, required this.s});
@@ -26,16 +25,7 @@ class HomeV2 extends StatefulWidget {
 }
 
 class _HomeV2State extends State<HomeV2> {
-  static const tips = [
-    'Cuando el sonido deja de ondular, van juntos.',
-    'Adulto: los gestos pequeños bastan; tu stick se ajusta a tu rango.',
-    'En «Espejo», pónganse frente a frente.',
-    'En «Sígueme», dejen que el niño invente primero.',
-    'Lo logrado no se pierde: pueden volver otro día.',
-  ];
-
   List<SessionRecord> _sessions = [];
-  int _tip = 0;
 
   @override
   void initState() {
@@ -77,10 +67,9 @@ class _HomeV2State extends State<HomeV2> {
               SizedBox(
                 height: math.max(360, c.maxHeight * 0.75 - 60),
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  PlaySphere(onTap: () => _go(ModeScreen(s: s))),
+                  PlaySphere(onTap: () => _go(LevelsScreen(s: s))),
                   const SizedBox(height: 44),
                   const Text('Elijan un nivel y coloquen el celular en el eje', style: TextStyle(fontSize: 14, color: V2.soft, fontWeight: FontWeight.w600)),
-                  V2.link('Calibrar los sticks', () => unawaited(openCalibration(context, s))),
                 ]),
               ),
               const SizedBox(height: 18),
@@ -98,21 +87,6 @@ class _HomeV2State extends State<HomeV2> {
                   const SizedBox(height: 8),
                 ],
               const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
-                decoration: BoxDecoration(color: V2.yellow, borderRadius: BorderRadius.circular(22)),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('IDEA PARA HOY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 0.3, color: V2.ink)),
-                  const SizedBox(height: 6),
-                  Text(tips[_tip], style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, height: 1.3, color: V2.ink)),
-                  TextButton(
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero, foregroundColor: V2.ink),
-                    onPressed: () => setState(() => _tip = (_tip + 1) % tips.length),
-                    child: const Text('Otra idea', style: TextStyle(fontSize: 13, decoration: TextDecoration.underline, fontWeight: FontWeight.w800)),
-                  ),
-                ]),
-              ),
-              const SizedBox(height: 8),
               Center(child: V2.link('Repasar la preparación', () => s.openOnboarding(context))),
               const SizedBox(height: 22),
               const Divider(color: V2.line),

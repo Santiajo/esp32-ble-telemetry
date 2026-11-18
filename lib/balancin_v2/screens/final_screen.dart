@@ -8,26 +8,23 @@ import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../app_v2.dart';
-import '../core/sync_engine.dart';
+import '../core/levels.dart';
 import '../core/telemetry.dart';
 import '../platform/progress_store.dart';
 import '../widgets/v2_ui.dart';
-import 'sticks_gate_screen.dart';
+import 'levels_screen.dart';
 
 /// El recuerdo (`#final` del prototipo): título según lo logrado, duración y
 /// sincronía, la canción con la parte nueva marcada, el dibujo de lo que
 /// hicieron los sticks y quién guió. «Escuchar la canción» (o «Jugar otra vez»
 /// en Libre) y «Guardar el recuerdo» como imagen. Plan v2 §10.2.
 class FinalScreen extends StatefulWidget {
-  const FinalScreen({super.key, required this.s, required this.record, required this.fresh, this.fromHistory = false, this.calNote});
+  const FinalScreen({super.key, required this.s, required this.record, required this.fresh, this.fromHistory = false});
   final V2Services s;
   final SessionRecord record;
 
   /// Niveles logrados en esta sesión (con anillo en la barra).
   final List<int> fresh;
-
-  /// Aviso si algún stick no se calibró al empezar.
-  final String? calNote;
 
   /// Abierto desde «Sesiones pasadas».
   final bool fromHistory;
@@ -59,6 +56,11 @@ class _FinalScreenState extends State<FinalScreen> {
     if (r.levels.isNotEmpty) {
       return r.levels.length == 1 ? 'Sumaron una parte de la canción.' : 'Sumaron ${r.levels.length} partes de la canción.';
     }
+    final pct = ((r.levelPct ?? 0) * 100).round();
+    if (pct > 0 && r.levelId != null) {
+      final l = levelById(r.levelId!);
+      return 'Lograron $pct % del nivel ${l.id} · ${l.name}.';
+    }
     return 'Hoy fue de práctica.';
   }
 
@@ -80,7 +82,8 @@ class _FinalScreenState extends State<FinalScreen> {
 
   void _primary() {
     if (r.isFree) {
-      unawaited(openGame(context, widget.s, mode: PlayMode.free, replace: true));
+      // Sesiones de Libre de antes: el modo ya no está en la app.
+      unawaited(Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => LevelsScreen(s: widget.s))));
       return;
     }
     final ids = _got.isEmpty ? [1] : (List.of(_got)..sort());
@@ -169,10 +172,6 @@ class _FinalScreenState extends State<FinalScreen> {
                 if (_lead.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(_lead, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: V2.soft, fontWeight: FontWeight.w700)),
-                ],
-                if (widget.calNote != null) ...[
-                  const SizedBox(height: 12),
-                  Text(widget.calNote!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: V2.coral, fontWeight: FontWeight.w800)),
                 ],
               ]),
             ),

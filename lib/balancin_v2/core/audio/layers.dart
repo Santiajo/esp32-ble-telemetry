@@ -222,6 +222,16 @@ class AudioLayers {
     fifthGain.setTarget(0, 0.3);
   }
 
+  /// Voces continuas a 0 de inmediato, para cuando ya nadie va a seguir avanzando las
+  /// curvas: al salir de una pantalla, [silence] y un solo paso dejaban ~37 % sonando.
+  void mute() {
+    for (final g in [adultGain, relGain, fifthGain]) {
+      g
+        ..value = 0
+        ..target = 0;
+    }
+  }
+
   /// Avanza las curvas [dt] segundos (la plataforma lo llama en cada cuadro).
   void advance(double dt) {
     for (final g in [adultHz, adultHarmHz, adultGain, adultHarmGain, rel1Hz, rel2Hz, fifthHz, relGain, fifthGain]) {

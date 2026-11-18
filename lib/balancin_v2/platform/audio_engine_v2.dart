@@ -65,6 +65,9 @@ class AudioEngineV2 with WidgetsBindingObserver {
   final List<SoundHandle> _waveHandles = [];
   final List<double> _lastAmp = [0, 0, 0, 0, 0];
 
+  /// La app está de fondo: nadie avanza las voces, así que quedan en silencio.
+  bool _background = false;
+
   /// Fin (ms del reloj de la app) y parciales de cada nota sonando: para la polifonía.
   final List<({double end, int partials})> _sounding = [];
 
@@ -206,7 +209,39 @@ class AudioEngineV2 with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) unawaited(ensureAlive());
+    switch (state) {
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _background = true;
+        _muteVoices();
+      case AppLifecycleState.resumed:
+        _background = false;
+        unawaited(ensureAlive());
+      case AppLifecycleState.inactive:
+        break;
+    }
+  }
+
+  void _muteVoices() {
+    if (!_ready || _waveHandles.length < 5) return;
+    final s = SoLoud.instance;
+    if (!s.isInitialized) return;
+    try {
+      for (var i = 0; i < 5; i++) {
+        s.fadeVolume(_waveHandles[i], 0, const Duration(milliseconds: 40));
+        _lastAmp[i] = 0;
+      }
+    } catch (e) {
+      debugPrint('[AudioEngineV2] fallo al silenciar: $e');
+    }
+  }
+
+  /// Apaga las voces continuas al salir de una pantalla: después de esto ya no llegan
+  /// cuadros que las sigan bajando.
+  void hush(AudioLayers layers) {
+    layers.mute();
+    _muteVoices();
   }
 
   /// Si Android detuvo el audio nativo, lo reinicia y recarga desde la memoria.
@@ -231,7 +266,7 @@ class AudioEngineV2 with WidgetsBindingObserver {
   /// Avanza las curvas de [layers] y pasa las 5 voces a SoLoud.
   void frame(AudioLayers layers, double dt) {
     layers.advance(dt);
-    if (!_ready || _waveHandles.length < 5) return;
+    if (_background || !_ready || _waveHandles.length < 5) return;
     final s = SoLoud.instance;
     if (!s.isInitialized) return;
     final v = layers.voices;

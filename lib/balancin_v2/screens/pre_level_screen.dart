@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../app_v2.dart';
 import '../core/levels.dart';
-import '../core/sync_engine.dart';
 import '../widgets/v2_ui.dart';
 import 'calibrate_sticks_screen.dart';
-import 'sticks_gate_screen.dart';
 
 /// Antes de cada nivel (`#pre` del prototipo): dibujo, consigna, quién guía y
-/// «Insertar el teléfono y comenzar».
+/// «Calibrar y comenzar».
 class PreLevelScreen extends StatelessWidget {
   const PreLevelScreen({super.key, required this.s, required this.level});
   final V2Services s;
@@ -47,10 +45,9 @@ class PreLevelScreen extends StatelessWidget {
               Align(alignment: Alignment.centerLeft, child: GuideChip(level: level)),
               const Spacer(),
               V2.primary(
-                'Insertar el teléfono y comenzar',
-                () => openGame(context, s, mode: PlayMode.levels, levelIndex: level.id - 1),
+                'Calibrar y comenzar',
+                () => openLevel(context, s, level.id - 1),
               ),
-              Center(child: V2.link('Calibrar los sticks', () => openCalibration(context, s))),
             ]),
           ),
         ),

@@ -8,10 +8,8 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../balancin/platform/stick_hub.dart';
 import '../../balancin/session/board_session.dart' show StickRole;
 import '../app_v2.dart';
-import '../core/sync_engine.dart';
 import '../platform/ble_permissions.dart';
 import '../widgets/v2_ui.dart';
-import 'insert_v2_screen.dart';
 
 /// El stick está conectado y mandando datos (conectado sin datos no sirve para jugar).
 bool stickReady(StickHub hub, StickRole role) {
@@ -19,42 +17,27 @@ bool stickReady(StickHub hub, StickRole role) {
   return l != null && l.connected && l.reader.lastSample != null && !l.silent;
 }
 
-/// Único camino a la partida: con los dos sticks listos va a la inserción; si
-/// falta alguno, pasa por [SticksGateScreen] (plan v2 §17).
-Future<void> openGame(BuildContext context, V2Services s, {required PlayMode mode, int levelIndex = 0, bool replace = false}) {
-  final ready = StickRole.values.every((r) => stickReady(s.hub, r));
-  final route = MaterialPageRoute<void>(
-    builder: (_) => ready
-        ? InsertV2Screen(s: s, mode: mode, levelIndex: levelIndex)
-        : SticksGateScreen(s: s, mode: mode, levelIndex: levelIndex),
-  );
-  final nav = Navigator.of(context);
-  return replace ? nav.pushReplacement(route) : nav.push(route);
-}
-
 /// Lleva a [page] con los dos sticks listos; si falta alguno, pasa antes por
 /// [SticksGateScreen].
 Future<void> openWithSticks(BuildContext context, V2Services s, Widget Function() page) {
   final ready = StickRole.values.every((r) => stickReady(s.hub, r));
   return Navigator.of(context).push(MaterialPageRoute<void>(
-    builder: (_) => ready ? page() : SticksGateScreen(s: s, mode: PlayMode.free, next: page),
+    builder: (_) => ready ? page() : SticksGateScreen(s: s, next: page),
   ));
 }
 
 /// «Conecten los sticks»: no deja seguir hasta que los dos estén conectados y
 /// mandando datos.
 class SticksGateScreen extends StatefulWidget {
-  const SticksGateScreen({super.key, required this.s, required this.mode, this.levelIndex = 0, this.isReady, this.next});
+  const SticksGateScreen({super.key, required this.s, required this.next, this.isReady});
 
   final V2Services s;
-  final PlayMode mode;
-  final int levelIndex;
 
   /// Reemplaza a [stickReady] en las pruebas.
   final bool Function(StickRole role)? isReady;
 
-  /// A dónde seguir; si falta, a la inserción de la partida.
-  final Widget Function()? next;
+  /// A dónde seguir con los dos sticks listos.
+  final Widget Function() next;
 
   @override
   State<SticksGateScreen> createState() => _SticksGateScreenState();
@@ -159,9 +142,7 @@ class _SticksGateScreenState extends State<SticksGateScreen> {
   }
 
   void _continue() {
-    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
-      builder: (_) => widget.next?.call() ?? InsertV2Screen(s: widget.s, mode: widget.mode, levelIndex: widget.levelIndex),
-    ));
+    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => widget.next()));
   }
 
   @override

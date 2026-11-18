@@ -54,7 +54,12 @@ class _StickCheckScreenState extends State<StickCheckScreen> with SingleTickerPr
   bool _tracing = false;
   String _trace = '';
 
-  StickCheck _newCheck() => StickCheck(role: widget.role, params: widget.params, onAxes: widget.saveAxes);
+  StickCheck _newCheck() => StickCheck(
+        role: widget.role,
+        params: widget.params,
+        onAxes: widget.saveAxes,
+        verifyAxes: widget.forUsers && widget.params.axisCheck > 0,
+      );
 
   String get _who => widget.role == Role.adult ? 'adulto' : 'niño';
 

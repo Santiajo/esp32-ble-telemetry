@@ -13,7 +13,7 @@ const Map<Relation, String> relationNames = {
   Relation.together: 'Juntos',
   Relation.mirror: 'Espejo',
   Relation.same: 'Iguales',
-  Relation.seesaw: 'Sube y baja',
+  Relation.seesaw: 'Señalados',
   Relation.pulse: 'Mismo pulso',
   Relation.follow: 'Sígueme',
 };
@@ -49,7 +49,7 @@ class Level {
   final int id;
   final String name;
 
-  /// Consigna corta («Suban y bajen los sticks al mismo tiempo.»).
+  /// Consigna corta («Apunten el stick a ustedes mismos y al otro, sin parar.»).
   final String text;
   final Relation relation;
 
@@ -94,7 +94,7 @@ const List<Level> levels = [
   Level(
       id: 1,
       name: 'Juntos',
-      text: 'Suban y bajen los sticks al mismo tiempo.',
+      text: 'Apunten el stick a ustedes mismos y al otro, sin parar.',
       relation: Relation.together,
       guides: [Role.adult, Role.child],
       tol: 1.2,
@@ -104,7 +104,7 @@ const List<Level> levels = [
   Level(
       id: 2,
       name: 'Espejo',
-      text: 'Frente a frente, como en un espejo.',
+      text: 'Apunten al mismo lado, como en un espejo.',
       relation: Relation.mirror,
       guides: [Role.child, Role.adult],
       tol: 1.2,
@@ -114,7 +114,7 @@ const List<Level> levels = [
   Level(
       id: 3,
       name: 'Iguales',
-      text: 'Inclínense hacia el mismo lado.',
+      text: 'Apunten el stick al mismo punto de la pieza.',
       relation: Relation.same,
       guides: [Role.adult, Role.child],
       tol: 1.0,
@@ -123,8 +123,8 @@ const List<Level> levels = [
       difficulty: 2),
   Level(
       id: 4,
-      name: 'Sube y baja',
-      text: 'Uno arriba, el otro abajo. Y cambien.',
+      name: 'Señalados',
+      text: 'Apunten el stick a la misma persona.',
       relation: Relation.seesaw,
       guides: [Role.adult, Role.child],
       tol: 1.0,
@@ -134,7 +134,7 @@ const List<Level> levels = [
   Level(
       id: 5,
       name: 'Mismo pulso',
-      text: 'Balancéense al mismo ritmo.',
+      text: 'Muevan el stick al mismo ritmo.',
       relation: Relation.pulse,
       guides: [Role.child, null],
       tol: 0.9,
@@ -144,7 +144,7 @@ const List<Level> levels = [
   Level(
       id: 6,
       name: 'Sígueme',
-      text: 'Uno inventa, el otro copia. Luego cambian.',
+      text: 'Uno mueve la muñeca y el otro lo imita. Luego cambian.',
       relation: Relation.follow,
       guides: [Role.adult, Role.child],
       tol: 1.2,
@@ -154,7 +154,7 @@ const List<Level> levels = [
   Level(
       id: 7,
       name: 'La canción',
-      text: 'Todo junto, hasta terminar la canción.',
+      text: 'Usen todos los movimientos para terminar la canción.',
       relation: Relation.song,
       parts: [Relation.together, Relation.mirror, Relation.seesaw, Relation.pulse],
       guides: [Role.adult, Role.child, Role.adult, Role.child],

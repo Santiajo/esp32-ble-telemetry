@@ -10,9 +10,9 @@ abstract final class BenchStore {
   static const String _voiceKey = 'balancin_v2_voz_on'; // clave nueva: por defecto apagada
   static const String _versionKey = 'balancin_v2_params_version';
 
-  /// Versión de los valores de fábrica. 2 = «zonas y trazo» por defecto (§16): los
-  /// valores guardados antes pasan a medir así una vez; después se respeta lo elegido.
-  static const int paramsVersion = 2;
+  /// Versión de los valores de fábrica. 3 = solo tercios y trazo (§20): los valores
+  /// guardados antes pasan a medir así una vez; después se respeta lo elegido en Ajuste.
+  static const int paramsVersion = 3;
 
   static Future<SyncParams> loadParams() async {
     try {
@@ -20,8 +20,12 @@ abstract final class BenchStore {
       final raw = p.getString(_paramsKey);
       if (raw == null) return SyncParams();
       final params = SyncParams.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
-      if ((p.getInt(_versionKey) ?? 1) < 2) {
-        params.matchMode = SyncParams().matchMode;
+      if ((p.getInt(_versionKey) ?? 1) < paramsVersion) {
+        final factory = SyncParams();
+        params
+          ..matchMode = factory.matchMode
+          ..zoneCount = factory.zoneCount
+          ..zoneStrict = factory.zoneStrict;
         await saveParams(params);
       }
       return params;

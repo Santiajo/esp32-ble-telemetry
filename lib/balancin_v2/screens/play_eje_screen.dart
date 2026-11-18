@@ -15,31 +15,26 @@ import '../core/levels.dart';
 import '../core/light_model.dart';
 import '../core/stick_state.dart';
 import '../core/sync_engine.dart';
-import '../platform/cal_store.dart';
 import '../platform/progress_store.dart';
 import '../platform/tilt_stick.dart';
 import '../widgets/two_halves_light.dart';
 import 'final_screen.dart';
 
-/// Aviso del final si algún stick no se calibró (`null` si los dos sí).
-String? calibrationNote({required bool adult, required bool child}) {
-  if (adult && child) return null;
-  final who = !adult && !child ? 'Los dos sticks no se movieron' : 'El stick del ${adult ? 'niño' : 'adulto'} no se movió';
-  return '$who lo suficiente en los primeros 6 s: no se calibró y jugó con el rango por defecto.';
-}
-
 /// Dentro del eje (`#ejeView` del prototipo): solo luz en dos mitades.
 ///
-/// Calibra el rango de cada persona al empezar (6 s, «muévanse libremente»),
-/// juega el nivel o el modo Libre con los dos sticks reales y, al terminar
+/// Juega un nivel con los dos sticks reales y la calibración recién hecha en
+/// «Calibrar los sticks», y al terminar
 /// (nivel logrado, 30 s sin juego o «terminar»), guarda la sesión y pasa al
 /// final. Si se pierde un stick, abre la pantalla de pérdida y la sesión sigue
 /// al volver. Para terminar a mano: mantener 2 s la esquina superior derecha.
 class PlayEjeScreen extends StatefulWidget {
-  const PlayEjeScreen({super.key, required this.s, required this.mode, this.levelIndex = 0, this.sticks});
+  const PlayEjeScreen({super.key, required this.s, required this.mode, required this.cals, this.levelIndex = 0, this.sticks});
   final V2Services s;
   final PlayMode mode;
   final int levelIndex;
+
+  /// Calibración de cada stick, hecha al entrar al nivel.
+  final Map<Role, StickCal> cals;
 
   /// Sticks ya abiertos por la inserción (llevan unos segundos leyendo). La
   /// pantalla pasa a ser su dueña. Si faltan, los abre ella.
@@ -66,8 +61,6 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
   bool _lostOpen = false;
   bool _closing = false;
   Timer? _exitHold;
-  String? _calNote;
-  final Map<Role, StickCal> _savedCal = {};
 
   static StickRole _sr(Role r) => r == Role.adult ? StickRole.adult : StickRole.child;
 
@@ -76,7 +69,11 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
     super.initState();
     final s = widget.s;
     s.hub.hold();
-    _e = SyncEngine(params: s.params, closeOnIdle: true, isLevelEnabled: enabledLevelIds.contains);
+    // Cada nivel se entra calibrando, así que al lograrlo la sesión cierra (§19).
+    _e = SyncEngine(params: s.params, closeOnIdle: true, isLevelEnabled: (_) => false);
+    for (final r in Role.values) {
+      _e.stick(r).cal = widget.cals[r];
+    }
     _sticks.addAll(widget.sticks ?? PlayEjeScreen.openSticks(s));
     for (final r in Role.values) {
       s.hub.arm(_sr(r));
@@ -96,16 +93,13 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
 
   Future<void> _start() async {
     _progress = await ProgressStore.progress();
-    for (final r in Role.values) {
-      final c = await CalStore.load(_sticks[r]!.link.savedMac);
-      if (c != null) _savedCal[r] = c;
-    }
     if (!mounted) return;
     final now = AppClock.nowMs();
     _layers
       ..resetChild()
       ..startPad(now);
-    _handle(_e.start(mode: widget.mode, levelIndex: widget.levelIndex, calibrate: true, now: now), now);
+    _handle(_e.start(mode: widget.mode, levelIndex: widget.levelIndex, now: now), now);
+    widget.s.audio.playChime(); // con el teléfono en el eje, es el aviso de que empezó
     _ticker.start();
     // La pérdida solo avisa de conectado a desconectado: un stick caído antes de
     // empezar no dispara ningún evento, así que se revisa aquí.
@@ -126,8 +120,7 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
       _sticks[r]?.dispose();
     }
     widget.s.hub.unhold();
-    _layers.silence();
-    widget.s.audio.frame(_layers, 0.3);
+    widget.s.audio.hush(_layers);
     unawaited(widget.s.voice.stop());
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     unawaited(WakelockPlus.disable());
@@ -158,13 +151,6 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
         case LevelCompletedEvent(:final levelId):
           if (!_progress.contains(levelId)) _progress.add(levelId);
           unawaited(ProgressStore.addProgress(levelId));
-        case CalibrationDoneEvent():
-          s.audio.playChime(); // con el teléfono en el eje, es el aviso de que ya empezó
-          // Sin movimiento suficiente al empezar, vale la calibración de «Calibrar los sticks».
-          for (final r in Role.values) {
-            if (_e.stick(r).cal == null) _e.stick(r).cal = _savedCal[r];
-          }
-          _calNote = calibrationNote(adult: _e.adult.cal != null, child: _e.child.cal != null);
         case SessionClosedEvent(:final record):
           unawaited(_finish(record.levels, ev));
         default:
@@ -183,7 +169,7 @@ class _PlayEjeScreenState extends State<PlayEjeScreen> with TickerProviderStateM
     await ProgressStore.addSession(ev.record);
     if (!mounted) return;
     await Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
-      builder: (_) => FinalScreen(s: widget.s, record: ev.record, fresh: fresh, calNote: _calNote),
+      builder: (_) => FinalScreen(s: widget.s, record: ev.record, fresh: fresh),
     ));
   }
 

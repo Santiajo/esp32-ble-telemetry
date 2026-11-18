@@ -12,6 +12,7 @@ import 'package:esp32_ble_telemetry/balancin_v2/core/stick_check.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/sync_engine.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/tilt/axis_map.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/tilt/imu_trace.dart';
+import 'package:esp32_ble_telemetry/balancin_v2/core/tilt/tilt_reader.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/core/tilt/vec3.dart';
 import 'package:esp32_ble_telemetry/balancin_v2/screens/stick_check_screen.dart';
 import 'package:flutter/material.dart';
@@ -67,8 +68,8 @@ const double frame = 1000 / 60;
 
 /// Un participante que sigue las consignas. Se puede cambiar cada gesto.
 class Run {
-  Run(this.stick, {this.params}) {
-    check = StickCheck(role: Role.adult, params: params ?? SyncParams(), onAxes: (a) => stick.axes = a);
+  Run(this.stick, {this.params, bool verify = false}) {
+    check = StickCheck(role: Role.adult, params: params ?? SyncParams(), onAxes: (a) => stick.axes = a, verifyAxes: verify);
   }
 
   final FakeStick stick;
@@ -116,6 +117,39 @@ void goodUser(CheckStep step, double ms, FakeStick s) {
     case CheckStep.done:
       break;
   }
+}
+
+/// Pasa una traza real por el lector y el chequeo de usuarios.
+StickCheck replay(List<TraceSample> t) {
+  final p = SyncParams();
+  final r = TiltReader(params: p);
+  final c = StickCheck(role: Role.adult, params: p, onAxes: r.setAxes, verifyAxes: true);
+  final t0 = t.first.arrivalMs;
+  var k = 0;
+  for (var now = 0.0; now < t.last.arrivalMs - t0 + 25000 && c.step != CheckStep.done; now += frame) {
+    while (k < t.length && t[k].arrivalMs - t0 <= now) {
+      r.addSample(t[k].sample, t[k].arrivalMs - t0);
+      k++;
+    }
+    final stale = !r.hasTilt || (k < t.length && now - r.lastArrivalMs > 1000);
+    c.tick(
+      now,
+      StickSnapshot(
+        connected: true,
+        receiving: !stale,
+        hz: stale ? 0 : 100,
+        tiltX: r.tiltX,
+        tiltY: r.tiltY,
+        gravity: r.gravity,
+        accelMagG: r.accelMagG,
+        restMagG: r.restMagG,
+        gyroReady: r.calibrated,
+        stillCount: r.stillCount,
+        axes: r.axes,
+      ),
+    );
+  }
+  return c;
 }
 
 List<String> titles(StickCheck c, CheckGrade g) => [
@@ -274,6 +308,85 @@ void main() {
       });
       expect(r.check.grade, CheckGrade.ok, reason: '${r.check.findings}');
     });
+  });
+
+  group('ejes en la calibración de usuarios', () {
+    // turnDeg −90 = montaje real: adelante = −X del sensor, derecha = +Y.
+    test('con el stick bien sujeto pasa', () {
+      final r = Run(FakeStick(turnDeg: -90), verify: true)..play(goodUser);
+      expect(r.check.grade, CheckGrade.ok, reason: '${r.check.findings}');
+      expect(r.check.cal, isNotNull);
+    });
+
+    test('girado 90° no avanza, avisa en el momento y queda sin calibrar', () {
+      final r = Run(FakeStick(), verify: true);
+      String? seen;
+      r.play((step, ms, s) {
+        goodUser(step, ms, s);
+        if (step == CheckStep.forward) seen ??= r.check.hint;
+      });
+      expect(seen, contains('hacia el lado'));
+      expect(titles(r.check, CheckGrade.fail), ['Eje incorrecto']);
+      expect(r.check.cal, isNull);
+    });
+
+    test('al revés no avanza y dice que va hacia atrás', () {
+      final r = Run(FakeStick(turnDeg: 90), verify: true);
+      String? seen;
+      r.play((step, ms, s) {
+        goodUser(step, ms, s);
+        if (step == CheckStep.forward) seen ??= r.check.hint;
+      });
+      expect(seen, contains('hacia atrás'));
+      expect(r.check.cal, isNull);
+    });
+
+    test('repetir el gesto de adelante en el paso de la derecha no avanza', () {
+      final r = Run(FakeStick(turnDeg: -90), verify: true);
+      String? seen;
+      r.play((step, ms, s) {
+        goodUser(step, ms, s);
+        if (step == CheckStep.right) {
+          s
+            ..side = 0
+            ..fwd = 30 * math.sin(ms / 1400 * math.pi).clamp(0.0, 1.0);
+          seen ??= r.check.hint;
+        }
+      });
+      expect(seen, contains('adelante-atrás'));
+      expect(titles(r.check, CheckGrade.fail), ['Eje incorrecto']);
+    });
+
+    test('un stick que no está vertical no pasa de la quietud', () {
+      final s = FakeStick(turnDeg: -90);
+      final r = Run(s, verify: true)
+        ..play((step, ms, q) {
+          goodUser(step, ms, q);
+          if (step == CheckStep.rest) q.fwd = 80;
+        });
+      expect(titles(r.check, CheckGrade.fail), ['El stick no estaba vertical']);
+    });
+
+    test('el banco no lo exige: sirve para diagnosticar', () {
+      final r = Run(FakeStick())..play(goodUser);
+      expect(r.check.cal, isNotNull);
+    });
+
+    // Fin de los pasos de ejes en cada traza: después hay movimiento libre.
+    for (final (name, axesEndMs) in [('chequeo_a', 6300.0), ('chequeo_b', 9200.0)]) {
+      test('gestos reales ($name): pasan bien sujetos y no con el sensor girado 90°', () {
+        final t = ImuTrace.decode(File('test/balancin_v2/golden/$name.trace').readAsStringSync());
+        expect(replay(t).findings.map((f) => f.title), contains('Orientación'));
+        final turned = [
+          for (final q in t.where((q) => q.arrivalMs - t.first.arrivalMs < axesEndMs))
+            TraceSample(
+              q.arrivalMs,
+              ImuSample(tMs: q.sample.tMs, ax: q.sample.ay, ay: -q.sample.ax, az: q.sample.az, gx: q.sample.gy, gy: -q.sample.gx, gz: q.sample.gz),
+            )
+        ];
+        expect(replay(turned).findings.map((f) => f.title), contains('Eje incorrecto'));
+      });
+    }
   });
 
   group('datos de la prueba', () {

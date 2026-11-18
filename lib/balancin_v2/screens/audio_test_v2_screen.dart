@@ -94,8 +94,7 @@ class _AudioTestV2ScreenState extends State<AudioTestV2Screen> with SingleTicker
     if (widget.audio == null) {
       unawaited(_audio.release());
     } else {
-      _layers.silence();
-      _audio.frame(_layers, 0.3);
+      _audio.hush(_layers);
     }
     super.dispose();
   }
@@ -263,7 +262,7 @@ class _AudioTestV2ScreenState extends State<AudioTestV2Screen> with SingleTicker
               _btn('Canción completa', () => unawaited(_audio.playSong([for (final l in levels) l.id]))),
               _btn('Cierre', _audio.playClosing),
               _btn('Campanita', _audio.playChime),
-              _btn('Consigna', () => unawaited(_voice.say('Nivel 1. Juntos. Suban y bajen los sticks al mismo tiempo. Guía el adulto, luego el niño.'))),
+              _btn('Consigna', () => unawaited(_voice.say('Nivel 1. Juntos. Apunten el stick a ustedes mismos y al otro, sin parar. Guía el adulto, luego el niño.'))),
               _btn('Perder stick', () {
                 _engine.pause();
                 _layers.silence();

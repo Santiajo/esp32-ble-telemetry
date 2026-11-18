@@ -33,6 +33,7 @@ class FakeBle:
         self.mtu, self.fail, self.delay = mtu, fail, delay
         self.packets = []
         self.slow_sends = 0
+        self.max_send_ms = 0
 
     def fits(self, n):
         return n <= self.mtu - 3

@@ -70,7 +70,7 @@ void main() {
     });
 
     test('fuera de la franja, d = lo que falta para entrar', () {
-      final e = SyncEngine(params: SyncParams()..matchMode = 1..syncLagMs = 0..velWeight = 0);
+      final e = SyncEngine(params: SyncParams()..matchMode = 1..zoneStrict = 0..syncLagMs = 0..velWeight = 0);
       e.start(mode: PlayMode.levels, now: 0);
       feedPlane(e.adult, 0, 4, e);
       feedPlane(e.child, 0, 0, e);
@@ -120,7 +120,7 @@ void main() {
       expect(play(1, SyncParams(), wave(4), wave(2.5, center: -1)).levelsDone, [1], reason: 'Juntos');
       Pos sway(double s) => (x: 4 * math.sin(2 * math.pi * 0.4 * s), y: 3 * math.sin(2 * math.pi * 0.4 * s));
       expect(play(2, SyncParams(), sway, (s) => (x: -sway(s).x, y: sway(s).y)).levelsDone, [2], reason: 'Espejo');
-      expect(play(3, SyncParams(), sway, sway).levelsDone, [3], reason: 'Iguales');
+      expect(play(3, SyncParams(), sway, (s) => (x: -sway(s).x, y: -sway(s).y)).levelsDone, [3], reason: 'Iguales');
       expect(play(4, SyncParams(), wave(4), wave(4, phase: math.pi)).levelsDone, [4], reason: 'Sube y baja');
     });
 
@@ -146,7 +146,9 @@ void main() {
     });
 
     test('«Iguales»: mismo lado cuenta; lado contrario, no', () {
-      final p = SyncParams()..sideOnly = 1;
+      final p = SyncParams()
+        ..sideOnly = 1
+        ..samePoint = 0;
       expect(play(3, p.copy(), side, (s) => (x: side(s).x, y: 2)).levelsDone, [3]);
       expect(play(3, p.copy(), side, (s) => (x: -side(s).x, y: 2)).levelsDone, isEmpty);
     });

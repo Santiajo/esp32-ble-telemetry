@@ -253,7 +253,7 @@ class TiltReader {
     while (_still.isNotEmpty && _tU - _still.first.t > stillWindowMs) {
       _still.removeFirst();
     }
-    if (_still.length < 20 || _tU - _still.first.t < stillWindowMs * 0.9) return;
+    if (_still.length < 10 || _tU - _still.first.t < stillWindowMs * 0.9) return;
     final n = _still.length;
     var m = V3.zero;
     var mm = 0.0;

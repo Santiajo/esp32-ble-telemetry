@@ -36,6 +36,7 @@ RATE_HZ = 100
 BATCH_SAMPLES = 3                # muestras por paquete BLE (3 líneas caben con MTU 185)
 CONGESTED_MS = 2000              # tiempo con la mitad de las muestras tras una congestión
 SLOW_SEND_MS = 50                # enviar un paquete no debería tardar más que esto
+STATS_MS = 2000                  # resumen por la consola cada 2 s, con teléfono conectado
 DEBUG_PRINT_HZ = 5               # impresión en consola cuando no hay teléfono conectado
 
 # LEGACY_OUTPUT = True envía "rawX,rawY\n" (escalado a ±2 g, como el firmware antiguo) a 50 Hz,
@@ -104,6 +105,9 @@ class StickBLE:
         self.mtu = 23
         self.dropped = 0
         self.slow_sends = 0
+        self.packets = 0
+        self.bytes_sent = 0
+        self.max_send_ms = 0
         self._ble = bluetooth.BLE()
         self._ble.active(True)
         self._ble.config(gap_name=name)
@@ -153,6 +157,8 @@ class StickBLE:
         try:
             for i in range(0, len(data), chunk):
                 self._ble.gatts_notify(conn, self._tx, data[i:i + chunk])
+                self.packets += 1
+            self.bytes_sent += len(data)
             return True
         except OSError:
             # Cola BLE llena o conexión cayéndose: se descarta la muestra
@@ -195,6 +201,8 @@ class Batcher:
         ok = self.ble.send(self.buf)
         self.clear()
         took = time.ticks_diff(time.ticks_ms(), t0)
+        if took > self.ble.max_send_ms:
+            self.ble.max_send_ms = took
         if took > SLOW_SEND_MS:
             self.ble.slow_sends += 1
         if not ok or took > SLOW_SEND_MS:
@@ -226,11 +234,17 @@ def main():
     n = 0
     i2c_errors_seq = 0
     t_next = time.ticks_us()
+    t_stats = time.ticks_ms()
+    max_loop_ms = 0
+    reads = 0
+    i2c_errors = 0
 
     while True:
+        t_loop = time.ticks_ms()
         try:
             ax, ay, az, gx, gy, gz = mpu.read()
             i2c_errors_seq = 0
+            reads += 1
             if LEGACY_OUTPUT:
                 clamp = lambda v: max(-32768, min(32767, v * 4))  # ±8 g → escala ±2 g
                 line = '%d,%d\n' % (clamp(ax), clamp(ay))
@@ -253,12 +267,28 @@ def main():
         except OSError:
             # Lectura I2C fallida (cable flojo / ruido): no matar el programa
             i2c_errors_seq += 1
+            i2c_errors += 1
             if i2c_errors_seq == 10:
                 print('AVISO: 10 errores I2C seguidos - revisar cables del MPU6050')
 
         n += 1
-        if n % (RATE_HZ * 10) == 0 and (stick.dropped or stick.slow_sends):
-            print('[BLE] descartadas por cola llena:', stick.dropped, '· envíos lentos:', stick.slow_sends)
+        took = time.ticks_diff(time.ticks_ms(), t_loop)
+        if took > max_loop_ms:
+            max_loop_ms = took
+        if time.ticks_diff(time.ticks_ms(), t_stats) >= STATS_MS:
+            if stick.connected:
+                print('[STATS] lecturas', reads, 'paquetes', stick.packets, 'bytes', stick.bytes_sent, 'rechazados', stick.dropped,
+                      'lentos', stick.slow_sends, 'envio_max_ms', stick.max_send_ms, 'vuelta_max_ms', max_loop_ms,
+                      'i2c', i2c_errors, 'mtu', stick.mtu, 'mitad', batch.slow_until is not None)
+            t_stats = time.ticks_ms()
+            max_loop_ms = 0
+            reads = 0
+            i2c_errors = 0
+            stick.packets = 0
+            stick.bytes_sent = 0
+            stick.max_send_ms = 0
+            stick.dropped = 0
+            stick.slow_sends = 0
 
         t_next = time.ticks_add(t_next, period_us)
         wait = time.ticks_diff(t_next, time.ticks_us())

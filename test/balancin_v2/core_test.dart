@@ -32,6 +32,184 @@ List<SyncEvent> runFor(SyncEngine e, double from, double to) {
 SyncEngine v2Engine() => SyncEngine(params: pointParams(), closeOnIdle: true, isLevelEnabled: enabledLevelIds.contains);
 
 void main() {
+  group('tiempo por nivel (§21)', () {
+    (SyncEngine, List<SyncEvent>) play(double seconds, {required bool userFlow, double syncFor = 3}) {
+      final p = SyncParams()..matchMode = 0..slipDrain = 0;
+      final e = SyncEngine(params: p, closeOnIdle: userFlow, isLevelEnabled: (_) => false, wallClock: () => DateTime(2026));
+      e.drive = (t) {
+        final y = 25 * math.sin(t / 300);
+        e.adult.feedTilt(0, y, p);
+        e.child.feedTilt(0, (t < syncFor * 1000 ? y : -y) * p.rangeC / p.rangeA, p);
+      };
+      var now = 0.0;
+      final ev = e.start(mode: PlayMode.levels, now: now);
+      while (now < seconds * 1000 && e.running) {
+        now += 1000 / 60;
+        ev.addAll(e.tick(now));
+      }
+      return (e, ev);
+    }
+
+    test('a los 40 s sin lograrlo va al final con lo más lejos que llegaron', () {
+      final (e, ev) = play(45, userFlow: true);
+      final closed = ev.whereType<SessionClosedEvent>().single;
+      expect(e.running, isFalse);
+      expect(closed.at, closeTo(40000, 200));
+      expect(closed.byIdle, isFalse);
+      expect(closed.record.levels, isEmpty);
+      expect(closed.record.levelId, 1);
+      expect(closed.record.levelPct, inInclusiveRange(0.2, 0.45));
+      final back = SessionRecord.fromJson(closed.record.toJson());
+      expect((back.levelId, back.levelPct), (1, closed.record.levelPct));
+    });
+
+    test('el banco no tiene límite', () {
+      final (e, _) = play(45, userFlow: false);
+      expect(e.running, isTrue);
+    });
+
+    test('0 = sin límite', () {
+      final p = SyncParams()..levelLimit = 0;
+      final e = SyncEngine(params: p, closeOnIdle: true, wallClock: () => DateTime(2026));
+      e.drive = (t) {
+        e.adult.feedTilt(0, 25 * math.sin(t / 300), p);
+        e.child.feedTilt(0, -25 * math.sin(t / 300), p);
+      };
+      var now = 0.0;
+      e.start(mode: PlayMode.levels, now: now);
+      while (now < 45000) {
+        now += 1000 / 60;
+        e.tick(now);
+      }
+      expect(e.running, isTrue);
+    });
+
+    test('lograr el nivel no deja porcentaje pendiente', () {
+      final (_, ev) = play(30, userFlow: true, syncFor: 30);
+      final closed = ev.whereType<SessionClosedEvent>().single;
+      expect(closed.record.levels, [1]);
+      expect(closed.record.levelPct, isNull);
+    });
+  });
+
+  group('solo zonas y trazo (§20)', () {
+    double measure(SyncParams p, double ya, double yc) {
+      final e = SyncEngine(params: p, wallClock: () => DateTime(2026));
+      e.drive = (_) {
+        e.adult.feedTilt(0, ya / 6 * p.rangeA, p);
+        e.child.feedTilt(0, yc / 6 * p.rangeC, p);
+      };
+      var now = 0.0;
+      e.start(mode: PlayMode.levels, now: now);
+      for (var i = 0; i < 90; i++) {
+        now += 1000 / 60;
+        e.tick(now);
+      }
+      return e.d;
+    }
+
+    SyncParams zones() => SyncParams()..matchMode = 1;
+
+    test('dentro del mismo tercio la distancia es 0', () {
+      expect(measure(zones(), 1, -1.5), 0);
+    });
+
+    test('medio punto fuera del tercio ya está fuera: sin el margen del punto', () {
+      final p = zones();
+      expect(measure(p, 1, 2.5), greaterThan(p.hyst * 1.2));
+      expect(measure(zones()..zoneStrict = 0, 1, 2.5), lessThan(1.2), reason: 'antes contaba como sincronía');
+    });
+
+    test('la velocidad no pesa en zonas', () {
+      final e = SyncEngine(params: zones()..velWeight = 5, wallClock: () => DateTime(2026));
+      final p = e.params;
+      e.drive = (t) {
+        e.adult.feedTilt(0, 1.8 * math.sin(t / 150) / 6 * p.rangeA, p);
+        e.child.feedTilt(0, 0.2 * math.sin(t / 150) / 6 * p.rangeC, p);
+      };
+      var now = 0.0, worst = 0.0;
+      e.start(mode: PlayMode.levels, now: now);
+      for (var i = 0; i < 300; i++) {
+        now += 1000 / 60;
+        e.tick(now);
+        worst = math.max(worst, e.d);
+      }
+      expect(worst, 0, reason: 'los dos siguen en el tercio del medio aunque sus velocidades difieren');
+    });
+  });
+
+  group('volver del borde (§19)', () {
+    SyncParams follow() => SyncParams();
+    StickState calibrated() => StickState(Role.child)..cal = const StickCal(cx: 0, cy: 0, hr: 0, hrX: 30, hrY: 30);
+
+    test('al devolverse desde más allá del rango, el punto se mueve de inmediato', () {
+      final p = follow();
+      final st = calibrated();
+      for (var t = 0.0; t <= 40; t++) {
+        st.feedTilt(0, t, p);
+      }
+      expect(st.raw.y, 6);
+      expect(st.atEdge, isTrue, reason: 'la marca de salida se mantiene');
+      st.feedTilt(0, 38, p);
+      expect(st.raw.y, lessThan(5.8), reason: 'sin esto seguiría pegado hasta bajar de 30°');
+      expect(st.atEdge, isFalse);
+
+      final q = SyncParams.prototype();
+      final old = calibrated();
+      for (var t = 0.0; t <= 40; t++) {
+        old.feedTilt(0, t, q);
+      }
+      old.feedTilt(0, 38, q);
+      expect(old.raw.y, 6, reason: 'el prototipo espera');
+    });
+
+    test('quieto no deriva: el punto queda donde está', () {
+      final p = follow();
+      final st = calibrated();
+      st.feedTilt(0, 0, p);
+      st.feedTilt(0, 40, p);
+      st.feedTilt(0, 20, p);
+      final y = st.raw.y;
+      for (var i = 0; i < 600; i++) {
+        st.feedTilt(0, 20, p);
+      }
+      expect(st.raw.y, y);
+    });
+
+    test('al seguir moviéndose vuelve al rango calibrado', () {
+      final p = follow();
+      final st = calibrated();
+      st.feedTilt(0, 0, p);
+      st.feedTilt(0, 40, p);
+      for (var i = 0; i < 40; i++) {
+        st.feedTilt(0, 20 + 5.0 * (i % 2), p);
+      }
+      st.feedTilt(0, 15, p);
+      expect(st.raw.y, closeTo(3, 1e-9), reason: '15° de 30° = 3 en el plano');
+    });
+
+    test('un salto enorme no corre el rango más de la mitad', () {
+      final p = follow();
+      final st = calibrated();
+      st.feedTilt(0, 0, p);
+      st.feedTilt(0, 1000, p);
+      expect(st.raw.y, 6);
+      st.feedTilt(0, 0, p);
+      expect(st.raw.y, closeTo(0, 1e-9));
+    });
+
+    test('nunca sale del plano, con cualquier entrada', () {
+      final p = follow();
+      final st = calibrated();
+      final r = math.Random(3);
+      for (var i = 0; i < 5000; i++) {
+        st.feedTilt((r.nextDouble() - .5) * 400, (r.nextDouble() - .5) * 400, p);
+        st.update(i * 16.0, 0.016, p);
+        expect(st.raw.x.abs() <= 6 && st.raw.y.abs() <= 6 && st.pos.x.abs() <= 6 && st.pos.y.abs() <= 6, isTrue);
+      }
+    });
+  });
+
   group('límite del plano', () {
     final p = pointParams();
 
@@ -193,7 +371,7 @@ void main() {
       e.drive = (now) => synthDrive(e, SynthQuality.sync, now);
       final start = e.start(mode: PlayMode.levels, now: 0);
       expect(start.whereType<SayEvent>().single.text,
-          'Nivel 1. Juntos. Suban y bajen los sticks al mismo tiempo. Guía el adulto, luego el niño.');
+          'Nivel 1. Juntos. Apunten el stick a ustedes mismos y al otro, sin parar. Guía el adulto, luego el niño.');
       final ev = runFor(e, 0, 30000);
       final guides = ev.whereType<GuideChangedEvent>().toList();
       expect(guides.map((g) => g.guide), [Role.child], reason: 'una sola vez');
@@ -221,7 +399,7 @@ void main() {
       expect(ev.whereType<LevelCompletedEvent>().first.levelId, 1);
       expect(ev.whereType<SessionClosedEvent>(), isEmpty);
       expect(ev.whereType<SayEvent>().map((s) => s.text),
-          contains('Nivel 2. Espejo. Frente a frente, como en un espejo. Guía el niño, luego el adulto.'));
+          contains('Nivel 2. Espejo. Apunten al mismo lado, como en un espejo. Guía el niño, luego el adulto.'));
       expect(e.level!.id, 2);
       expect(e.levelTelemetry.map((l) => l.nivel), [1, 2]);
     });

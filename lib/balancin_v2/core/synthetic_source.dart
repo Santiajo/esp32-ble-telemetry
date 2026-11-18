@@ -54,7 +54,7 @@ void synthDrive(SyncEngine e, SynthQuality quality, double now, {Set<Role> roles
     case Relation.mirror:
       c = P2(-a.x + ex, a.y + ey);
     case Relation.same:
-      c = P2(a.x + ex, a.y + ey);
+      c = e.params.samePoint > 0 ? P2(-a.x + ex, -a.y + ey) : P2(a.x + ex, a.y + ey);
     case Relation.pulse:
       final fr = q == SynthQuality.sync ? 1.0 : (q == SynthQuality.cerca ? 1.15 : 1.7);
       a = P2(1, 4 * math.sin(2 * math.pi * 0.8 * s));

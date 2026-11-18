@@ -25,7 +25,10 @@ class SyncParams {
     ..calMode = 0
     ..phraseSteps = 0
     ..runMaxNotes = 0
-    ..matchMode = 0;
+    ..matchMode = 0
+    ..edgeFollow = 0
+    ..levelLimit = 0
+    ..samePoint = 0;
 
   /// §15 · para jugar sin vista: zonas + trazo, solo el lado en «Espejo» e
   /// «Iguales», el borde no cuenta, campanita de guía, sonidos que ubican y
@@ -143,7 +146,7 @@ class SyncParams {
   // ---- §15 · jugar sin vista ----
 
   /// Cómo se mide la sincronía en las relaciones de posición (Juntos, Espejo,
-  /// Iguales, Sube y baja, Libre): 0 = punto (prototipo), 1 = zonas, 2 = trazo,
+  /// Iguales, Señalados, Libre): 0 = punto (prototipo), 1 = zonas, 2 = trazo,
   /// 3 = zonas y trazo a la vez (por defecto desde el 25-10-2026, §16).
   double matchMode = 3;
 
@@ -175,13 +178,33 @@ class SyncParams {
   /// 1 = la quinta aparece de a poco al acercarse (de 2·tol a tol), no de golpe.
   double fifthRamp = 0;
 
+  // ---- §19 · volver del borde sin espera ----
+
+  /// 1 = «Iguales» pide el mismo punto físico: frente a frente, lado y adelante opuestos en
+  /// el marco de cada uno. 0 = la misma posición en el marco de cada uno (prototipo).
+  double samePoint = 1;
+
+  /// Segundos de juego para lograr un nivel en el flujo de usuario; al pasar, va al final
+  /// con el % logrado. 0 = sin límite. El banco no lo usa.
+  double levelLimit = 40;
+
+  /// 1 = en zonas, estar fuera de la franja es estar fuera: sin el margen de tolerancia del punto.
+  double zoneStrict = 1;
+
+  /// 1 = la calibración de usuarios exige mover los ejes correctos del stick.
+  double axisCheck = 1;
+
+  /// 1 = pasarse del rango corre el límite con el stick: al devolverse, el punto se
+  /// mueve de inmediato. 0 = el punto espera a que la inclinación reentre (prototipo).
+  double edgeFollow = 1;
+
   static const List<String> keys = [
     'tolScale', 'alpha', 'rangeA', 'rangeC', 'minA', 'minC', 'onSpeed', 'hyst', //
     'secScale', 'idleAfter', 'decay', 'maxDetune', 'followLag', 'rhythmWin', 'endAfter',
     'kAccel', 'accelGate',
     'slipGrace', 'slipDrain', 'velWeight', 'syncLagMs', 'calMode', 'autoNext', 'phraseSteps', 'runMaxNotes', 'runMs', 'runGain',
     'matchMode', 'zoneCount', 'traceWinMs', 'traceMin', 'sideOnly', 'edgeNoSync', 'guideChime', 'sharedScale', 'sideTimbre',
-    'fifthRamp',
+    'fifthRamp', 'edgeFollow', 'zoneStrict', 'axisCheck', 'levelLimit', 'samePoint',
   ];
 
   double operator [](String k) => switch (k) {
@@ -222,6 +245,11 @@ class SyncParams {
         'sharedScale' => sharedScale,
         'sideTimbre' => sideTimbre,
         'fifthRamp' => fifthRamp,
+        'edgeFollow' => edgeFollow,
+        'zoneStrict' => zoneStrict,
+        'axisCheck' => axisCheck,
+        'levelLimit' => levelLimit,
+        'samePoint' => samePoint,
         _ => throw ArgumentError.value(k, 'k', 'parámetro desconocido'),
       };
 
@@ -301,6 +329,16 @@ class SyncParams {
         sideTimbre = v;
       case 'fifthRamp':
         fifthRamp = v;
+      case 'edgeFollow':
+        edgeFollow = v;
+      case 'zoneStrict':
+        zoneStrict = v;
+      case 'axisCheck':
+        axisCheck = v;
+      case 'levelLimit':
+        levelLimit = v;
+      case 'samePoint':
+        samePoint = v;
       default:
         throw ArgumentError.value(k, 'k', 'parámetro desconocido');
     }
