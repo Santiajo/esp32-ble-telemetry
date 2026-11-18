@@ -217,5 +217,5 @@ Se conecta a la primera (MTU 185, intervalo 15 ms). El retraso un poco mayor es 
   - Xiaomi: «Conceder permisos» no encendía el Bluetooth y la búsqueda fallaba sin aviso.
   - Tablet Samsung: no conectó y el stick quedó parpadeando, sin conexión. Causa probable: en Android 11 o anterior la búsqueda Bluetooth no devuelve nada con la Ubicación apagada.
   - **Arreglo en dev.8** (`FuenteSticksBle.prepararBluetooth`, canal `epu/sistema` en `MainActivity.kt`): pide encender el Bluetooth con el aviso del sistema y, en Android 11 o anterior, si la Ubicación está apagada abre su ajuste. Se revisa al tocar «Conectar sticks» y cada dos búsquedas fallidas.
-  - **Sin probar en esos teléfonos todavía.** APK en `entregas/Epu-2.1.0-dev.8.apk`.
+  - **Probado (18-11):** en el Xiaomi y la tablet Samsung el stick se detecta y conecta de inmediato. EPU-5 y EPU-6 cerrados. APK en `entregas/Epu-2.1.0-dev.8.apk`.
 
