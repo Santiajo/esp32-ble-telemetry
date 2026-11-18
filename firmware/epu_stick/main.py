@@ -386,9 +386,15 @@ def main():
     led = Led(LED_PIN)
     print('[PLACA] %s (%s) · rol %s · %s' % (PLACA['nombre'], PLACA_ID, STICK_ROLE, DEVICE_NAME))
     bus = open_bus()
-    if bus is None:
-        fail_forever(led, 'ERROR: ICM-42688-P no responde por %s. Revisar pines (arriba en Configuración), VCC->3V3, GND->GND'
-                     % BUS.upper())
+    # Si el sensor no responde (contacto flojo: el P1 lo tuvo el 18-11), reintenta cada
+    # 2 s con la luz parpadeando rápido, en vez de quedarse trabado hasta reiniciar.
+    while bus is None:
+        print('ERROR: ICM-42688-P no responde por %s. Revisar pines (arriba en Configuración), VCC->3V3, GND->GND.'
+              ' Reintento en 2 s.' % BUS.upper())
+        for _ in range(10):
+            led.set(1); time.sleep_ms(100)
+            led.set(0); time.sleep_ms(100)
+        bus = open_bus()
     imu = ICM42688(bus)
     if not imu.ok:
         fail_forever(led, 'ERROR: el ICM-42688-P no guardó la configuración. Revisar cables (MISO/MOSI) y alimentación.')
