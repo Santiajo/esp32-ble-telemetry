@@ -4,12 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final miercoles = DateTime(2026, 11, 18, 17, 0);
 
-  test('niveles seguidos van a la misma sesión; tras 30 min empieza otra', () {
+  test('mientras la app sigue abierta es la misma sesión; al cerrarla empieza otra', () {
     final p = ProgresoEpu()
       ..terminarNivel(1, miercoles)
       ..terminarNivel(2, miercoles.add(const Duration(minutes: 3)))
       ..terminarNivel(1, miercoles.add(const Duration(minutes: 6)))
-      ..terminarNivel(4, miercoles.add(const Duration(minutes: 50)));
+      ..cerrarSesion()
+      ..terminarNivel(4, miercoles.add(const Duration(minutes: 8)));
     expect(p.sesiones, hasLength(2));
     expect(p.sesiones.first.niveles, {4});
     expect(p.sesiones.last.niveles, {1, 2});
@@ -42,6 +43,7 @@ void main() {
   test('se guarda y se recupera igual; datos rotos no rompen la app', () {
     final p = ProgresoEpu()
       ..terminarNivel(1, miercoles)
+      ..cerrarSesion()
       ..terminarNivel(4, miercoles.add(const Duration(hours: 2)));
     final q = ProgresoEpu.fromJson(p.toJson());
     expect(q.completados, {1, 4});
@@ -56,8 +58,16 @@ void main() {
   test('guarda como mucho 20 sesiones', () {
     final p = ProgresoEpu();
     for (var i = 0; i < 25; i++) {
-      p.terminarNivel(1, miercoles.add(Duration(hours: i)));
+      p
+        ..terminarNivel(1, miercoles.add(Duration(hours: i)))
+        ..cerrarSesion();
     }
     expect(p.sesiones, hasLength(ProgresoEpu.maxSesiones));
+  });
+
+  test('al abrir la app de nuevo, el siguiente nivel abre una sesión nueva', () {
+    final p = ProgresoEpu()..terminarNivel(1, miercoles);
+    final q = ProgresoEpu.fromJson(p.toJson())..terminarNivel(2, miercoles.add(const Duration(minutes: 2)));
+    expect(q.sesiones, hasLength(2));
   });
 }

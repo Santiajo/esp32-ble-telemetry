@@ -15,7 +15,7 @@ import '../epu/juego/fuente_sticks.dart';
 ///
 /// Las pantallas de Joaquín (`lib/epu`) solo hablan con [FuenteSticks]. Por debajo
 /// se reutiliza lo que ya está probado con sticks reales:
-/// * [StickHub]: vinculación por nombre (`Epu-Adulto` / `Epu-Niño`), MAC guardada y
+/// * [StickHub]: vinculación por nombre (`Epu - adulto` / `Epu - niño`), MAC guardada y
 ///   reconexión;
 /// * [TiltStick]: inclinación contra la gravedad (filtro del acelerómetro y el
 ///   giroscopio) con los ejes de cada placa.

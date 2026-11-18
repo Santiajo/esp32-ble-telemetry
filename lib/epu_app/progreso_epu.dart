@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import '../epu/estado/estado_eco.dart';
 
-/// Una sesión de juego: desde el primer nivel terminado hasta el último, sin
-/// pausas de más de [ProgresoEpu.pausaSesion].
+/// Una sesión de juego: los niveles terminados mientras la app estuvo abierta
+/// y en pantalla (ver [ProgresoEpu.cerrarSesion]).
 class RegistroSesion {
   RegistroSesion({required this.inicio, required this.fin, required Set<int> niveles}) : niveles = {...niveles};
 
@@ -38,9 +38,6 @@ class ProgresoEpu {
       : completados = completados ?? {},
         sesiones = sesiones ?? [];
 
-  /// Más de esto sin terminar un nivel empieza otra sesión.
-  static const Duration pausaSesion = Duration(minutes: 30);
-
   /// Sesiones que se guardan (las más recientes).
   static const int maxSesiones = 20;
 
@@ -49,14 +46,22 @@ class ProgresoEpu {
   /// La más reciente primero.
   final List<RegistroSesion> sesiones;
 
+  /// Hay una sesión en curso (no se guarda: al abrir la app siempre empieza otra).
+  bool _sesionAbierta = false;
+
+  /// Dejaron de jugar: la app se cerró o pasó al fondo. El próximo nivel
+  /// terminado abre una sesión nueva (18-11: 30 min era demasiado).
+  void cerrarSesion() => _sesionAbierta = false;
+
   /// Registra un nivel terminado en [ahora].
   void terminarNivel(int nivel, DateTime ahora) {
     completados.add(nivel);
     final ultima = sesiones.isEmpty ? null : sesiones.first;
-    if (ultima != null && ahora.difference(ultima.fin) <= pausaSesion) {
+    if (ultima != null && _sesionAbierta) {
       ultima.fin = ahora;
       ultima.niveles.add(nivel);
     } else {
+      _sesionAbierta = true;
       sesiones.insert(0, RegistroSesion(inicio: ahora, fin: ahora, niveles: {nivel}));
       if (sesiones.length > maxSesiones) sesiones.removeRange(maxSesiones, sesiones.length);
     }

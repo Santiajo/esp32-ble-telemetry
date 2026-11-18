@@ -103,7 +103,7 @@ Cada tarea dice cuándo está lista. Marca `[x]` al verificar.
   - **Segunda prueba (dev.3), bien.** Dos observaciones:
     - La luz va en diagonal al borde derecho: es el diseño (borde derecho del adulto en (312, 320) y reposo en (150, 398), para que las luces no se tapen). El registro muestra el giro limpio (+55° de lado, −2° adelante). Para Joaquín si la quiere recta.
     - Al volver al centro bajando el brazo, la punta se iba >20° atrás y contaba como el borde de abajo. **Umbral subido a 25° (sale bajo 18°)** en dev.4. Para la prueba: «para volver al centro, pongan el stick derecho». *Listo cuando* el nivel 1 se completa de punta a punta en el teléfono y el trozo suena sin retraso notorio.
-- [x] Niveles completados y sesiones pasadas guardados en el teléfono (`lib/epu_app/progreso_epu.dart`, clave `epu_progreso`): los checks de «Elegir nivel» y las tarjetas del Home sobreviven al cerrar la app. Una sesión junta los niveles terminados sin pausas de más de 30 min; títulos «Hoy», «Ayer» o «Viernes, 30 oct», como el prototipo. 6 pruebas. 2.1.0-dev.6.
+- [x] Niveles completados y sesiones pasadas guardados en el teléfono (`lib/epu_app/progreso_epu.dart`, clave `epu_progreso`): los checks de «Elegir nivel» y las tarjetas del Home sobreviven al cerrar la app. Una sesión junta los niveles terminados mientras la app está abierta y en pantalla: al cerrarla o mandarla al fondo, el siguiente nivel abre otra (antes eran 30 min de pausa, demasiado). Títulos «Hoy», «Ayer» o «Viernes, 30 oct», como el prototipo. 7 pruebas. 2.1.0-dev.7.
 - [ ] APK 2.1.0 instalado en el teléfono de la prueba.
 
 ### Sábado 21 · prueba
@@ -202,3 +202,10 @@ Se conecta a la primera (MTU 185, intervalo 15 ms). El retraso un poco mayor es 
 **Cómo sacar una traza sin compartirla:** desde la dev.22, el banco guarda una copia de cada traza en `Android/data/cl.balancin.prototipo/files/registros/`. Se baja con `adb pull` (en Git Bash, con `MSYS_NO_PATHCONV=1`) y se mide con `python tools/trace_stats.py <traza>`.
 
 **Compilar el APK en este PC:** si Gradle falla con «Unable to establish loopback connection», definir `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\tmpj`.
+
+## 9. Nombres definitivos y APK para otros teléfonos (18-11-2026)
+
+- **Nombres de los sticks (EPU-5):** **«Epu - adulto»** y **«Epu - niño»**, con espacios. La app acepta también los del primer firmware («Epu-Adulto» / «Epu-Niño»). P2 cargado y reconectado; P1 cargado.
+- **P1 sin sensor tras la recarga:** lee `WHO_AM_I = 0x00` en su cableado (antes 0x47). Revisar conexión física / cortar la alimentación. Además, el P1 no acepta escritura por USB mientras corre un programa: para cargarle firmware hay que borrarlo con esptool y subir `main.py` antes de que arranque.
+- **APK para probar en otros celulares y mandarle a Joaquín:** `entregas/Epu-2.1.0-dev.7.apk` (sin niño simulado ni registro). Las APK no van al repo (`.gitignore`). EPU-5 y EPU-6 vuelven a «En curso» para probar en otros teléfonos.
+

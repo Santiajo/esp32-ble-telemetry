@@ -6,7 +6,7 @@
 #         v2,<t_ms>,<ax>,<ay>,<az>,<gx>,<gy>,<gz>\n
 #     Con ±8 g y ±1000 °/s el ICM-42688-P usa la misma escala que el MPU6050
 #     (4096 LSB por g y 32,8 LSB por °/s).
-#   - Se anuncia como «Epu-Adulto» o «Epu-Niño» (calendario de la semana y EPU-5).
+#   - Se anuncia como «Epu - adulto» o «Epu - niño» (nombres definitivos de EPU-5).
 #   - Sin teléfono conectado, imprime 5 veces por segundo la inclinación en grados
 #     (adelante/atrás e izquierda/derecha) y los valores crudos, para la prueba en Thonny.
 #   - Con teléfono conectado, imprime un resumen [STATS] cada 2 s.
@@ -47,7 +47,7 @@ ROL_POR_DEFECTO = 'A'            # placa nueva que no está en PLACAS
 PLACA_ID = binascii.hexlify(machine.unique_id()).decode()
 PLACA = PLACAS.get(PLACA_ID, {'nombre': '¿?', 'rol': ROL_POR_DEFECTO, 'ejes': EJES_DE_CANTO})
 STICK_ROLE = PLACA['rol']
-DEVICE_NAME = 'Epu-Adulto' if STICK_ROLE == 'A' else 'Epu-Niño'
+DEVICE_NAME = 'Epu - adulto' if STICK_ROLE == 'A' else 'Epu - niño'
 AXES = PLACA['ejes']
 
 BUS = 'spi'                      # 'spi' (así están cableados los sticks) o 'i2c'

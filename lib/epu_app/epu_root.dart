@@ -33,7 +33,7 @@ class EpuRoot extends StatefulWidget {
   State<EpuRoot> createState() => _EpuRootState();
 }
 
-class _EpuRootState extends State<EpuRoot> {
+class _EpuRootState extends State<EpuRoot> with WidgetsBindingObserver {
   final StickHub _hub = StickHub();
   late final FuenteSticksBle _fuente = FuenteSticksBle(
     _hub,
@@ -52,6 +52,7 @@ class _EpuRootState extends State<EpuRoot> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     EpuSticks.fuente = _fuente;
     EpuSticks.alMantenerLogo = _abrirBanco;
     EpuSticks.crearJuego = (nivel, estado, alTerminar) => JuegoEcoReal.para(_fuente, nivel, estado, alTerminar);
@@ -115,8 +116,15 @@ class _EpuRootState extends State<EpuRoot> {
     ));
   }
 
+  /// Cerrar la app o mandarla al fondo termina la sesión de juego.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) _progreso.cerrarSesion();
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     unawaited(_registro?.cancel());
     EpuSticks.alMantenerLogo = null;
     EpuSticks.crearJuego = null;
