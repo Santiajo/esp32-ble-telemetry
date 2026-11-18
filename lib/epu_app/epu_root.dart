@@ -14,6 +14,7 @@ import '../epu/navegacion/rutas.dart';
 import '../epu/tema/colores.dart';
 import 'fuente_sticks_ble.dart';
 import 'juego_eco_real.dart';
+import 'progreso_epu.dart';
 
 /// Raíz de la app Epu: crea la conexión con los sticks una sola vez, la entrega a
 /// las pantallas de Joaquín por [EpuSticks.fuente] y abre el flujo Eco.
@@ -39,7 +40,12 @@ class _EpuRootState extends State<EpuRoot> {
     unStick: const bool.fromEnvironment('EPU_UN_STICK'),
     alConectarLosDos: () => unawaited(_marcarPreparacion()),
   );
-  final EstadoEco _estado = EstadoEco(nivel: 1);
+  /// Clave del progreso guardado (niveles completados y sesiones).
+  static const String progresoKey = 'epu_progreso';
+
+  EstadoEco? _estado;
+  ProgresoEpu _progreso = ProgresoEpu();
+  final List<SesionPasada> _sesionesHome = [];
   bool? _preparado;
   StreamSubscription<LecturaStick>? _registro;
 
@@ -56,8 +62,15 @@ class _EpuRootState extends State<EpuRoot> {
   Future<void> _iniciar() async {
     bool hecho = false;
     try {
-      hecho = (await SharedPreferences.getInstance()).getBool(EpuRoot.preparacionKey) ?? false;
+      final prefs = await SharedPreferences.getInstance();
+      hecho = prefs.getBool(EpuRoot.preparacionKey) ?? false;
+      _progreso = ProgresoEpu.fromJson(prefs.getString(progresoKey));
     } catch (_) {}
+    _sesionesHome
+      ..clear()
+      ..addAll(_progreso.sesionesParaHome(DateTime.now()));
+    _estado = EstadoEco(nivel: 1, completados: {..._progreso.completados}, sesiones: _sesionesHome)
+      ..addListener(_alCambiarEstado);
     // Sticks ya vinculados: reconectar de fondo sin pedir permisos todavía.
     try {
       if (!Platform.isAndroid || await Permission.bluetoothConnect.isGranted) await _hub.reconnectSaved();
@@ -68,6 +81,31 @@ class _EpuRootState extends State<EpuRoot> {
   Future<void> _marcarPreparacion() async {
     try {
       await (await SharedPreferences.getInstance()).setBool(EpuRoot.preparacionKey, true);
+    } catch (_) {}
+  }
+
+  /// Un nivel recién completado (la pantalla de juego llama a `marcarCompletado`):
+  /// se suma a la sesión, se actualiza el Home y se guarda.
+  void _alCambiarEstado() {
+    final e = _estado;
+    if (e == null) return;
+    // Cada vez que termina un nivel se registra, aunque ya estuviera completado antes.
+    final terminado = e.ultimoTerminado;
+    if (terminado == null || terminado == _ultimoRegistrado) return;
+    _ultimoRegistrado = terminado;
+    final ahora = DateTime.now();
+    _progreso.terminarNivel(terminado.nivel, ahora);
+    _sesionesHome
+      ..clear()
+      ..addAll(_progreso.sesionesParaHome(ahora));
+    unawaited(_guardar());
+  }
+
+  ({int nivel, int vez})? _ultimoRegistrado;
+
+  Future<void> _guardar() async {
+    try {
+      await (await SharedPreferences.getInstance()).setString(progresoKey, _progreso.toJson());
     } catch (_) {}
   }
 
@@ -82,7 +120,8 @@ class _EpuRootState extends State<EpuRoot> {
     unawaited(_registro?.cancel());
     EpuSticks.alMantenerLogo = null;
     EpuSticks.crearJuego = null;
-    _estado.dispose();
+    _estado?.removeListener(_alCambiarEstado);
+    _estado?.dispose();
     _hub.dispose();
     super.dispose();
   }

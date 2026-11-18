@@ -103,7 +103,7 @@ Cada tarea dice cuándo está lista. Marca `[x]` al verificar.
   - **Segunda prueba (dev.3), bien.** Dos observaciones:
     - La luz va en diagonal al borde derecho: es el diseño (borde derecho del adulto en (312, 320) y reposo en (150, 398), para que las luces no se tapen). El registro muestra el giro limpio (+55° de lado, −2° adelante). Para Joaquín si la quiere recta.
     - Al volver al centro bajando el brazo, la punta se iba >20° atrás y contaba como el borde de abajo. **Umbral subido a 25° (sale bajo 18°)** en dev.4. Para la prueba: «para volver al centro, pongan el stick derecho». *Listo cuando* el nivel 1 se completa de punta a punta en el teléfono y el trozo suena sin retraso notorio.
-- [ ] Niveles completados guardados en el teléfono (`shared_preferences`) y arranque sin datos de ejemplo.
+- [x] Niveles completados y sesiones pasadas guardados en el teléfono (`lib/epu_app/progreso_epu.dart`, clave `epu_progreso`): los checks de «Elegir nivel» y las tarjetas del Home sobreviven al cerrar la app. Una sesión junta los niveles terminados sin pausas de más de 30 min; títulos «Hoy», «Ayer» o «Viernes, 30 oct», como el prototipo. 6 pruebas. 2.1.0-dev.6.
 - [ ] APK 2.1.0 instalado en el teléfono de la prueba.
 
 ### Sábado 21 · prueba

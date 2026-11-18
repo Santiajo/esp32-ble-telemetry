@@ -72,8 +72,18 @@ class EstadoEco extends ChangeNotifier {
 
   /// Se llama al terminar la melodía (pantalla de juego).
   void marcarCompletado(int nivel) {
-    if (_completados.add(nivel)) notifyListeners();
+    // Integración: avisa en cada nivel terminado (también si ya estaba completado),
+    // para registrar la sesión en el Home.
+    _completados.add(nivel);
+    _vecesTerminado++;
+    ultimoTerminado = (nivel: nivel, vez: _vecesTerminado);
+    notifyListeners();
   }
+
+  int _vecesTerminado = 0;
+
+  /// Último nivel terminado en esta ejecución (integración; `null` si ninguno).
+  ({int nivel, int vez})? ultimoTerminado;
 }
 
 /// Entrega el [EstadoEco] a toda la app. Uso: `EpuEstado.of(context).nivel`.
