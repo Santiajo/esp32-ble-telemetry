@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Selector de niveles</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.mv{transform-box:fill-box;transform-origin:50% 100%}
+.l1 .sa,.l1 .sc{transform:translateY(-9px) rotate(-6deg)}
+.l2 .sa{transform:rotate(-16deg)}.l2 .sc{transform:rotate(16deg)}
+.l3 .sa,.l3 .sc{transform:rotate(-18deg)}
+.l4 .sa{transform:translateY(-10px) rotate(-6deg)}.l4 .sc{transform:rotate(4deg)}
+.l5 .sa,.l5 .sc{transform:rotate(12deg)}
+.l6 .sa{transform:rotate(16deg)}.l6 .sc{transform:rotate(5deg)}
+.l7 .sa{transform:translateY(-8px) rotate(-10deg)}.l7 .sc{transform:rotate(14deg)}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; overflow-y: auto; background: #EFECE4; color: #2B2536; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; line-height: 1.35">
+<a href="Home.dc.html" style="position: absolute; top: 14px; left: 14px; z-index: 2; height: 40px; box-sizing: border-box; padding: 0 14px 0 12px; border-radius: 999px; background: #fff; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: #2B2536; text-decoration: none; box-shadow: 0 2px 10px rgba(43,37,54,.1)"><span style="width: 8px; height: 8px; border-left: 2.5px solid #2B2536; border-bottom: 2.5px solid #2B2536; transform: translateX(2px) rotate(45deg)"></span>Atrás</a>
+<div style="box-sizing: border-box; padding: 66px 22px 28px; display: flex; flex-direction: column; gap: 14px">
+  <div>
+    <h1 style="margin: 0; text-align: center; font-size: 32px; font-weight: 900; letter-spacing: -.02em; line-height: 1.05; padding-bottom: 6px">¿Qué van a jugar hoy?</h1>
+  </div>
+  <div>
+    <div style="display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; color: #5a536b; margin-bottom: 8px"><span>La canción</span><span>3 de 7 partes</span></div>
+    <div style="display: flex; gap: 4px"><i style="flex: 1; height: 10px; border-radius: 5px; background: #0D9488"></i><i style="flex: 1; height: 10px; border-radius: 5px; background: #0D9488"></i><i style="flex: 1; height: 10px; border-radius: 5px; background: #0D9488"></i><i style="flex: 1; height: 10px; border-radius: 5px; background: #dcd8cf"></i><i style="flex: 1; height: 10px; border-radius: 5px; background: #dcd8cf"></i><i style="flex: 1; height: 10px; border-radius: 5px; background: #dcd8cf"></i><i style="flex: 1; height: 10px; border-radius: 5px; background: #dcd8cf"></i></div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+
+    <a href="Antes.dc.html" data-nivel="1" onClick="{{ pick1 }}" style="position: relative; background: #fff; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; text-align: left; color: #2B2536; text-decoration: none">
+      <span aria-label="Completado" style="position: absolute; top: 12px; right: 12px; box-sizing: border-box; width: 26px; height: 26px; border-radius: 50%; background: #0D9488; display: grid; place-items: center"><svg viewBox="0 0 20 20" aria-hidden="true" style="width: 15px; height: 15px; display: block"><path d="M5 10.5 L8.5 14 L15 7" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+      <svg class="l1" viewBox="0 0 120 100" aria-hidden="true" style="width: 84px; height: 70px; display: block; flex: none"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"></line><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"></rect><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"></circle><circle cx="42" cy="30" r="3" fill="#F2E44A"></circle></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"></rect><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"></circle><circle cx="78" cy="52" r="2.5" fill="#F2E44A"></circle></g></svg>
+      <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><b style="font-size: 16px; font-weight: 900; line-height: 1.1">1 · Juntos</b><span style="display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; font-weight: 800; color: #5a536b; flex-wrap: wrap"><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #dcd8cf"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #dcd8cf"></i><em style="font-style: normal; margin-left: 3px">Fácil</em></span></span>
+    </a>
+
+    <a href="Antes.dc.html" data-nivel="2" onClick="{{ pick2 }}" style="position: relative; background: #fff; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; text-align: left; color: #2B2536; text-decoration: none">
+      <span aria-label="Completado" style="position: absolute; top: 12px; right: 12px; box-sizing: border-box; width: 26px; height: 26px; border-radius: 50%; background: #0D9488; display: grid; place-items: center"><svg viewBox="0 0 20 20" aria-hidden="true" style="width: 15px; height: 15px; display: block"><path d="M5 10.5 L8.5 14 L15 7" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+      <svg class="l2" viewBox="0 0 120 100" aria-hidden="true" style="width: 84px; height: 70px; display: block; flex: none"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"></line><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"></rect><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"></circle><circle cx="42" cy="30" r="3" fill="#F2E44A"></circle></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"></rect><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"></circle><circle cx="78" cy="52" r="2.5" fill="#F2E44A"></circle></g></svg>
+      <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><b style="font-size: 16px; font-weight: 900; line-height: 1.1">2 · Espejo</b><span style="display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; font-weight: 800; color: #5a536b; flex-wrap: wrap"><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #dcd8cf"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #dcd8cf"></i><em style="font-style: normal; margin-left: 3px">Fácil</em></span></span>
+    </a>
+
+    <a href="Antes.dc.html" data-nivel="3" onClick="{{ pick3 }}" style="position: relative; background: #fff; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; text-align: left; color: #2B2536; text-decoration: none">
+      <span aria-label="Completado" style="position: absolute; top: 12px; right: 12px; box-sizing: border-box; width: 26px; height: 26px; border-radius: 50%; background: #0D9488; display: grid; place-items: center"><svg viewBox="0 0 20 20" aria-hidden="true" style="width: 15px; height: 15px; display: block"><path d="M5 10.5 L8.5 14 L15 7" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+      <svg class="l3" viewBox="0 0 120 100" aria-hidden="true" style="width: 84px; height: 70px; display: block; flex: none"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"></line><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"></rect><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"></circle><circle cx="42" cy="30" r="3" fill="#F2E44A"></circle></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"></rect><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"></circle><circle cx="78" cy="52" r="2.5" fill="#F2E44A"></circle></g></svg>
+      <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><b style="font-size: 16px; font-weight: 900; line-height: 1.1">3 · Iguales</b><span style="display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; font-weight: 800; color: #5a536b; flex-wrap: wrap"><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #dcd8cf"></i><em style="font-style: normal; margin-left: 3px">Media</em></span></span>
+    </a>
+
+    <a href="Antes.dc.html" data-nivel="4" onClick="{{ pick4 }}" style="position: relative; background: #fff; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; text-align: left; color: #2B2536; text-decoration: none; box-shadow: inset 0 0 0 2.5px #2B2536">
+      <span aria-label="Sin completar" style="position: absolute; top: 12px; right: 12px; box-sizing: border-box; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #CFC8BA"></span>
+      <svg class="l4" viewBox="0 0 120 100" aria-hidden="true" style="width: 84px; height: 70px; display: block; flex: none"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"></line><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"></rect><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"></circle><circle cx="42" cy="30" r="3" fill="#F2E44A"></circle></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"></rect><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"></circle><circle cx="78" cy="52" r="2.5" fill="#F2E44A"></circle></g></svg>
+      <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><b style="font-size: 16px; font-weight: 900; line-height: 1.1">4 · Señalados</b><span style="display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; font-weight: 800; color: #5a536b; flex-wrap: wrap"><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #dcd8cf"></i><em style="font-style: normal; margin-left: 3px">Media</em><span style="border-radius: 999px; padding: 2px 8px; font-size: 10.5px; margin-left: 4px; background: #2B2536; color: #fff">Sugerido</span></span></span>
+    </a>
+
+    <a href="Antes.dc.html" data-nivel="5" onClick="{{ pick5 }}" style="position: relative; background: #fff; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; text-align: left; color: #2B2536; text-decoration: none">
+      <span aria-label="Sin completar" style="position: absolute; top: 12px; right: 12px; box-sizing: border-box; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #CFC8BA"></span>
+      <svg class="l5" viewBox="0 0 120 100" aria-hidden="true" style="width: 84px; height: 70px; display: block; flex: none"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"></line><circle class="beat" cx="60" cy="16" r="3.5" fill="#2B2536"></circle><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"></rect><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"></circle><circle cx="42" cy="30" r="3" fill="#F2E44A"></circle></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"></rect><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"></circle><circle cx="78" cy="52" r="2.5" fill="#F2E44A"></circle></g></svg>
+      <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><b style="font-size: 16px; font-weight: 900; line-height: 1.1">5 · Mismo pulso</b><span style="display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; font-weight: 800; color: #5a536b; flex-wrap: wrap"><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #dcd8cf"></i><em style="font-style: normal; margin-left: 3px">Media</em></span></span>
+    </a>
+
+    <a href="Antes.dc.html" data-nivel="6" onClick="{{ pick6 }}" style="position: relative; background: #fff; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; text-align: left; color: #2B2536; text-decoration: none">
+      <span aria-label="Sin completar" style="position: absolute; top: 12px; right: 12px; box-sizing: border-box; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #CFC8BA"></span>
+      <svg class="l6" viewBox="0 0 120 100" aria-hidden="true" style="width: 84px; height: 70px; display: block; flex: none"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"></line><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"></rect><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"></circle><circle cx="42" cy="30" r="3" fill="#F2E44A"></circle></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"></rect><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"></circle><circle cx="78" cy="52" r="2.5" fill="#F2E44A"></circle></g></svg>
+      <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><b style="font-size: 16px; font-weight: 900; line-height: 1.1">6 · Sígueme</b><span style="display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; font-weight: 800; color: #5a536b; flex-wrap: wrap"><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><em style="font-style: normal; margin-left: 3px">Difícil</em></span></span>
+    </a>
+
+    <a href="Antes.dc.html" data-nivel="7" onClick="{{ pick7 }}" style="position: relative; grid-column: 1 / -1; background: #fff; border-radius: 22px; padding: 14px; display: flex; flex-direction: row; gap: 14px; align-items: center; text-align: left; color: #2B2536; text-decoration: none">
+      <span aria-label="Sin completar" style="position: absolute; top: 12px; right: 12px; box-sizing: border-box; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #CFC8BA"></span>
+      <svg class="l7" viewBox="0 0 120 100" aria-hidden="true" style="width: 84px; height: 70px; display: block; flex: none"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"></line><g class="note"><ellipse cx="57" cy="20" rx="5" ry="3.6" transform="rotate(-20 57 20)" fill="#7A8B34"></ellipse><rect x="60.6" y="4" width="1.8" height="16" rx=".9" fill="#7A8B34"></rect></g><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"></rect><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"></circle><circle cx="42" cy="30" r="3" fill="#F2E44A"></circle></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"></rect><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"></circle><circle cx="78" cy="52" r="2.5" fill="#F2E44A"></circle></g></svg>
+      <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><b style="font-size: 16px; font-weight: 900; line-height: 1.1">7 · La canción</b><span style="display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; font-weight: 800; color: #5a536b; flex-wrap: wrap"><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><i style="width: 8px; height: 8px; border-radius: 50%; background: #2B2536"></i><em style="font-style: normal; margin-left: 3px">Difícil</em></span></span>
+    </a>
+
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const v = {};
+    for (let i = 1; i <= 7; i++) v['pick' + i] = () => { try { sessionStorage.setItem('epuNivel', String(i)); } catch (e) {} };
+    return v;
+  }
+}
+</script>
+</body>
+</html>

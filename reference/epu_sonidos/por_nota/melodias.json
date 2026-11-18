@@ -1,0 +1,414 @@
+[
+  {
+    "nivel": 1,
+    "nombre": "Madera",
+    "instrumento": "madera",
+    "notaSostenida": false,
+    "trozos": [
+      [
+        {
+          "nota": "la3",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "do4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "re4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "re4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "do4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "la3",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "do4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "la3",
+          "duracionMs": 1000
+        }
+      ]
+    ]
+  },
+  {
+    "nivel": 2,
+    "nombre": "Viento",
+    "instrumento": "viento",
+    "notaSostenida": true,
+    "trozos": [
+      [
+        {
+          "nota": "mi4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "sol4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "la4",
+          "duracionMs": 1500
+        },
+        {
+          "nota": "sol4",
+          "duracionMs": 500
+        }
+      ],
+      [
+        {
+          "nota": "mi4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "re4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "mi4",
+          "duracionMs": 2000
+        }
+      ]
+    ]
+  },
+  {
+    "nivel": 3,
+    "nombre": "Cuerda",
+    "instrumento": "cuerda",
+    "notaSostenida": false,
+    "trozos": [
+      [
+        {
+          "nota": "la3",
+          "duracionMs": 500
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "re4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "do4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "re4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "sol4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "re4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "do4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "la3",
+          "duracionMs": 1000
+        }
+      ]
+    ]
+  },
+  {
+    "nivel": 4,
+    "nombre": "Caña",
+    "instrumento": "cana",
+    "notaSostenida": true,
+    "trozos": [
+      [
+        {
+          "nota": "re4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "sol4",
+          "duracionMs": 1500
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 500
+        }
+      ],
+      [
+        {
+          "nota": "re4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "do4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "la3",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "do4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "re4",
+          "duracionMs": 2000
+        }
+      ]
+    ]
+  },
+  {
+    "nivel": 5,
+    "nombre": "Metal",
+    "instrumento": "metal",
+    "notaSostenida": false,
+    "trozos": [
+      [
+        {
+          "nota": "la3",
+          "duracionMs": 500
+        },
+        {
+          "nota": "do4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "re4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "sol4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "la4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "sol4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "mi4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "re4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "do4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "la3",
+          "duracionMs": 2000
+        }
+      ]
+    ]
+  },
+  {
+    "nivel": 6,
+    "nombre": "Voces",
+    "instrumento": "voces",
+    "notaSostenida": true,
+    "trozos": [
+      [
+        {
+          "nota": "la3",
+          "duracionMs": 2000
+        }
+      ],
+      [
+        {
+          "nota": "do4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "re4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "mi4",
+          "duracionMs": 2000
+        }
+      ],
+      [
+        {
+          "nota": "sol4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "re4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "do4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "la3",
+          "duracionMs": 2000
+        }
+      ]
+    ]
+  },
+  {
+    "nivel": 7,
+    "nombre": "Teclas",
+    "instrumento": "teclas",
+    "notaSostenida": false,
+    "trozos": [
+      [
+        {
+          "nota": "mi4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "sol4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "la4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "sol4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "re4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "do4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "re4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "mi4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "sol4",
+          "duracionMs": 1000
+        },
+        {
+          "nota": "la4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "mi4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "re4",
+          "duracionMs": 500
+        },
+        {
+          "nota": "do4",
+          "duracionMs": 1000
+        }
+      ],
+      [
+        {
+          "nota": "la3",
+          "duracionMs": 2000
+        }
+      ]
+    ]
+  }
+]

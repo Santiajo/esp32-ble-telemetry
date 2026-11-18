@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Eco · antes del nivel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.fill{animation:fill 3s linear both}
+@keyframes fill{from{width:0}to{width:100%}}
+.ar{opacity:0;transition:opacity .25s ease}
+.ar.dF{opacity:1;animation:arF .6s cubic-bezier(.2,.7,.3,1) both}
+.ar.dB{opacity:1;animation:arB .6s cubic-bezier(.2,.7,.3,1) both}
+.ar.dL{opacity:1;animation:arL .6s cubic-bezier(.2,.7,.3,1) both}
+.ar.dR{opacity:1;animation:arR .6s cubic-bezier(.2,.7,.3,1) both}
+@keyframes arF{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(-1.5px)}}
+@keyframes arB{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(1.5px)}}
+@keyframes arL{from{opacity:0;transform:translateX(5px)}to{opacity:1;transform:translateX(-1.5px)}}
+@keyframes arR{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:translateX(1.5px)}}
+.gr{animation:gr 1.68s linear infinite}
+@keyframes gr{to{transform:rotate(360deg)}}
+.hr{transform-box:fill-box;transform-origin:center;animation:hr 1s ease-in-out infinite}
+@keyframes hr{0%,100%{transform:scale(.8)}50%{transform:scale(1.25)}}
+@media(prefers-reduced-motion:reduce){.fill{animation:none;width:100%;opacity:.45}.ar{transition:none}.ar.dF,.ar.dB,.ar.dL,.ar.dR,.gr{animation:none}.hr{animation:none}}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; padding: 66px 22px 28px; background: #EFECE4; color: #2B2536; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; line-height: 1.35; display: flex; flex-direction: column; gap: 18px">
+  <a href="EcoNiveles.dc.html" style="position: absolute; top: 14px; left: 14px; height: 40px; box-sizing: border-box; padding: 0 14px 0 12px; border-radius: 999px; background: #fff; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: #2B2536; text-decoration: none; box-shadow: 0 2px 10px rgba(43,37,54,.1)"><span style="width: 8px; height: 8px; border-left: 2.5px solid #2B2536; border-bottom: 2.5px solid #2B2536; transform: translateX(2px) rotate(45deg)"></span>Atrás</a>
+  <div style="flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+    <span style="font-size: 13px; font-weight: 800; color: #5a536b">{{ k }}</span>
+    <span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: #5a536b"><i aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: {{ d1 }}"></i><i aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: {{ d2 }}"></i><i aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: {{ d3 }}"></i><em style="font-style: normal; margin-left: 3px">{{ dTx }}</em></span>
+  </div>
+  <div style="flex: 1; min-height: 260px; max-height: 388px; display: grid; place-items: center; overflow: hidden">
+    <svg viewBox="0 0 120 100" role="img" aria-label="{{ alt }}" style="width: 285px; height: auto; display: block">
+      <g transform="translate(30 6.5)"><g class="{{ ka }}" fill="none" stroke="#7E9142" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M0 4 L0 -4.5 M-3.6 -1 L0 -4.5 L3.6 -1" transform="rotate({{ ra }})"/></g></g>
+      <g transform="translate(30 7.5)"><g class="ar gr" fill="none" stroke="#7E9142" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="opacity: {{ ga }}"><path d="M-3.52 -2.47 A4.3 4.3 0 1 1 1.11 4.15"/><path d="M-1.79 4.93 L1.76 6.57 L0.46 1.74 Z" fill="#7E9142" stroke-width="1"/></g></g>
+      <g transform="translate(88 27.5)"><g class="{{ kc }}" fill="none" stroke="#7E9142" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M0 4 L0 -4.5 M-3.6 -1 L0 -4.5 L3.6 -1" transform="rotate({{ rc }})"/></g></g>
+      <g transform="translate(88 27.5)"><g class="ar gr" fill="none" stroke="#7E9142" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="opacity: {{ gc }}"><path d="M-3.52 -2.47 A4.3 4.3 0 1 1 1.11 4.15"/><path d="M-1.79 4.93 L1.76 6.57 L0.46 1.74 Z" fill="#7E9142" stroke-width="1"/></g></g>
+      <g transform="translate(30 15)"><path d="M14 60 L42.4 140" fill="none" stroke="#2B2536" stroke-width="20.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aBpalm }}" fill="none" stroke="#2B2536" stroke-width="20.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aPalm }}" fill="none" stroke="#2B2536" stroke-width="20.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aC1 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aC1 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aC2 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aC2 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aC3 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aC3 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aC4 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aC4 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 60 L42.4 140" fill="none" stroke="#fff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aBpalm }}" fill="none" stroke="#fff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aPalm }}" fill="none" stroke="#fff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aStick }}" fill="none" stroke="#B3A2DC" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><g style="transform: translate({{ aLx }}px, {{ aLy }}px)"><circle class="hr" cx="0" cy="0" r="8.5" fill="none" stroke="#F2E44A" stroke-width="1.8" opacity="{{ ha }}"/><g style="transform: scale({{ aLs }}); opacity: {{ aLo }}"><circle cx="0" cy="0" r="5" fill="#F2E44A" opacity=".45"/><circle cx="0" cy="0" r="3" fill="#F2E44A"/></g></g><path d="{{ aF1 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ aT1 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aW1 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ aT1 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aF2 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ aT2 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aW2 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ aT2 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aF3 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ aT3 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aW3 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ aT3 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aF4 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ aT4 }}" fill="none" stroke="#2B2536" stroke-width="8.8" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aW4 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ aT4 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aTh }}" fill="none" stroke="#2B2536" stroke-width="11.2" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aTh }}" fill="none" stroke="#fff" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ aEr }}" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g transform="translate(88 36) scale(.74)"><path d="M14 60 L42.4 140" fill="none" stroke="#2B2536" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cBpalm }}" fill="none" stroke="#2B2536" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cPalm }}" fill="none" stroke="#2B2536" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cC1 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cC1 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cC2 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cC2 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cC3 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cC3 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cC4 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cC4 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 60 L42.4 140" fill="none" stroke="#fff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cBpalm }}" fill="none" stroke="#fff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cPalm }}" fill="none" stroke="#fff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cStick }}" fill="none" stroke="#E85E45" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><g style="transform: translate({{ cLx }}px, {{ cLy }}px)"><circle class="hr" cx="0" cy="0" r="8.5" fill="none" stroke="#F2E44A" stroke-width="1.8" opacity="{{ hc }}"/><g style="transform: scale({{ cLs }}); opacity: {{ cLo }}"><circle cx="0" cy="0" r="5" fill="#F2E44A" opacity=".45"/><circle cx="0" cy="0" r="3" fill="#F2E44A"/></g></g><path d="{{ cF1 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ cT1 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cW1 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ cT1 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cF2 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ cT2 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cW2 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ cT2 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cF3 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ cT3 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cW3 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ cT3 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cF4 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ cT4 }}" fill="none" stroke="#2B2536" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cW4 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="butt" stroke-linejoin="round"/><path d="{{ cT4 }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cTh }}" fill="none" stroke="#2B2536" stroke-width="12.4" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cTh }}" fill="none" stroke="#fff" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round"/><path d="{{ cEr }}" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </svg>
+  </div>
+  <div style="text-align: center">
+    <h2 style="margin: 0 0 4px; font-size: 28px; font-weight: 900; letter-spacing: -.01em; line-height: 1.1">{{ n }}</h2>
+    <p style="margin: 0 0 8px; font-size: 15px; font-weight: 800; color: #2B2536">{{ pec }}</p>
+    <p style="margin: 0; font-size: 15px; color: #4a445a">{{ t }}</p>
+  </div>
+  <a href="EcoGuia.dc.html" aria-disabled="{{ lock }}" style="position: relative; overflow: hidden; margin-top: auto; flex: none; box-sizing: border-box; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 58px; padding: 12px 20px; font-size: 17px; font-weight: 800; color: {{ bfg }}; text-decoration: none; background: {{ bbg }}; border: 1.5px solid {{ bbg }}; border-radius: 16px; pointer-events: {{ bpe }}; transition: background .3s, border-color .3s, color .3s"><sc-if value="{{ lock }}" hint-placeholder-val="{{ true }}"><span class="fill" aria-hidden="true" style="position: absolute; left: 0; top: 0; bottom: 0; background: #B8B1A4"></span></sc-if><span style="position: relative">Comenzar</span></a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"melodia":{"editor":"enum","options":["1","2","3","4","5","6","7"],"default":"4"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  MEL = [
+    { n: 'Madera', ins: 'Marimba', d: 1, pec: 'Juntos', t: 'Vuelquen el stick los dos hacia el mismo borde de la pantalla, arriba o abajo. Como dos remos que van a la par.', alt: 'Los dos sticks se vuelcan hacia el mismo borde' },
+    { n: 'Viento', ins: 'Flauta dulce', d: 1, pec: 'Quietos', t: 'Vuelquen el stick hacia el mismo borde y quédense ahí, sin moverse, hasta que suene. Como una nota larga de flauta.', alt: 'Los dos sticks se vuelcan hacia el mismo borde y se quedan quietos' },
+    { n: 'Cuerda', ins: 'Guitarra', d: 2, pec: 'Lados contrarios', t: 'Cada uno vuelca el stick hacia un costado distinto: si uno va a la izquierda, el otro va a la derecha. Como estirar un elástico entre los dos.', alt: 'Un stick se vuelca hacia la izquierda y el otro hacia la derecha' },
+    { n: 'Caña', ins: 'Clarinete', d: 2, pec: 'Sube y baja', t: 'Uno vuelca el stick hacia arriba y el otro hacia abajo, y después cambian. Como un balancín.', alt: 'Un stick se vuelca hacia arriba mientras el otro va hacia abajo, y se alternan' },
+    { n: 'Metal', ins: 'Handpan', d: 2, pec: 'Giro', t: 'Giren la punta del stick en círculo alrededor del centro, los dos hacia el mismo lado. Como revolver una olla.', alt: 'Los dos sticks giran la punta en círculo hacia el mismo lado' },
+    { n: 'Voces', ins: 'Coro', d: 3, pec: 'Eco por turnos', t: 'Uno vuelca el stick hacia un borde y vuelve al centro. Después el otro repite el mismo movimiento. Como un eco.', alt: 'Un stick se vuelca hacia un borde y después el otro repite el mismo movimiento' },
+    { n: 'Teclas', ins: 'Piano', d: 3, pec: 'Mezcla', t: 'Aquí se mezcla todo: juntos, contrarios, giros y turnos. El último trozo lo elige el niño y el adulto lo sigue.', alt: 'Los sticks combinan los movimientos de los niveles anteriores' }
+  ];
+  PH = [
+    [['F', 'F', 1100], ['', '', 700], ['B', 'B', 1100], ['', '', 700]],
+    [['R', 'R', 2400, 'h'], ['', '', 800], ['F', 'F', 2400, 'h'], ['', '', 800]],
+    [['L', 'R', 1100], ['', '', 700], ['R', 'L', 1100], ['', '', 700]],
+    [['F', 'B', 1100], ['B', 'F', 1100]],
+    [['L', 'L', 420, 'g'], ['F', 'F', 420, 'g'], ['R', 'R', 420, 'g'], ['B', 'B', 420, 'g']],
+    [['F', '', 1000], ['', '', 500], ['', 'F', 1000], ['', '', 800], ['', 'L', 1000], ['', '', 500], ['L', '', 1000], ['', '', 800]],
+    [['F', 'F', 1000], ['', '', 500], ['L', 'R', 1000], ['', '', 500], ['L', 'L', 400, 'g'], ['F', 'F', 400, 'g'], ['R', 'R', 400, 'g'], ['B', 'B', 400, 'g'], ['', '', 700], ['', 'B', 1000], ['', '', 500], ['B', '', 1000], ['', '', 800]]
+  ];
+  POSE = { '': [0, 0], L: [-16, 0], R: [16, 0], F: [0, -35], B: [0, 40] };
+  cur = [0, 0, 0, 0];
+  ROT = { F: 0, R: 90, B: 180, L: 270, '': 0 };
+  state = { ph: 0, f: 0, ok: false };
+  id() {
+    let saved = null; try { saved = sessionStorage.getItem('epuMelodia'); } catch (e) {}
+    return Math.min(7, Math.max(1, parseInt(this.props.melodia ?? saved ?? '4', 10) || 4));
+  }
+  tick() {
+    const P = this.PH[this.id() - 1], cur = P[this.state.ph % P.length];
+    this.tm = setTimeout(() => { this.setState(s => ({ ph: (s.ph + 1) % P.length })); this.tick(); }, cur[2]);
+  }
+  goal() {
+    const P = this.PH[this.id() - 1], p = P[this.state.ph % P.length], a = this.POSE[p[0]], c = this.POSE[p[1]];
+    return [a[0], a[1], c[0], c[1]];
+  }
+  step() {
+    const g = this.goal(); let mv = false;
+    this.cur = this.cur.map((v, i) => { const d = g[i] - v; if (!d) return v; mv = true; return Math.abs(d) < .2 ? g[i] : v + d * .22; });
+    if (mv) this.setState(s => ({ f: s.f + 1 }));
+    this.lp = setTimeout(() => this.step(), 33);
+  }
+  geo(th, ph) {
+    const D = Math.PI / 180, ct = Math.cos(th * D), st = Math.sin(th * D), cp = Math.cos(ph * D), sp = Math.sin(ph * D);
+    const P = (x, y, z) => { const rx = x - 14, ry = y - 60, y1 = ry * cp + z * sp; return [14 + rx * ct - y1 * st, 60 + rx * st + y1 * ct]; };
+    const f = v => Math.round(v * 100) / 100;
+    const d = pts => pts.map((q, i) => (i ? 'L' : 'M') + f(q[0]) + ' ' + f(q[1])).join(' ');
+    const ys = ph > 0 ? [56.7, 49.8, 42.9, 36] : [36, 42.9, 49.8, 56.7];
+    const ring = (y, as) => as.map(a => P(10.5 * Math.cos(a * D), y, 10.5 * Math.sin(a * D)));
+    const FR = [180, 165, 150, 130, 110, 90, 72, 55], BK = [330, 310, 290, 270, 250, 230, 210, 195];
+    const o = {};
+    ys.forEach((y, i) => { const fr = ring(y, FR), t = fr[fr.length - 1]; o['c' + (i + 1)] = d(ring(y, BK).concat(fr)); o['f' + (i + 1)] = d(ring(y, [174]).concat(fr.slice(1))); o['w' + (i + 1)] = d(fr); o['t' + (i + 1)] = 'M' + f(t[0]) + ' ' + f(t[1]) + ' h.01'; });
+    const L = P(0, 6, 0), up = Math.max(0, ph) / 40, dn = Math.max(0, -ph) / 35;
+    return Object.assign(o, {
+      palm: d([P(11.5, 46, 3), P(14, 60, 0)]),
+      bpalm: d([P(11, 43, -4), P(14, 60, 0)]),
+      stick: d([P(0, 8, 0), P(0, 64, 0)]),
+      th: d([92.5, 75, 60, 45].map(a => { const x = 11.7 * Math.cos(a * D); return P(x, 34.12 + .233 * x, 11.7 * Math.sin(a * D)); }).concat([P(11.5, 36.8, 8), P(14.5, 37.5, 7), P(17.2, 48.3, 4)])),
+      er: d([P(14.3, 40, 6), P(16.7, 53, 3)]),
+      lx: f(L[0]), ly: f(L[1] + 3 * up), ls: f(1 + .6 * up), lo: f(1 - .7 * dn)
+    });
+  }
+  componentDidMount() {
+    try { sessionStorage.setItem('epuModo', 'eco'); } catch (e) {}
+    this.un = setTimeout(() => this.setState({ ok: true }), 3000);
+    let still = false; try { still = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    if (still) { this.cur = this.goal(); this.setState(s => ({ f: s.f + 1 })); return; }
+    this.tm = setTimeout(() => this.tick(), 600);
+    this.step();
+  }
+  componentWillUnmount() { clearTimeout(this.tm); clearTimeout(this.lp); clearTimeout(this.un); }
+  renderVals() {
+    const id = this.id(), M = this.MEL[id - 1], P = this.PH[id - 1], p = P[this.state.ph % P.length];
+    const a = p[0], c = p[1], g = p[3] === 'g', h = p[3] === 'h';
+    const on = '#2B2536', off = '#dcd8cf';
+    const A = this.geo(this.cur[0], this.cur[1]), C = this.geo(this.cur[2], this.cur[3]), o = {};
+    Object.keys(A).forEach(q => { const Q = q[0].toUpperCase() + q.slice(1); o['a' + Q] = A[q]; o['c' + Q] = C[q]; });
+    return Object.assign(o, {
+      k: 'Nivel ' + id + ' de 7 · ' + M.ins,
+      dTx: ['', 'Fácil', 'Media', 'Difícil'][M.d], d1: on, d2: M.d >= 2 ? on : off, d3: M.d >= 3 ? on : off,
+      n: M.n, pec: M.pec, t: M.t, alt: M.alt,
+      ra: this.ROT[a], rc: this.ROT[c],
+      ka: 'ar' + (a && !g ? ' d' + a : ''), kc: 'ar' + (c && !g ? ' d' + c : ''), ga: g ? 1 : 0, gc: g ? 1 : 0,
+      ha: h ? 1 : 0, hc: h ? 1 : 0,
+      lock: !this.state.ok, bbg: this.state.ok ? '#2B2536' : '#D5CFC3', bfg: this.state.ok ? '#fff' : '#6B6557', bpe: this.state.ok ? 'auto' : 'none'
+    });
+  }
+}
+</script>
+</body>
+</html>

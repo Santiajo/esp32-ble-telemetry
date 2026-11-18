@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Eco · nivel 2 Viento · descubrir la melodía</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+</style>
+</helmet>
+<div onClickCapture="{{ intercept }}" style="width: 390px; height: 908px; background: #E6E2D8; color: #2B2536; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column">
+  <div style="flex: none; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 10px">
+    <span style="font-size: 13px; font-weight: 800; color: #5a536b">Nivel 2 · Viento</span>
+    <sc-if value="{{ jugando }}" hint-placeholder-val="{{ true }}">
+    <button onClick="{{ toggle }}" aria-pressed="{{ on }}" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 800; color: {{ fg }}; background: {{ bg }}; border: 1.5px solid {{ bd }}; border-radius: 14px; cursor: pointer">
+      <svg viewBox="0 0 20 20" aria-hidden="true" style="width: 18px; height: 18px; display: block"><path d="M3 7.5 L6.5 7.5 L10.5 4 L10.5 16 L6.5 12.5 L3 12.5 Z" fill="{{ fg }}"/><path d="M13.2 7.2 A4 4 0 0 1 13.2 12.8 M15.4 5 A7 7 0 0 1 15.4 15" fill="none" stroke="{{ fg }}" stroke-width="1.8" stroke-linecap="round" opacity="{{ wav }}"/><path d="M13 7.5 L17.5 12.5 M17.5 7.5 L13 12.5" fill="none" stroke="{{ fg }}" stroke-width="1.8" stroke-linecap="round" opacity="{{ mut }}"/></svg>
+      {{ lab }}
+    </button>
+    </sc-if>
+    <sc-if value="{{ fin }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ replay }}" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 800; color: #2B2536; background: #fff; border: 1.5px solid rgba(43,37,54,.2); border-radius: 14px; cursor: pointer">
+      <svg viewBox="0 0 20 20" aria-hidden="true" style="width: 16px; height: 16px; display: block"><path d="M15.5 10 A5.5 5.5 0 1 1 13.6 5.8" fill="none" stroke="#2B2536" stroke-width="2.4" stroke-linecap="round"/><path d="M14.4 2.6 L14 6.4 L10.2 6" fill="none" stroke="#2B2536" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Volver a jugar
+    </button>
+    </sc-if>
+  </div>
+  <div style="flex: none; width: 390px; height: 844px; overflow: hidden; background: #1d1927">
+    <sc-if value="{{ jugando }}" hint-placeholder-val="{{ true }}"><dc-import name="EcoJuego" melodia="2" sonido="{{ snd }}" hint-size="390px,844px"></dc-import></sc-if>
+    <sc-if value="{{ fin }}" hint-placeholder-val="{{ false }}"><dc-import name="EcoFinal" melodia="2" hint-size="390px,844px"></dc-import></sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":908}}'>
+class Component extends DCLogic {
+  state = { on: false, fin: false };
+  renderVals() {
+    const on = this.state.on;
+    return {
+      on, snd: on ? 'on' : 'off', lab: on ? 'Sonido encendido' : 'Sonido apagado',
+      fg: on ? '#fff' : '#2B2536', bg: on ? '#0D9488' : '#fff', bd: on ? '#0D9488' : 'rgba(43,37,54,.2)',
+      wav: on ? 1 : 0, mut: on ? 0 : 1,
+      toggle: () => this.setState(s => ({ on: !s.on })),
+      jugando: !this.state.fin, fin: this.state.fin,
+      replay: () => this.setState({ fin: false }),
+      intercept: e => {
+        const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a || !/EcoFinal\.dc\.html$/.test(a.getAttribute('href') || '')) return;
+        e.preventDefault(); e.stopPropagation();
+        this.setState({ fin: true });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

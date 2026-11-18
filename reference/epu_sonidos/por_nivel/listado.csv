@@ -1,0 +1,42 @@
+archivo,nivel,nombre,tipo,notas,duración (s)
+nivel1_madera_trozo1.wav,1,Madera,Trozo 1,A3 C4,1.97
+nivel1_madera_trozo2.wav,1,Madera,Trozo 2,D4 E4,1.97
+nivel1_madera_trozo3.wav,1,Madera,Trozo 3,D4 C4 A3,1.97
+nivel1_madera_trozo4.wav,1,Madera,Trozo 4,C4 A3,1.97
+nivel1_madera_completa.wav,1,Madera,Melodía completa,A3 C4 | D4 E4 | D4 C4 A3 | C4 A3,7.97
+nivel2_viento_trozo1.wav,2,Viento,Trozo 1,E4 G4,2.21
+nivel2_viento_trozo2.wav,2,Viento,Trozo 2,A4 G4,2.21
+nivel2_viento_trozo3.wav,2,Viento,Trozo 3,E4 D4,2.21
+nivel2_viento_trozo4.wav,2,Viento,Trozo 4,E4,2.21
+nivel2_viento_completa.wav,2,Viento,Melodía completa,E4 G4 | A4 G4 | E4 D4 | E4,8.21
+nivel3_cuerda_trozo1.wav,3,Cuerda,Trozo 1,A3 E4 D4,2.36
+nivel3_cuerda_trozo2.wav,3,Cuerda,Trozo 2,C4 D4 E4,2.37
+nivel3_cuerda_trozo3.wav,3,Cuerda,Trozo 3,G4 E4,2.37
+nivel3_cuerda_trozo4.wav,3,Cuerda,Trozo 4,D4 C4 A3,2.37
+nivel3_cuerda_completa.wav,3,Cuerda,Melodía completa,A3 E4 D4 | C4 D4 E4 | G4 E4 | D4 C4 A3,8.37
+nivel4_cana_trozo1.wav,4,Caña,Trozo 1,D4 E4,2.21
+nivel4_cana_trozo2.wav,4,Caña,Trozo 2,G4 E4,2.21
+nivel4_cana_trozo3.wav,4,Caña,Trozo 3,D4 C4,2.21
+nivel4_cana_trozo4.wav,4,Caña,Trozo 4,A3 C4,2.21
+nivel4_cana_trozo5.wav,4,Caña,Trozo 5,D4,2.21
+nivel4_cana_completa.wav,4,Caña,Melodía completa,D4 E4 | G4 E4 | D4 C4 | A3 C4 | D4,10.21
+nivel5_metal_trozo1.wav,5,Metal,Trozo 1,A3 C4 E4,3.07
+nivel5_metal_trozo2.wav,5,Metal,Trozo 2,D4 E4 G4,3.07
+nivel5_metal_trozo3.wav,5,Metal,Trozo 3,A4 G4,3.07
+nivel5_metal_trozo4.wav,5,Metal,Trozo 4,E4 D4 C4,3.07
+nivel5_metal_trozo5.wav,5,Metal,Trozo 5,A3,2.07
+nivel5_metal_completa.wav,5,Metal,Melodía completa,A3 C4 E4 | D4 E4 G4 | A4 G4 | E4 D4 C4 | A3,10.07
+nivel6_voces_trozo1.wav,6,Voces,Trozo 1,A3,2.21
+nivel6_voces_trozo2.wav,6,Voces,Trozo 2,C4 D4,2.21
+nivel6_voces_trozo3.wav,6,Voces,Trozo 3,E4,2.21
+nivel6_voces_trozo4.wav,6,Voces,Trozo 4,G4 E4,2.21
+nivel6_voces_trozo5.wav,6,Voces,Trozo 5,D4 C4,2.21
+nivel6_voces_trozo6.wav,6,Voces,Trozo 6,A3,2.21
+nivel6_voces_completa.wav,6,Voces,Melodía completa,A3 | C4 D4 | E4 | G4 E4 | D4 C4 | A3,12.21
+nivel7_teclas_trozo1.wav,7,Teclas,Trozo 1,E4 G4 A4,2.67
+nivel7_teclas_trozo2.wav,7,Teclas,Trozo 2,G4 E4 D4,2.59
+nivel7_teclas_trozo3.wav,7,Teclas,Trozo 3,C4 D4 E4,2.67
+nivel7_teclas_trozo4.wav,7,Teclas,Trozo 4,G4 A4,2.67
+nivel7_teclas_trozo5.wav,7,Teclas,Trozo 5,E4 D4 C4,2.67
+nivel7_teclas_trozo6.wav,7,Teclas,Trozo 6,A3,1.67
+nivel7_teclas_completa.wav,7,Teclas,Melodía completa,E4 G4 A4 | G4 E4 D4 | C4 D4 E4 | G4 A4 | E4 D4 C4 | A3,11.67

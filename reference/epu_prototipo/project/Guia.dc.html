@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Quién guía</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.pop{animation:pop .5s cubic-bezier(.2,.8,.2,1) .15s both}
+.g1,.g2,.gs{transform-box:fill-box;transform-origin:50% 100%}
+.g1{animation:deep .7s cubic-bezier(.34,1.45,.64,1) .35s both}
+.ar{animation:arr .5s cubic-bezier(.2,.8,.2,1) 1.2s both}
+.g2{animation:deep .7s cubic-bezier(.34,1.45,.64,1) 1.85s both}
+.gs{animation:deep .7s cubic-bezier(.34,1.45,.64,1) .35s both}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes deep{0%{opacity:0;transform:scale(.25);filter:blur(3px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:scale(1);filter:blur(0)}}
+@keyframes arr{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.pop,.g1,.g2,.gs,.ar{animation:none!important}}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; padding: 66px 22px 28px; background: #EFECE4; color: #2B2536; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; line-height: 1.35; display: flex; flex-direction: column; gap: 18px">
+  <a href="Antes.dc.html" style="position: absolute; top: 14px; left: 14px; height: 40px; box-sizing: border-box; padding: 0 14px 0 12px; border-radius: 999px; background: #fff; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: #2B2536; text-decoration: none; box-shadow: 0 2px 10px rgba(43,37,54,.1)"><span style="width: 8px; height: 8px; border-left: 2.5px solid #2B2536; border-bottom: 2.5px solid #2B2536; transform: translateX(2px) rotate(45deg)"></span>Atrás</a>
+  <span style="flex: none; text-align: center; font-size: 13px; font-weight: 800; color: #5a536b">{{ k }}</span>
+  <div class="pop" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center">
+    <div>
+      <sc-if value="{{ mFirst }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 320 270" role="img" aria-label="{{ alt }}" style="width: 280px; height: auto; display: block"><path d="M40 248 L280 248" fill="none" stroke="#DAD4C8" stroke-width="6" stroke-linecap="round"/><g class="g1"><rect x="56" y="52" width="48" height="194" rx="24" fill="#B3A2DC"/><circle cx="80" cy="75" r="13" fill="#F2E44A" opacity=".45"/><circle cx="80" cy="75" r="8" fill="#F2E44A"/></g><g class="g2"><rect x="221" y="124" width="38" height="122" rx="19" fill="#E85E45"/><circle cx="240" cy="143" r="12" fill="#F2E44A" opacity=".45"/><circle cx="240" cy="143" r="7" fill="#F2E44A"/></g><g class="ar"><path d="M132 168 L188 168" fill="none" stroke="#7E9142" stroke-width="5" stroke-linecap="round"/><path d="M176 156 L190 168 L176 180" fill="none" stroke="#7E9142" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g></svg></sc-if>
+      <sc-if value="{{ mSecond }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 320 270" role="img" aria-label="{{ alt }}" style="width: 280px; height: auto; display: block"><path d="M40 248 L280 248" fill="none" stroke="#DAD4C8" stroke-width="6" stroke-linecap="round"/><g class="g1"><rect x="61" y="124" width="38" height="122" rx="19" fill="#E85E45"/><circle cx="80" cy="143" r="12" fill="#F2E44A" opacity=".45"/><circle cx="80" cy="143" r="7" fill="#F2E44A"/></g><g class="g2"><rect x="216" y="52" width="48" height="194" rx="24" fill="#B3A2DC"/><circle cx="240" cy="75" r="13" fill="#F2E44A" opacity=".45"/><circle cx="240" cy="75" r="8" fill="#F2E44A"/></g><g class="ar"><path d="M132 168 L188 168" fill="none" stroke="#7E9142" stroke-width="5" stroke-linecap="round"/><path d="M176 156 L190 168 L176 180" fill="none" stroke="#7E9142" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g></svg></sc-if>
+      <sc-if value="{{ mSolo }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 320 270" role="img" aria-label="{{ alt }}" style="width: 280px; height: auto; display: block"><path d="M40 248 L280 248" fill="none" stroke="#DAD4C8" stroke-width="6" stroke-linecap="round"/><g class="gs"><rect x="141" y="124" width="38" height="122" rx="19" fill="#E85E45"/><circle cx="160" cy="143" r="12" fill="#F2E44A" opacity=".45"/><circle cx="160" cy="143" r="7" fill="#F2E44A"/></g></svg></sc-if>
+      <sc-if value="{{ mTurns }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 320 270" role="img" aria-label="{{ alt }}" style="width: 280px; height: auto; display: block"><path d="M40 248 L280 248" fill="none" stroke="#DAD4C8" stroke-width="6" stroke-linecap="round"/><g class="g1"><rect x="56" y="52" width="48" height="194" rx="24" fill="#B3A2DC"/><circle cx="80" cy="75" r="13" fill="#F2E44A" opacity=".45"/><circle cx="80" cy="75" r="8" fill="#F2E44A"/></g><g class="g2"><rect x="221" y="124" width="38" height="122" rx="19" fill="#E85E45"/><circle cx="240" cy="143" r="12" fill="#F2E44A" opacity=".45"/><circle cx="240" cy="143" r="7" fill="#F2E44A"/></g><g class="ar"><path d="M132 168 L188 168" fill="none" stroke="#7E9142" stroke-width="5" stroke-linecap="round"/><path d="M176 156 L190 168 L176 180" fill="none" stroke="#7E9142" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M144 156 L130 168 L144 180" fill="none" stroke="#7E9142" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g></svg></sc-if>
+    </div>
+    <div>
+      <h1 style="margin: 0 0 10px; font-size: 38px; font-weight: 900; letter-spacing: -.02em; line-height: 1.05">{{ hA }}<span style="color: {{ hC }}">{{ hW }}</span></h1>
+      <p style="margin: 0 auto; max-width: 300px; font-size: 17px; font-weight: 700; color: #4a445a">{{ sA }}<span style="color: {{ sC }}; font-weight: 900">{{ sW }}</span>{{ sZ }}</p>
+    </div>
+  </div>
+  <a href="Calibrar.dc.html" style="flex: none; box-sizing: border-box; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 58px; padding: 12px 20px; font-size: 17px; font-weight: 800; color: #fff; text-decoration: none; background: #2B2536; border: 1.5px solid #2B2536; border-radius: 16px">Empezar nivel</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"nivel":{"editor":"enum","options":["1","2","3","4","5","6","7"],"default":"4"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  NAMES = ['Juntos', 'Espejo', 'Iguales', 'Señalados', 'Mismo pulso', 'Sígueme', 'La canción'];
+  GUIDE = ['adult2', 'child2', 'adult2', 'adult2', 'child', 'adult2', 'both'];
+  renderVals() {
+    let saved = null; try { saved = sessionStorage.getItem('epuNivel'); } catch (e) {}
+    const id = Math.min(7, Math.max(1, parseInt(this.props.nivel ?? saved ?? '4', 10) || 4));
+    const A = '#B3A2DC', K = '#E85E45';
+    const C = {
+      adult2: { mode: 'first', hA: 'Guía el ', hW: 'adulto', hC: A, sA: 'Después cambian y guía el ', sW: 'niño', sC: K, sZ: '.', badges: true, nA: '1', nC: '2', alt: 'Primero guía el stick lila del adulto y después el naranjo del niño' },
+      child2: { mode: 'second', hA: 'Guía el ', hW: 'niño', hC: K, sA: 'Después cambian y guía el ', sW: 'adulto', sC: A, sZ: '.', badges: true, nA: '2', nC: '1', alt: 'Primero guía el stick naranjo del niño y después el lila del adulto' },
+      child: { mode: 'solo', hA: 'Guía el ', hW: 'niño', hC: K, sA: 'El ', sW: 'adulto', sC: A, sZ: ' sigue su ritmo todo el nivel.', badges: false, nA: '', nC: '', alt: 'Guía el stick naranjo del niño' },
+      both: { mode: 'turns', hA: 'Guían por turnos', hW: '', hC: A, sA: 'Primero uno y después el otro, varias veces.', sW: '', sC: A, sZ: '', badges: false, nA: '', nC: '', alt: 'Los dos sticks guían por turnos' }
+    }[this.GUIDE[id - 1]];
+    return Object.assign({ k: 'Nivel ' + id + ' · ' + this.NAMES[id - 1], mFirst: C.mode === 'first', mSecond: C.mode === 'second', mSolo: C.mode === 'solo', mTurns: C.mode === 'turns' }, C);
+  }
+}
+</script>
+</body>
+</html>

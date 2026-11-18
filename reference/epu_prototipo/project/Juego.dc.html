@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Juego · cuenta regresiva y luces</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.iris{animation:iris .7s cubic-bezier(.65,0,.35,1) both}
+.ready{animation:fadeIn .4s ease-out .55s both}
+.n3{animation:num 1s cubic-bezier(.2,.8,.2,1) .9s both}
+.n2{animation:num 1s cubic-bezier(.2,.8,.2,1) 1.9s both}
+.n1{animation:num 1s cubic-bezier(.2,.8,.2,1) 2.9s both}
+.count{animation:fadeOut .6s ease-in 3.9s both}
+.hA{animation:hA 5s ease-in-out 4.2s infinite}
+.hC{animation:hC 5s ease-in-out 4.2s infinite}
+.lvl{animation:fadeIn .6s ease-out 4.4s both}
+@keyframes iris{from{clip-path:circle(0% at 50% 50%)}to{clip-path:circle(75% at 50% 50%)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0;visibility:hidden}}
+@keyframes num{0%{opacity:0;transform:scale(.4)}30%{opacity:1;transform:scale(1.25)}55%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.3)}}
+@keyframes hA{0%,100%{opacity:.25}35%{opacity:.85}60%{opacity:.4}}
+@keyframes hC{0%,100%{opacity:.25}25%{opacity:.5}55%{opacity:.9}80%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.iris,.ready,.lvl{animation:none}.n3,.n2,.n1{animation:none;opacity:0}.count{animation:fadeOut .01s linear 1s both}.hA,.hC{animation:none}}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #EFECE4; color: #fff; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; line-height: 1.35">
+  <div class="iris" style="position: absolute; inset: 0; background: #1d1927">
+    <div style="position: absolute; inset: 0">
+      <div class="hA" style="position: absolute; left: 0; right: 0; top: 0; height: 42%; opacity: .25; background: linear-gradient(to bottom, rgb(179,162,220) 0%, rgb(179,162,220) 22%, rgba(179,162,220,0) 100%)"></div>
+      <div class="hC" style="position: absolute; left: 0; right: 0; bottom: 0; height: 42%; opacity: .25; background: linear-gradient(to top, rgb(232,94,69) 0%, rgb(232,94,69) 22%, rgba(232,94,69,0) 100%)"></div>
+      <div class="lvl" style="position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center">
+        <span style="font-size: 13px; font-weight: 800; color: rgba(255,255,255,.6)">{{ lvl }}</span>
+        <a href="Final.dc.html" style="display: inline-flex; align-items: center; justify-content: center; min-height: 48px; box-sizing: border-box; padding: 10px 22px; font-size: 14px; font-weight: 800; color: #fff; text-decoration: none; background: rgba(255,255,255,.14); border-radius: 16px">Terminar</a>
+      </div>
+    </div>
+    <div class="count" role="status" style="position: absolute; inset: 0; background: #1d1927; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px">
+      <p class="ready" style="margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -.01em">Prepárense para jugar</p>
+      <div style="position: relative; width: 200px; height: 170px">
+        <span class="n3" style="position: absolute; inset: 0; display: grid; place-items: center; font-size: 132px; font-weight: 900; line-height: 1">3</span>
+        <span class="n2" style="position: absolute; inset: 0; display: grid; place-items: center; font-size: 132px; font-weight: 900; line-height: 1">2</span>
+        <span class="n1" style="position: absolute; inset: 0; display: grid; place-items: center; font-size: 132px; font-weight: 900; line-height: 1">1</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"nivel":{"editor":"enum","options":["1","2","3","4","5","6","7"],"default":"4"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  NAMES = ['Juntos', 'Espejo', 'Iguales', 'Señalados', 'Mismo pulso', 'Sígueme', 'La canción'];
+  renderVals() {
+    let saved = null; try { saved = sessionStorage.getItem('epuNivel'); } catch (e) {}
+    const id = Math.min(7, Math.max(1, parseInt(this.props.nivel ?? saved ?? '4', 10) || 4));
+    return { lvl: 'Nivel ' + id + ' · ' + this.NAMES[id - 1] };
+  }
+}
+</script>
+</body>
+</html>

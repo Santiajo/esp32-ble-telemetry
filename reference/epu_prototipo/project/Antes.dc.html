@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Antes del nivel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.mv{transform-box:fill-box;transform-origin:50% 100%}
+.beat{transform-box:fill-box;transform-origin:center}
+.l1 .sa,.l1 .sc{animation:lift 1.8s ease-in-out infinite}
+.l2 .sa{animation:tilt 2.2s ease-in-out infinite}.l2 .sc{animation:tiltR 2.2s ease-in-out infinite}
+.l3 .sa,.l3 .sc{animation:lean 4s ease-in-out infinite}
+.l4 .sa{animation:lift 2s ease-in-out infinite}.l4 .sc{animation:lift 2s ease-in-out -1s infinite}
+.l5 .sa,.l5 .sc{animation:tilt .9s ease-in-out infinite}.l5 .beat{animation:beat .9s ease-out infinite}
+.l6 .sa{animation:fol 3.2s ease-in-out infinite}.l6 .sc{animation:fol 3.2s ease-in-out .5s infinite}
+.l7 .sa{animation:songA 6s ease-in-out infinite}.l7 .sc{animation:songC 6s ease-in-out infinite}.l7 .note{animation:bob 1.5s ease-in-out infinite}
+@keyframes lift{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-9px) rotate(-6deg)}}
+@keyframes tilt{0%,100%{transform:rotate(-16deg)}50%{transform:rotate(16deg)}}
+@keyframes tiltR{0%,100%{transform:rotate(16deg)}50%{transform:rotate(-16deg)}}
+@keyframes lean{0%,8%{transform:rotate(0)}22%,42%{transform:rotate(-18deg)}54%,58%{transform:rotate(0)}72%,92%{transform:rotate(18deg)}100%{transform:rotate(0)}}
+@keyframes fol{0%,100%{transform:rotate(0)}20%{transform:rotate(-14deg)}40%{transform:rotate(10deg)}60%{transform:translateY(-6px) rotate(-4deg)}80%{transform:rotate(16deg)}}
+@keyframes beat{0%{transform:scale(1.5);opacity:1}100%{transform:scale(.7);opacity:.3}}
+@keyframes songA{0%,100%{transform:none}12%{transform:translateY(-9px)}24%{transform:none}36%{transform:rotate(-16deg)}48%{transform:rotate(16deg)}60%{transform:none}72%{transform:rotate(-14deg)}84%{transform:rotate(14deg)}}
+@keyframes songC{0%,100%{transform:none}12%{transform:translateY(-9px)}24%{transform:none}36%{transform:rotate(16deg)}48%{transform:rotate(-16deg)}60%{transform:none}72%{transform:rotate(-14deg)}84%{transform:rotate(14deg)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@media(prefers-reduced-motion:reduce){.mv,.beat,.note{animation:none!important}}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; padding: 66px 22px 28px; background: #EFECE4; color: #2B2536; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; line-height: 1.35; display: flex; flex-direction: column; justify-content: flex-start; gap: 18px">
+  <a href="Niveles.dc.html" style="position: absolute; top: 14px; left: 14px; height: 40px; box-sizing: border-box; padding: 0 14px 0 12px; border-radius: 999px; background: #fff; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: #2B2536; text-decoration: none; box-shadow: 0 2px 10px rgba(43,37,54,.1)"><span style="width: 8px; height: 8px; border-left: 2.5px solid #2B2536; border-bottom: 2.5px solid #2B2536; transform: translateX(2px) rotate(45deg)"></span>Atrás</a>
+  <div style="flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+    <span style="font-size: 13px; font-weight: 800; color: #5a536b">{{ k }}</span>
+    <span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: #5a536b"><i aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: {{ d1 }}"></i><i aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: {{ d2 }}"></i><i aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: {{ d3 }}"></i><em style="font-style: normal; margin-left: 3px">{{ dTx }}</em></span>
+  </div>
+  <div style="flex: 1; min-height: 260px; max-height: 388px; display: grid; place-items: center; overflow: hidden">
+    <sc-if value="{{ s1 }}" hint-placeholder-val="{{ false }}"><svg class="l1" viewBox="0 0 120 100" aria-hidden="true" style="width: 285px; height: auto; display: block"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"/><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"/><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"/><circle cx="42" cy="30" r="3" fill="#F2E44A"/></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"/><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"/><circle cx="78" cy="52" r="2.5" fill="#F2E44A"/></g></svg></sc-if>
+    <sc-if value="{{ s2 }}" hint-placeholder-val="{{ false }}"><svg class="l2" viewBox="0 0 120 100" aria-hidden="true" style="width: 285px; height: auto; display: block"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"/><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"/><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"/><circle cx="42" cy="30" r="3" fill="#F2E44A"/></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"/><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"/><circle cx="78" cy="52" r="2.5" fill="#F2E44A"/></g></svg></sc-if>
+    <sc-if value="{{ s3 }}" hint-placeholder-val="{{ false }}"><svg class="l3" viewBox="0 0 120 100" aria-hidden="true" style="width: 285px; height: auto; display: block"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"/><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"/><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"/><circle cx="42" cy="30" r="3" fill="#F2E44A"/></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"/><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"/><circle cx="78" cy="52" r="2.5" fill="#F2E44A"/></g></svg></sc-if>
+    <sc-if value="{{ s4 }}" hint-placeholder-val="{{ true }}"><svg class="l4" viewBox="0 0 120 100" aria-hidden="true" style="width: 285px; height: auto; display: block"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"/><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"/><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"/><circle cx="42" cy="30" r="3" fill="#F2E44A"/></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"/><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"/><circle cx="78" cy="52" r="2.5" fill="#F2E44A"/></g></svg></sc-if>
+    <sc-if value="{{ s5 }}" hint-placeholder-val="{{ false }}"><svg class="l5" viewBox="0 0 120 100" aria-hidden="true" style="width: 285px; height: auto; display: block"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"/><circle class="beat" cx="60" cy="16" r="3.5" fill="#2B2536"/><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"/><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"/><circle cx="42" cy="30" r="3" fill="#F2E44A"/></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"/><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"/><circle cx="78" cy="52" r="2.5" fill="#F2E44A"/></g></svg></sc-if>
+    <sc-if value="{{ s6 }}" hint-placeholder-val="{{ false }}"><svg class="l6" viewBox="0 0 120 100" aria-hidden="true" style="width: 285px; height: auto; display: block"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"/><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"/><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"/><circle cx="42" cy="30" r="3" fill="#F2E44A"/></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"/><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"/><circle cx="78" cy="52" r="2.5" fill="#F2E44A"/></g></svg></sc-if>
+    <sc-if value="{{ s7 }}" hint-placeholder-val="{{ false }}"><svg class="l7" viewBox="0 0 120 100" aria-hidden="true" style="width: 285px; height: auto; display: block"><line x1="16" y1="92" x2="104" y2="92" stroke="#DAD4C8" stroke-width="3" stroke-linecap="round"/><g class="note"><ellipse cx="57" cy="20" rx="5" ry="3.6" transform="rotate(-20 57 20)" fill="#7A8B34"/><rect x="60.6" y="4" width="1.8" height="16" rx=".9" fill="#7A8B34"/></g><g class="mv sa"><rect x="34" y="22" width="16" height="68" rx="8" fill="#B3A2DC"/><circle cx="42" cy="30" r="5" fill="#F2E44A" opacity=".45"/><circle cx="42" cy="30" r="3" fill="#F2E44A"/></g><g class="mv sc"><rect x="72" y="46" width="12" height="44" rx="6" fill="#E85E45"/><circle cx="78" cy="52" r="4.2" fill="#F2E44A" opacity=".45"/><circle cx="78" cy="52" r="2.5" fill="#F2E44A"/></g></svg></sc-if>
+  </div>
+  <div style="text-align: center">
+    <h2 style="margin: 0 0 8px; font-size: 28px; font-weight: 900; letter-spacing: -.01em">{{ n }}</h2>
+    <p style="margin: 0; font-size: 15px; color: #4a445a">{{ t }}</p>
+    <p style="margin: 8px 0 0; font-size: 13px; color: #5a536b; font-weight: 700">Muevan solo la muñeca: el brazo se queda quieto.</p>
+  </div>
+  <a href="Guia.dc.html" style="margin-top: auto; flex: none; box-sizing: border-box; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 58px; padding: 12px 20px; font-size: 17px; font-weight: 800; color: #fff; text-decoration: none; background: #2B2536; border: 1.5px solid #2B2536; border-radius: 16px">Comenzar</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"nivel":{"editor":"enum","options":["1","2","3","4","5","6","7"],"default":"4"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  LEVELS = [
+    { n: 'Juntos', t: 'Apunten el stick hacia ustedes y luego hacia el otro, sin parar. Como un columpio que va y viene.', d: 1, g: 'adult', gt: 'Guía el adulto, luego el niño' },
+    { n: 'Espejo', t: 'Apunten el stick hacia el mismo lado: si uno va a su derecha, el otro también va a su derecha. Igual hacia adelante y hacia atrás. Como su reflejo en un espejo.', d: 1, g: 'child', gt: 'Guía el niño, luego el adulto' },
+    { n: 'Iguales', t: 'Apunten el stick al mismo punto de la pieza: si uno va a su izquierda, el otro va a su derecha; si uno va adelante, el otro va atrás. Como dos linternas alumbrando el mismo rincón.', d: 2, g: 'adult', gt: 'Guía el adulto, luego el niño' },
+    { n: 'Señalados', t: 'Apunten el stick a la misma persona: si uno se apunta a sí mismo, el otro también lo apunta a él. Como cuando todos señalan al del cumpleaños.', d: 2, g: 'adult', gt: 'Guía el adulto, luego el niño' },
+    { n: 'Mismo pulso', t: 'Muevan el stick a la misma velocidad, hacia donde quieran. Importa el ritmo, no la dirección, como dos personas caminando al mismo paso.', d: 2, g: 'child', gt: 'Guía el niño' },
+    { n: 'Sígueme', t: 'Uno mueve la muñeca y el otro lo imita. Luego cambian.', d: 3, g: 'adult', gt: 'Guía el adulto, luego el niño' },
+    { n: 'La canción', t: 'Usen todos los movimientos para terminar la canción.', d: 3, g: 'both', gt: 'Guían por turnos' }
+  ];
+  componentDidMount() { try { sessionStorage.setItem('epuModo', 'mov'); } catch (e) {} }
+  renderVals() {
+    let saved = null; try { saved = sessionStorage.getItem('epuNivel'); } catch (e) {}
+    const id = Math.min(7, Math.max(1, parseInt(this.props.nivel ?? saved ?? '4', 10) || 4));
+    const L = this.LEVELS[id - 1];
+    const GB = { adult: '#B3A2DC', child: '#F4C3B6', both: '#fff' };
+    const GD = { adult: '#B3A2DC', child: '#E85E45', both: 'linear-gradient(180deg,#B3A2DC 50%,#E85E45 50%)' };
+    const on = '#2B2536', off = '#dcd8cf';
+    const v = { k: 'Nivel ' + id + ' de 7', dTx: ['', 'Fácil', 'Media', 'Difícil'][L.d], d1: on, d2: L.d >= 2 ? on : off, d3: L.d >= 3 ? on : off, n: L.n, t: L.t, gBg: GB[L.g], gDot: GD[L.g], gTx: L.gt };
+    for (let i = 1; i <= 7; i++) v['s' + i] = i === id;
+    return v;
+  }
+}
+</script>
+</body>
+</html>

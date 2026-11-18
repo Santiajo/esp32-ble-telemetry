@@ -327,7 +327,7 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
     final now = AppClock.nowMs();
     if (_trialStart == null) {
       if (Role.values.any((r) => _src[r] != BenchSource.stick || _sticks[r] == null)) {
-        return _snack('Primero haz el chequeo de los dos sticks.');
+        return _snack('«Grabar prueba» necesita los dos sticks conectados. Con uno solo, usa «Grabar traza» en su panel.');
       }
       for (final s in _sticks.values) {
         s.startRecording(now);
@@ -460,7 +460,9 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
 
   Widget _body(SyncEngine e) {
     final now = AppClock.nowMs();
-    return Padding(
+    // Se desplaza: en teléfonos de ~800 dp de alto los paneles de los sticks quedaban sin
+    // espacio, se escondía el estado de conexión y el menú ⋮ no se podía tocar (18-11-2026).
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (_trialStart != null) _trialBanner(e, now),
@@ -491,7 +493,8 @@ class _BenchScreenState extends State<BenchScreen> with SingleTickerProviderStat
         const SizedBox(height: 4),
         _meters(e, now),
         const SizedBox(height: 6),
-        Expanded(
+        SizedBox(
+          height: _src.values.contains(BenchSource.stick) ? 230 : 140,
           child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(child: _panel(Role.adult, 'Adulto · stick grande', lila, now)),
             const SizedBox(width: 8),

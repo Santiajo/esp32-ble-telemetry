@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Bienvenida · logo Epu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.iris{animation:out .6s ease-in-out 1.85s both}
+.logo{transform-origin:50% 50%;animation:pop .6s cubic-bezier(.2,.8,.2,1) .1s both, land .85s cubic-bezier(.65,0,.35,1) 1.4s both, hide .01s linear 2.5s both}
+@keyframes out{from{opacity:1}to{opacity:0;visibility:hidden}}
+@keyframes pop{from{opacity:0;transform:translateY(379px) scale(2.2)}to{opacity:1;transform:translateY(379px) scale(3)}}
+@keyframes land{from{transform:translateY(379px) scale(3)}to{transform:none}}
+@keyframes hide{to{visibility:hidden}}
+@media(prefers-reduced-motion:reduce){.iris{animation:out .3s linear 1s both}.logo{animation:hide .01s linear 1s both;transform:translateY(379px) scale(3)}}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #EFECE4; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif">
+  <div style="position: absolute; inset: 0"><dc-import name="Home" hint-size="390px,844px"></dc-import></div>
+  <div class="iris" aria-hidden="true" style="position: absolute; inset: 0; background: #EFECE4"></div>
+  <div style="position: absolute; left: 0; right: 0; top: 26px; display: flex; justify-content: center; pointer-events: none">
+    <img class="logo" src="/_blob/19f7632108754f2205b82c485f808219" alt="Epu" style="display: block; height: 34px; width: auto">
+  </div>
+  <a href="Home.dc.html" ref="{{ setNext }}" aria-hidden="true" tabindex="-1" style="position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none">Home</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  goNext() {
+    const el = this.nextEl; if (!el) return;
+    try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (e) { try { el.click(); } catch (x) {} }
+  }
+  componentWillUnmount() { clearTimeout(this.nx); }
+  renderVals() {
+    return {
+      setNext: el => {
+        this.nextEl = el;
+        if (el && !this.nx) this.nx = setTimeout(() => this.goNext(), 2600);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

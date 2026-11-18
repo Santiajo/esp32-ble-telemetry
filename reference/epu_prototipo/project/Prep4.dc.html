@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Preparación 3 · Conectar sticks</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.breath{animation:breath 1.4s ease-in-out infinite}
+@keyframes breath{0%,100%{box-shadow:0 0 0 0 rgba(13,148,136,.12),0 0 4px 0 rgba(13,148,136,.15)}50%{box-shadow:0 0 0 6px rgba(13,148,136,.26),0 0 22px 6px rgba(13,148,136,.3)}}
+@media(prefers-reduced-motion:reduce){.breath{animation:none}}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; padding: 66px 18px 20px; background: #EFECE4; color: #2B2536; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; line-height: 1.35; display: flex; flex-direction: column; gap: 14px">
+  <a href="Prep2.dc.html" style="position: absolute; top: 14px; left: 14px; height: 40px; box-sizing: border-box; padding: 0 14px 0 12px; border-radius: 999px; background: #fff; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: #2B2536; text-decoration: none; box-shadow: 0 2px 10px rgba(43,37,54,.1)"><span style="width: 8px; height: 8px; border-left: 2.5px solid #2B2536; border-bottom: 2.5px solid #2B2536; transform: translateX(2px) rotate(45deg)"></span>Atrás</a>
+  <ol aria-label="Paso 3 de 4" style="list-style: none; margin: 0; padding: 0; flex: none; display: flex; align-items: center; justify-content: center">
+    <li aria-label="Paso 1, completado" style="box-sizing: border-box; flex: none; width: 34px; height: 34px; min-width: 34px; min-height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 900; line-height: 1; background: #0D9488"><svg viewBox="0 0 20 20" aria-hidden="true" style="width: 18px; height: 18px; display: block"><path d="M5 10.5 L8.5 14 L15 7" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></li>
+    <li aria-hidden="true" style="flex: none; width: 32px; height: 4px; background: #0D9488"></li>
+    <li aria-label="Paso 2, completado" style="box-sizing: border-box; flex: none; width: 34px; height: 34px; min-width: 34px; min-height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 900; line-height: 1; background: #0D9488"><svg viewBox="0 0 20 20" aria-hidden="true" style="width: 18px; height: 18px; display: block"><path d="M5 10.5 L8.5 14 L15 7" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></li>
+    <li aria-hidden="true" style="flex: none; width: 32px; height: 4px; background: #0D9488"></li>
+    <li aria-current="step" style="box-sizing: border-box; flex: none; width: 34px; height: 34px; min-width: 34px; min-height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 900; line-height: 1; background: #fff; border: 3px solid #0D9488; color: #0D9488">3</li>
+    <li aria-hidden="true" style="flex: none; width: 32px; height: 4px; background: #dcd8cf"></li>
+    <li style="box-sizing: border-box; flex: none; width: 34px; height: 34px; min-width: 34px; min-height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 900; line-height: 1; background: transparent; border: 2px solid #CFC8BA; color: #A39C8E">4</li>
+  </ol>
+  <div style="flex: 1; display: flex; flex-direction: column; gap: 16px">
+    <div style="flex: 1; min-height: 220px; display: grid; place-items: center; overflow: hidden; padding: 8px 24px">
+      <svg viewBox="0 0 320 260" role="img" aria-label="Los dos sticks, lila y naranjo, con su luz de conexión" style="width: 290px; height: auto; display: block">
+        <path d="M64 238 L256 238" fill="none" stroke="#DAD4C8" stroke-width="6" stroke-linecap="round"/>
+        <rect x="105" y="42" width="48" height="194" rx="24" fill="#B3A2DC"/>
+        <circle cx="129" cy="65" r="13" fill="#F2E44A" opacity="{{ halo1 }}"/>
+        <circle cx="129" cy="65" r="8" fill="{{ core1 }}"/>
+        <rect x="177" y="114" width="38" height="122" rx="19" fill="#E85E45"/>
+        <circle cx="196" cy="133" r="12" fill="#F2E44A" opacity="{{ halo2 }}"/>
+        <circle cx="196" cy="133" r="7" fill="{{ core2 }}"/>
+      </svg>
+    </div>
+    <div style="text-align: center">
+      <h2 style="margin: 0 0 8px; font-size: 26px; font-weight: 900; letter-spacing: -.01em; line-height: 1.1">Conecta los dos sticks</h2>
+      <p style="margin: 0; font-size: 15px; color: #4a445a">Toca el botón. La luz de cada stick parpadea mientras se conecta y queda fija al terminar.</p>
+    </div>
+    <button onClick="{{ tap }}" class="{{ cls }}" aria-live="polite" style="position: relative; flex: none; box-sizing: border-box; width: 100%; min-height: 62px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 20px; font: inherit; font-size: 17px; font-weight: 800; line-height: 1.15; color: {{ fg }}; background: {{ bg }}; border: 1.5px solid {{ bd }}; border-radius: 16px; cursor: pointer; transition: background .3s, border-color .3s, color .3s">
+      <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}"><span style="width: 22px; height: 22px; flex: none; border-radius: 50%; background: #fff; display: grid; place-items: center"><svg viewBox="0 0 22 22" aria-hidden="true" style="width: 22px; height: 22px; display: block"><path d="M6.5 11.5 L9.8 14.6 L15.6 8" fill="none" stroke="#0D9488" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></sc-if>
+      <span>{{ lab }}</span>
+    </button>
+    <a href="Prep5.dc.html" ref="{{ setNext }}" aria-hidden="true" tabindex="-1" style="position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none">Siguiente</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { c: 'idle', l1: false, l2: false, k1: false, k2: false };
+  tone() {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+      this.ac = this.ac || new C(); if (this.ac.state !== 'running') this.ac.resume();
+      const t = this.ac.currentTime, o = this.ac.createOscillator(), g = this.ac.createGain();
+      o.type = 'sine'; o.frequency.value = 523.25; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.2, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + .8);
+      o.connect(g); g.connect(this.ac.destination); o.start(t); o.stop(t + .9);
+    } catch (e) {}
+  }
+  connect() {
+    if (this.state.c !== 'idle') return;
+    try { const C = window.AudioContext || window.webkitAudioContext; if (C) { this.ac = this.ac || new C(); this.ac.resume(); } } catch (x) {}
+    this.blink = setInterval(() => this.setState(s => ({ l1: s.k1 ? true : !s.l1, l2: s.k2 ? true : !s.l2 })), 250);
+    this.t1 = setTimeout(() => { this.tone(); this.setState({ k1: true, l1: true }); }, 1700);
+    this.t2 = setTimeout(() => {
+      clearInterval(this.blink); this.tone();
+      this.setState({ k2: true, l2: true, c: 'done' });
+      this.nx = setTimeout(() => this.goNext(), 1500);
+    }, 2600);
+    this.setState({ c: 'busy', l1: true, l2: true });
+  }
+  goNext() {
+    const el = this.nextEl; if (!el) return;
+    try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (e) { try { el.click(); } catch (x) {} }
+  }
+  componentWillUnmount() { clearInterval(this.blink); clearTimeout(this.t1); clearTimeout(this.t2); clearTimeout(this.nx); }
+  renderVals() {
+    const s = this.state, c = s.c, lit = '#F2E44A';
+    return {
+      core1: s.l1 ? lit : '#9A8BC4', halo1: s.l1 ? .45 : 0,
+      core2: s.l2 ? lit : '#C24A35', halo2: s.l2 ? .45 : 0,
+      lab: c === 'done' ? 'Sticks conectados' : c === 'busy' ? 'Conectando…' : 'Conectar sticks',
+      fg: c === 'busy' ? '#0B6F66' : '#fff',
+      bg: c === 'idle' ? '#2B2536' : c === 'busy' ? '#fff' : '#0D9488',
+      bd: c === 'idle' ? '#2B2536' : '#0D9488',
+      cls: c === 'busy' ? 'breath' : '',
+      done: c === 'done',
+      tap: () => this.connect(),
+      setNext: el => { this.nextEl = el; }
+    };
+  }
+}
+</script>
+</body>
+</html>

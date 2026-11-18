@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>App completa · Eco</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+</style>
+</helmet>
+<div style="width: 500px; height: 1000px; box-sizing: border-box; padding: 24px 43px 0; background: #E6E2D8; color: #2B2536; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; gap: 18px">
+  <div style="width: 414px; display: flex; flex-direction: column; gap: 6px">
+  <div style="display: flex; align-items: center; gap: 8px">
+    <button onClick="{{ back }}" disabled="{{ noBack }}" aria-label="Volver al paso anterior" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px; font: inherit; font-size: 14px; font-weight: 800; color: #2B2536; background: #fff; border: 1.5px solid rgba(43,37,54,.2); border-radius: 14px; cursor: pointer; opacity: {{ backOp }}">
+      <svg viewBox="0 0 20 20" aria-hidden="true" style="width: 16px; height: 16px; display: block"><path d="M12 4 L6 10 L12 16" fill="none" stroke="#2B2536" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Paso anterior
+    </button>
+    <button onClick="{{ goHome }}" aria-label="Ir al Home" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px; font: inherit; font-size: 14px; font-weight: 800; color: #2B2536; background: #fff; border: 1.5px solid rgba(43,37,54,.2); border-radius: 14px; cursor: pointer">
+      <svg viewBox="0 0 20 20" aria-hidden="true" style="width: 16px; height: 16px; display: block"><path d="M3.5 9.5 L10 4 L16.5 9.5" fill="none" stroke="#2B2536" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 8.5 L5.5 16 L14.5 16 L14.5 8.5" fill="none" stroke="#2B2536" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Ir al Home
+    </button>
+    <button onClick="{{ restart }}" aria-label="Reiniciar el prototipo" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px; font: inherit; font-size: 14px; font-weight: 800; color: #2B2536; background: #fff; border: 1.5px solid rgba(43,37,54,.2); border-radius: 14px; cursor: pointer">
+      <svg viewBox="0 0 20 20" aria-hidden="true" style="width: 16px; height: 16px; display: block"><path d="M15.5 10 A5.5 5.5 0 1 1 13.6 5.8" fill="none" stroke="#2B2536" stroke-width="2.4" stroke-linecap="round"/><path d="M14.4 2.6 L14 6.4 L10.2 6" fill="none" stroke="#2B2536" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Reiniciar
+    </button>
+  </div>
+    <span style="font-size: 12.5px; font-weight: 800; color: #5a536b; line-height: 1.2">Flujo Eco · Pantalla actual: {{ label }}</span>
+  </div>
+  <div onClickCapture="{{ intercept }}" style="position: relative; width: 414px; height: 868px; box-sizing: border-box; padding: 12px; background: #17141f; border-radius: 58px; box-shadow: 0 0 0 2px rgba(43,37,54,.9), 0 30px 60px rgba(43,37,54,.16)">
+    <div style="width: 390px; height: 844px; border-radius: 46px; overflow: hidden; background: #EFECE4; transform: translateZ(0)">
+      <sc-if value="{{ sMain }}" hint-placeholder-val="{{ true }}"><dc-import name="Main" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sPrep1 }}" hint-placeholder-val="{{ false }}"><dc-import name="Prep1" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sPrep2 }}" hint-placeholder-val="{{ false }}"><dc-import name="Prep2" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sPrep4 }}" hint-placeholder-val="{{ false }}"><dc-import name="Prep4" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sPrep5 }}" hint-placeholder-val="{{ false }}"><dc-import name="Prep5" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sBienvenida }}" hint-placeholder-val="{{ false }}"><dc-import name="Bienvenida" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sHome }}" hint-placeholder-val="{{ false }}"><dc-import name="Home" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sNiveles }}" hint-placeholder-val="{{ false }}"><dc-import name="Niveles" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sAntes }}" hint-placeholder-val="{{ false }}"><dc-import name="Antes" nivel="{{ nivel }}" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sGuia }}" hint-placeholder-val="{{ false }}"><dc-import name="Guia" nivel="{{ nivel }}" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sCalibrar }}" hint-placeholder-val="{{ false }}"><dc-import name="Calibrar" modo="eco" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sJuego }}" hint-placeholder-val="{{ false }}"><dc-import name="Juego" nivel="{{ nivel }}" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sFinal }}" hint-placeholder-val="{{ false }}"><dc-import name="Final" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sEcoNiveles }}" hint-placeholder-val="{{ false }}"><dc-import name="EcoNiveles" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sEcoAntes }}" hint-placeholder-val="{{ false }}"><dc-import name="EcoAntes" melodia="{{ melodia }}" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sEcoGuia }}" hint-placeholder-val="{{ false }}"><dc-import name="EcoGuia" melodia="{{ melodia }}" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sEcoJuego }}" hint-placeholder-val="{{ false }}"><dc-import name="EcoJuego" melodia="{{ melodia }}" sonido="on" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sEcoFinal }}" hint-placeholder-val="{{ false }}"><dc-import name="EcoFinal" melodia="{{ melodia }}" hint-size="390px,844px"></dc-import></sc-if>
+      <sc-if value="{{ sPerdida }}" hint-placeholder-val="{{ false }}"><dc-import name="Perdida" hint-size="390px,844px"></dc-import></sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":500,"height":1000}}'>
+class Component extends DCLogic {
+  SCREENS = ['Main', 'Prep1', 'Prep2', 'Prep4', 'Prep5', 'Bienvenida', 'Home', 'Niveles', 'Antes', 'Guia', 'Calibrar', 'Juego', 'Final', 'Perdida', 'EcoNiveles', 'EcoAntes', 'EcoGuia', 'EcoJuego', 'EcoFinal'];
+  NAMES = { Main: 'Inicio de sesión', Prep1: 'Preparación · Permisos', Prep2: 'Preparación · Sin avisos', Prep4: 'Preparación · Conectar', Prep5: 'Preparación · Quién usa', Bienvenida: 'Bienvenida · logo', Home: 'Home', Niveles: 'Niveles', Antes: 'Antes del nivel', Guia: 'Quién guía', Calibrar: 'Calibrar sticks', Juego: 'Juego · cuenta regresiva', Final: 'Final · el recuerdo', Perdida: 'Pérdida de stick', EcoNiveles: 'Eco · elegir melodía', EcoAntes: 'Eco · antes de la melodía', EcoGuia: 'Eco · quién guía', EcoJuego: 'Eco · jugar', EcoFinal: 'Eco · el recuerdo' };
+  state = { stack: ['Main'], cur: 'Main', nivel: '4', melodia: '4' };
+  show(stack) {
+    this.setState({ stack, cur: null }, () => { this.t = setTimeout(() => this.setState({ cur: stack[stack.length - 1] }), 0); });
+  }
+  MAP = { Niveles: 'EcoNiveles', Antes: 'EcoAntes', Guia: 'EcoGuia', Juego: 'EcoJuego', Final: 'EcoFinal' };
+  go(name) {
+    name = this.MAP[name] || name;
+    if (this.SCREENS.indexOf(name) < 0) return;
+    const st = this.state.stack, base = st[st.length - 1] === 'Bienvenida' ? st.slice(0, -1) : st;
+    this.show(base.concat([name]));
+  }
+  componentDidMount() { try { sessionStorage.setItem('epuModo', 'eco'); } catch (x) {} }
+  componentWillUnmount() { clearTimeout(this.t); }
+  renderVals() {
+    const cur = this.state.cur, v = {};
+    this.SCREENS.forEach(n => { v['s' + n] = cur === n; });
+    const top = this.state.stack[this.state.stack.length - 1];
+    return Object.assign(v, {
+      nivel: this.state.nivel,
+      melodia: this.state.melodia,
+      goEco: () => { try { sessionStorage.setItem('epuModo', 'eco'); } catch (x) {} if (this.state.cur !== 'EcoNiveles') this.show(this.state.stack.concat(['EcoNiveles'])); },
+      label: this.NAMES[top] || '',
+      noBack: this.state.stack.length < 2,
+      backOp: this.state.stack.length < 2 ? .45 : 1,
+      back: () => { if (this.state.stack.length > 1) this.show(this.state.stack.slice(0, -1)); },
+      restart: () => this.show(['Main']),
+      goHome: () => { if (this.state.cur !== 'Home') this.show(this.state.stack.concat(['Home'])); },
+      intercept: e => {
+        const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a) return;
+        const href = a.getAttribute('href') || '';
+        const m = href.match(/^(?:\.\/|\/)?([A-Za-z0-9_]+)\.dc\.html$/);
+        if (!m) return;
+        e.preventDefault(); e.stopPropagation();
+        const nv = a.getAttribute('data-nivel');
+        if (nv) this.setState({ nivel: nv });
+        const ml = a.getAttribute('data-melodia');
+        if (ml) { this.setState({ melodia: ml }); try { sessionStorage.setItem('epuMelodia', ml); sessionStorage.setItem('epuModo', 'eco'); } catch (x) {} }
+        this.go(m[1]);
+      }
+    });
+  }
+}
+</script>
+</body>
+</html>

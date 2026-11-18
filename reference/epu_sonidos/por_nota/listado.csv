@@ -1,0 +1,97 @@
+archivo,instrumento,nivel,nota,frecuencia (Hz),tipo,duración sostenida (ms),largo del archivo (s)
+madera_la3.wav,madera,Madera,la3,220,Se apaga sola,,0.97
+madera_do4.wav,madera,Madera,do4,261.63,Se apaga sola,,0.97
+madera_re4.wav,madera,Madera,re4,293.66,Se apaga sola,,0.97
+madera_mi4.wav,madera,Madera,mi4,329.63,Se apaga sola,,0.97
+madera_sol4.wav,madera,Madera,sol4,392,Se apaga sola,,0.97
+madera_la4.wav,madera,Madera,la4,440,Se apaga sola,,0.97
+viento_la3_500ms.wav,viento,Viento,la3,220,Sostenida,500,0.71
+viento_la3_1000ms.wav,viento,Viento,la3,220,Sostenida,1000,1.21
+viento_la3_1500ms.wav,viento,Viento,la3,220,Sostenida,1500,1.71
+viento_la3_2000ms.wav,viento,Viento,la3,220,Sostenida,2000,2.21
+viento_do4_500ms.wav,viento,Viento,do4,261.63,Sostenida,500,0.71
+viento_do4_1000ms.wav,viento,Viento,do4,261.63,Sostenida,1000,1.21
+viento_do4_1500ms.wav,viento,Viento,do4,261.63,Sostenida,1500,1.71
+viento_do4_2000ms.wav,viento,Viento,do4,261.63,Sostenida,2000,2.21
+viento_re4_500ms.wav,viento,Viento,re4,293.66,Sostenida,500,0.71
+viento_re4_1000ms.wav,viento,Viento,re4,293.66,Sostenida,1000,1.21
+viento_re4_1500ms.wav,viento,Viento,re4,293.66,Sostenida,1500,1.71
+viento_re4_2000ms.wav,viento,Viento,re4,293.66,Sostenida,2000,2.21
+viento_mi4_500ms.wav,viento,Viento,mi4,329.63,Sostenida,500,0.71
+viento_mi4_1000ms.wav,viento,Viento,mi4,329.63,Sostenida,1000,1.21
+viento_mi4_1500ms.wav,viento,Viento,mi4,329.63,Sostenida,1500,1.71
+viento_mi4_2000ms.wav,viento,Viento,mi4,329.63,Sostenida,2000,2.21
+viento_sol4_500ms.wav,viento,Viento,sol4,392,Sostenida,500,0.71
+viento_sol4_1000ms.wav,viento,Viento,sol4,392,Sostenida,1000,1.21
+viento_sol4_1500ms.wav,viento,Viento,sol4,392,Sostenida,1500,1.71
+viento_sol4_2000ms.wav,viento,Viento,sol4,392,Sostenida,2000,2.21
+viento_la4_500ms.wav,viento,Viento,la4,440,Sostenida,500,0.71
+viento_la4_1000ms.wav,viento,Viento,la4,440,Sostenida,1000,1.21
+viento_la4_1500ms.wav,viento,Viento,la4,440,Sostenida,1500,1.71
+viento_la4_2000ms.wav,viento,Viento,la4,440,Sostenida,2000,2.21
+cuerda_la3.wav,cuerda,Cuerda,la3,220,Se apaga sola,,1.37
+cuerda_do4.wav,cuerda,Cuerda,do4,261.63,Se apaga sola,,1.37
+cuerda_re4.wav,cuerda,Cuerda,re4,293.66,Se apaga sola,,1.36
+cuerda_mi4.wav,cuerda,Cuerda,mi4,329.63,Se apaga sola,,1.37
+cuerda_sol4.wav,cuerda,Cuerda,sol4,392,Se apaga sola,,1.37
+cuerda_la4.wav,cuerda,Cuerda,la4,440,Se apaga sola,,1.37
+cana_la3_500ms.wav,cana,Caña,la3,220,Sostenida,500,0.71
+cana_la3_1000ms.wav,cana,Caña,la3,220,Sostenida,1000,1.21
+cana_la3_1500ms.wav,cana,Caña,la3,220,Sostenida,1500,1.71
+cana_la3_2000ms.wav,cana,Caña,la3,220,Sostenida,2000,2.21
+cana_do4_500ms.wav,cana,Caña,do4,261.63,Sostenida,500,0.71
+cana_do4_1000ms.wav,cana,Caña,do4,261.63,Sostenida,1000,1.21
+cana_do4_1500ms.wav,cana,Caña,do4,261.63,Sostenida,1500,1.71
+cana_do4_2000ms.wav,cana,Caña,do4,261.63,Sostenida,2000,2.21
+cana_re4_500ms.wav,cana,Caña,re4,293.66,Sostenida,500,0.71
+cana_re4_1000ms.wav,cana,Caña,re4,293.66,Sostenida,1000,1.21
+cana_re4_1500ms.wav,cana,Caña,re4,293.66,Sostenida,1500,1.71
+cana_re4_2000ms.wav,cana,Caña,re4,293.66,Sostenida,2000,2.21
+cana_mi4_500ms.wav,cana,Caña,mi4,329.63,Sostenida,500,0.71
+cana_mi4_1000ms.wav,cana,Caña,mi4,329.63,Sostenida,1000,1.21
+cana_mi4_1500ms.wav,cana,Caña,mi4,329.63,Sostenida,1500,1.71
+cana_mi4_2000ms.wav,cana,Caña,mi4,329.63,Sostenida,2000,2.21
+cana_sol4_500ms.wav,cana,Caña,sol4,392,Sostenida,500,0.71
+cana_sol4_1000ms.wav,cana,Caña,sol4,392,Sostenida,1000,1.21
+cana_sol4_1500ms.wav,cana,Caña,sol4,392,Sostenida,1500,1.71
+cana_sol4_2000ms.wav,cana,Caña,sol4,392,Sostenida,2000,2.21
+cana_la4_500ms.wav,cana,Caña,la4,440,Sostenida,500,0.71
+cana_la4_1000ms.wav,cana,Caña,la4,440,Sostenida,1000,1.21
+cana_la4_1500ms.wav,cana,Caña,la4,440,Sostenida,1500,1.71
+cana_la4_2000ms.wav,cana,Caña,la4,440,Sostenida,2000,2.21
+metal_la3.wav,metal,Metal,la3,220,Se apaga sola,,2.07
+metal_do4.wav,metal,Metal,do4,261.63,Se apaga sola,,2.07
+metal_re4.wav,metal,Metal,re4,293.66,Se apaga sola,,2.07
+metal_mi4.wav,metal,Metal,mi4,329.63,Se apaga sola,,2.07
+metal_sol4.wav,metal,Metal,sol4,392,Se apaga sola,,2.07
+metal_la4.wav,metal,Metal,la4,440,Se apaga sola,,2.07
+voces_la3_500ms.wav,voces,Voces,la3,220,Sostenida,500,0.71
+voces_la3_1000ms.wav,voces,Voces,la3,220,Sostenida,1000,1.21
+voces_la3_1500ms.wav,voces,Voces,la3,220,Sostenida,1500,1.71
+voces_la3_2000ms.wav,voces,Voces,la3,220,Sostenida,2000,2.21
+voces_do4_500ms.wav,voces,Voces,do4,261.63,Sostenida,500,0.71
+voces_do4_1000ms.wav,voces,Voces,do4,261.63,Sostenida,1000,1.21
+voces_do4_1500ms.wav,voces,Voces,do4,261.63,Sostenida,1500,1.71
+voces_do4_2000ms.wav,voces,Voces,do4,261.63,Sostenida,2000,2.21
+voces_re4_500ms.wav,voces,Voces,re4,293.66,Sostenida,500,0.71
+voces_re4_1000ms.wav,voces,Voces,re4,293.66,Sostenida,1000,1.21
+voces_re4_1500ms.wav,voces,Voces,re4,293.66,Sostenida,1500,1.71
+voces_re4_2000ms.wav,voces,Voces,re4,293.66,Sostenida,2000,2.21
+voces_mi4_500ms.wav,voces,Voces,mi4,329.63,Sostenida,500,0.71
+voces_mi4_1000ms.wav,voces,Voces,mi4,329.63,Sostenida,1000,1.21
+voces_mi4_1500ms.wav,voces,Voces,mi4,329.63,Sostenida,1500,1.71
+voces_mi4_2000ms.wav,voces,Voces,mi4,329.63,Sostenida,2000,2.21
+voces_sol4_500ms.wav,voces,Voces,sol4,392,Sostenida,500,0.71
+voces_sol4_1000ms.wav,voces,Voces,sol4,392,Sostenida,1000,1.21
+voces_sol4_1500ms.wav,voces,Voces,sol4,392,Sostenida,1500,1.71
+voces_sol4_2000ms.wav,voces,Voces,sol4,392,Sostenida,2000,2.21
+voces_la4_500ms.wav,voces,Voces,la4,440,Sostenida,500,0.71
+voces_la4_1000ms.wav,voces,Voces,la4,440,Sostenida,1000,1.21
+voces_la4_1500ms.wav,voces,Voces,la4,440,Sostenida,1500,1.71
+voces_la4_2000ms.wav,voces,Voces,la4,440,Sostenida,2000,2.21
+teclas_la3.wav,teclas,Teclas,la3,220,Se apaga sola,,1.67
+teclas_do4.wav,teclas,Teclas,do4,261.63,Se apaga sola,,1.67
+teclas_re4.wav,teclas,Teclas,re4,293.66,Se apaga sola,,1.59
+teclas_mi4.wav,teclas,Teclas,mi4,329.63,Se apaga sola,,1.67
+teclas_sol4.wav,teclas,Teclas,sol4,392,Se apaga sola,,1.67
+teclas_la4.wav,teclas,Teclas,la4,440,Se apaga sola,,1.67

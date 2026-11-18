@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Calibrar sticks</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.ring{opacity:0;transform-box:fill-box;transform-origin:center}
+.busy .ring{animation:ring 1.3s ease-out infinite}
+.busy .ring2{animation-delay:.65s}
+.busy .led{animation:blink .7s ease-in-out infinite}
+.fill{animation:fill 3s linear both}
+@keyframes ring{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(2.8)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fill{from{width:0}to{width:100%}}
+@media(prefers-reduced-motion:reduce){.busy .ring,.busy .led{animation:none}.busy .ring{opacity:.5}}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; padding: 66px 22px 28px; background: #EFECE4; color: #2B2536; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; line-height: 1.35; display: flex; flex-direction: column; gap: 18px">
+  <a href="{{ backHref }}" style="position: absolute; top: 14px; left: 14px; height: 40px; box-sizing: border-box; padding: 0 14px 0 12px; border-radius: 999px; background: #fff; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: #2B2536; text-decoration: none; box-shadow: 0 2px 10px rgba(43,37,54,.1)"><span style="width: 8px; height: 8px; border-left: 2.5px solid #2B2536; border-bottom: 2.5px solid #2B2536; transform: translateX(2px) rotate(45deg)"></span>Atrás</a>
+  <div class="{{ phase }}" style="flex: 1; min-height: 260px; max-height: 388px; display: grid; place-items: center; overflow: hidden">
+    <svg viewBox="0 0 320 260" role="img" aria-label="Dos manos sosteniendo los sticks derechos, con la luz de la punta mirando hacia arriba" style="width: 290px; height: auto; display: block">
+      <path d="M129 54 L129 18" fill="none" stroke="#7E9142" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="1 8"></path>
+      <path d="M121 22 L129 13 L137 22" fill="none" stroke="#7E9142" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path>
+      <path d="M196 114 L196 84" fill="none" stroke="#7E9142" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="1 8"></path>
+      <path d="M188 88 L196 79 L204 88" fill="none" stroke="#7E9142" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path>
+      <rect x="105" y="62" width="48" height="174" rx="24" fill="#B3A2DC"></rect>
+      <circle class="ring" cx="129" cy="86" r="13" fill="none" stroke="#F2E44A" stroke-width="3"></circle>
+      <circle class="ring ring2" cx="129" cy="86" r="13" fill="none" stroke="#F2E44A" stroke-width="3"></circle>
+      <g class="led"><circle cx="129" cy="86" r="13" fill="#F2E44A" opacity=".45"></circle><circle cx="129" cy="86" r="8" fill="#F2E44A"></circle></g>
+      <rect x="95" y="150" width="68" height="58" rx="22" fill="#DAD4C8"></rect>
+      <path d="M104 166 L140 166 M104 179 L140 179 M104 192 L140 192" fill="none" stroke="#C3BCAD" stroke-width="3" stroke-linecap="round"></path>
+      <rect x="177" y="124" width="38" height="112" rx="19" fill="#E85E45"></rect>
+      <rect x="169" y="168" width="54" height="46" rx="18" fill="#DAD4C8"></rect>
+      <path d="M177 181 L206 181 M177 191 L206 191 M177 201 L206 201" fill="none" stroke="#C3BCAD" stroke-width="3" stroke-linecap="round"></path>
+      <circle class="ring" cx="196" cy="143" r="12" fill="none" stroke="#F2E44A" stroke-width="3"></circle>
+      <circle class="ring ring2" cx="196" cy="143" r="12" fill="none" stroke="#F2E44A" stroke-width="3"></circle>
+      <g class="led"><circle cx="196" cy="143" r="12" fill="#F2E44A" opacity=".45"></circle><circle cx="196" cy="143" r="7" fill="#F2E44A"></circle></g>
+    </svg>
+  </div>
+  <div style="text-align: center">
+    <h2 style="margin: 0 0 8px; font-size: 28px; font-weight: 900; letter-spacing: -.01em; line-height: 1.1">Calibren los sticks</h2>
+    <p style="margin: 0; font-size: 15px; color: #4a445a">Cada uno sostiene su stick, con la luz hacia arriba</p>
+    <p style="margin: 8px 0 0; font-size: 13px; color: #5a536b; font-weight: 700">Quédense quietos hasta que termine.</p>
+  </div>
+  <button onClick="{{ start }}" aria-live="polite" style="position: relative; overflow: hidden; margin-top: auto; flex: none; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 58px; padding: 12px 20px; font: inherit; font-size: 17px; font-weight: 800; color: {{ fg }}; background: {{ bg }}; border: 1.5px solid {{ bd }}; border-radius: 16px; cursor: pointer; transition: background .3s, border-color .3s, color .3s">
+    <sc-if value="{{ busy }}" hint-placeholder-val="{{ false }}"><span class="fill" aria-hidden="true" style="position: absolute; left: 0; top: 0; bottom: 0; background: #E6F4F2"></span></sc-if>
+    <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}"><span style="position: relative; width: 22px; height: 22px; flex: none; border-radius: 50%; background: #fff; display: grid; place-items: center"><svg viewBox="0 0 22 22" aria-hidden="true" style="width: 22px; height: 22px; display: block"><path d="M6.5 11.5 L9.8 14.6 L15.6 8" fill="none" stroke="#0D9488" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></span></sc-if>
+    <span style="position: relative">{{ lab }}</span>
+  </button>
+  <a href="{{ nextHref }}" ref="{{ setNext }}" aria-hidden="true" tabindex="-1" style="position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none">Siguiente</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { c: 'idle' };
+  start() {
+    if (this.state.c !== 'idle') return;
+    this.setState({ c: 'busy' });
+    this.t = setTimeout(() => {
+      this.setState({ c: 'done' });
+      this.nx = setTimeout(() => this.goNext(), 1200);
+    }, 3000);
+  }
+  goNext() {
+    const el = this.nextEl; if (!el) return;
+    try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (e) { try { el.click(); } catch (x) {} }
+  }
+  componentWillUnmount() { clearTimeout(this.t); clearTimeout(this.nx); }
+  renderVals() {
+    const c = this.state.c;
+    let modo = null; try { modo = sessionStorage.getItem('epuModo'); } catch (e) {}
+    const eco = (this.props.modo ?? modo) === 'eco';
+    return {
+      backHref: eco ? 'EcoGuia.dc.html' : 'Guia.dc.html',
+      nextHref: eco ? 'EcoJuego.dc.html' : 'Juego.dc.html',
+      phase: c,
+      busy: c === 'busy',
+      done: c === 'done',
+      lab: c === 'done' ? 'Sticks calibrados' : c === 'busy' ? 'Calibrando… no se muevan' : 'Calibrar',
+      fg: c === 'idle' ? '#fff' : c === 'busy' ? '#0B6F66' : '#fff',
+      bg: c === 'idle' ? '#2B2536' : c === 'busy' ? '#fff' : '#0D9488',
+      bd: c === 'idle' ? '#2B2536' : '#0D9488',
+      start: () => this.start(),
+      setNext: el => { this.nextEl = el; }
+    };
+  }
+}
+</script>
+</body>
+</html>

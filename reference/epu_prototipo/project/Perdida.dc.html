@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Pérdida de stick</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.ring{animation:ring 1.6s ease-in-out infinite}
+@keyframes ring{0%,100%{opacity:.35;transform:scale(.97)}50%{opacity:1;transform:scale(1)}}
+.breathA{animation:breathA 1.4s ease-in-out infinite}
+.breathC{animation:breathC 1.4s ease-in-out infinite}
+@keyframes breathA{0%,100%{box-shadow:0 0 0 0 rgba(179,162,220,.15),0 0 4px 0 rgba(179,162,220,.2)}50%{box-shadow:0 0 0 6px rgba(179,162,220,.4),0 0 22px 6px rgba(179,162,220,.45)}}
+@keyframes breathC{0%,100%{box-shadow:0 0 0 0 rgba(232,94,69,.12),0 0 4px 0 rgba(232,94,69,.15)}50%{box-shadow:0 0 0 6px rgba(232,94,69,.28),0 0 22px 6px rgba(232,94,69,.32)}}
+@media(prefers-reduced-motion:reduce){.ring,.breathA,.breathC{animation:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 20px; background: #EFECE4; color: #2B2536; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; line-height: 1.35; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 16px">
+  <div style="box-sizing: border-box; width: 100%; min-height: 240px; max-height: 338px; display: grid; place-items: center; overflow: hidden; padding: 24px">
+    <div style="position: relative; display: grid; place-items: center; padding: 26px">
+      <div class="ring" style="position: absolute; inset: 0; border: 2.5px dashed #E85E45; border-radius: 999px"></div>
+      <div style="width: {{ stW }}; height: {{ stH }}; border-radius: 999px; background: {{ stC }}; transition: background .4s"></div>
+    </div>
+  </div>
+  <div>
+    <sc-if value="{{ nd }}" hint-placeholder-val="{{ true }}"><span style="display: inline-flex; align-items: center; gap: 8px; background: #F4C3B6; border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 800"><b style="width: 10px; height: 10px; border-radius: 50%; background: #E85E45"></b><span>{{ cause }}</span></span></sc-if>
+    <h2 style="margin: 8px 0 6px; font-size: 24px; font-weight: 900; letter-spacing: -.01em; line-height: 1.1">{{ title }}</h2>
+    <p style="margin: 0 auto; font-size: 15px; color: #4a445a; max-width: 300px">{{ text }}</p>
+  </div>
+  <button onClick="{{ tap }}" class="{{ cls }}" aria-live="polite" style="position: relative; width: 100%; max-width: 320px; min-height: 60px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 18px; font: inherit; font-size: 15px; font-weight: 800; line-height: 1.15; color: #2B2536; background: {{ bg }}; border: 1.5px solid {{ bd }}; border-radius: 16px; cursor: pointer; transition: background .3s, border-color .3s">
+    <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}"><span style="width: 22px; height: 22px; flex: none; border-radius: 50%; background: #fff; display: grid; place-items: center"><svg viewBox="0 0 22 22" aria-hidden="true" style="width: 22px; height: 22px; display: block"><path d="M6.5 11.5 L9.8 14.6 L15.6 8" fill="none" stroke="#2B2536" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></sc-if>
+    <sc-if value="{{ nd }}" hint-placeholder-val="{{ true }}"><span style="width: 14px; height: 14px; flex: none; border-radius: 50%; background: {{ led }}"></span></sc-if>
+    <span>{{ lab }}</span>
+  </button>
+  
+  
+  <a href="Antes.dc.html" ref="{{ setNext }}" aria-hidden="true" tabindex="-1" style="display: none">Volver al nivel</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"stick":{"editor":"enum","options":["pequeño","grande"],"default":"pequeño"},"causa":{"editor":"enum","options":["Fuera de alcance","Batería agotada"],"default":"Fuera de alcance"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { c: 'idle', lit: false };
+  tone() {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+      this.ac = this.ac || new C(); if (this.ac.state !== 'running') this.ac.resume();
+      const ac = this.ac, t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = 523.25; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.2, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + .8);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + .9);
+    } catch (x) {}
+  }
+  connect() {
+    if (this.state.c !== 'idle') return;
+    try { const C = window.AudioContext || window.webkitAudioContext; if (C) { this.ac = this.ac || new C(); this.ac.resume(); } } catch (x) {}
+    this.blink = setInterval(() => this.setState(s => ({ lit: !s.lit })), 250);
+    this.t = setTimeout(() => {
+      clearInterval(this.blink);
+      this.tone();
+      this.setState({ c: 'done', lit: true });
+      this.nx = setTimeout(() => this.goNext(), 1500);
+    }, 2400);
+    this.setState({ c: 'busy', lit: true });
+  }
+  goNext() {
+    const el = this.nextEl; if (!el) return;
+    try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (e) { try { el.click(); } catch (x) {} }
+  }
+  componentWillUnmount() { clearInterval(this.blink); clearTimeout(this.t); clearTimeout(this.nx); }
+  renderVals() {
+    const big = (this.props.stick ?? 'pequeño') === 'grande';
+    const bat = (this.props.causa ?? 'Fuera de alcance') === 'Batería agotada';
+    const s = this.state, name = big ? 'grande' : 'pequeño', stick = big ? '#B3A2DC' : '#E85E45', tint = big ? '#F1EDFA' : '#FCE6E1';
+    return {
+      stW: big ? '62px' : '44px', stH: big ? '220px' : '150px',
+      cause: bat ? 'Batería agotada' : 'Fuera de alcance',
+      title: 'Se perdió el stick ' + (big ? 'grande' : 'pequeño'),
+      text: bat ? 'Carga el stick unos minutos y toca el botón.' : 'Acerca el stick al teléfono y toca el botón.',
+      tip: bat ? 'Con diez minutos de carga alcanza para una sesión.' : 'Lo logrado en los niveles no se pierde.',
+      lab: s.c === 'done' ? 'Stick ' + name + ' conectado' : s.c === 'busy' ? 'Conectando…' : 'Reconectar stick ' + name,
+      bg: s.c === 'done' ? stick : s.c === 'busy' ? tint : '#fff',
+      bd: s.c === 'idle' ? 'rgba(43,37,54,.25)' : stick,
+      cls: s.c === 'busy' ? (big ? 'breathA' : 'breathC') : '',
+      done: s.c === 'done',
+      nd: s.c !== 'done',
+      led: s.lit ? '#F2E44A' : '#e2ded6',
+      stC: s.c === 'done' ? stick : '#cfc9d8',
+      tap: () => this.connect(),
+      setNext: el => { this.nextEl = el; }
+    };
+  }
+}
+</script>
+</body>
+</html>

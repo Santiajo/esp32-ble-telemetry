@@ -1,0 +1,570 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Antes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Antes del nivel",
+      "w": 390,
+      "x": 940,
+      "y": 1244
+    },
+    "App.dc.html": {
+      "h": 1000,
+      "is_interactive": true,
+      "title": "App completa · prototipo",
+      "w": 500,
+      "x": -620,
+      "y": 0
+    },
+    "AppEco.dc.html": {
+      "h": 1000,
+      "is_interactive": true,
+      "title": "App completa · Eco",
+      "w": 500,
+      "x": -620,
+      "y": 4914
+    },
+    "Bienvenida.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Bienvenida · logo Epu",
+      "w": 390,
+      "x": 2350,
+      "y": 0
+    },
+    "Calibrar.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Calibrar sticks",
+      "w": 390,
+      "x": 1880,
+      "y": 1244
+    },
+    "Eco1Antes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 1 · Madera · antes del nivel",
+      "w": 390,
+      "x": 0,
+      "y": 6482
+    },
+    "Eco1Final.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 1 · Madera · el recuerdo",
+      "w": 390,
+      "x": 0,
+      "y": 9438
+    },
+    "Eco1Guia.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 1 · Madera · quién guía",
+      "w": 390,
+      "x": 0,
+      "y": 7446
+    },
+    "Eco1Juego.dc.html": {
+      "h": 908,
+      "is_interactive": true,
+      "title": "Nivel 1 · Madera · descubrir la melodía",
+      "w": 390,
+      "x": 0,
+      "y": 8410
+    },
+    "Eco2Antes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 2 · Viento · antes del nivel",
+      "w": 390,
+      "x": 470,
+      "y": 6482
+    },
+    "Eco2Final.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 2 · Viento · el recuerdo",
+      "w": 390,
+      "x": 470,
+      "y": 9438
+    },
+    "Eco2Guia.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 2 · Viento · quién guía",
+      "w": 390,
+      "x": 470,
+      "y": 7446
+    },
+    "Eco2Juego.dc.html": {
+      "h": 908,
+      "is_interactive": true,
+      "title": "Nivel 2 · Viento · descubrir la melodía",
+      "w": 390,
+      "x": 470,
+      "y": 8410
+    },
+    "Eco3Antes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 3 · Cuerda · antes del nivel",
+      "w": 390,
+      "x": 940,
+      "y": 6482
+    },
+    "Eco3Final.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 3 · Cuerda · el recuerdo",
+      "w": 390,
+      "x": 940,
+      "y": 9438
+    },
+    "Eco3Guia.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 3 · Cuerda · quién guía",
+      "w": 390,
+      "x": 940,
+      "y": 7446
+    },
+    "Eco3Juego.dc.html": {
+      "h": 908,
+      "is_interactive": true,
+      "title": "Nivel 3 · Cuerda · descubrir la melodía",
+      "w": 390,
+      "x": 940,
+      "y": 8410
+    },
+    "Eco4Antes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 4 · Caña · antes del nivel",
+      "w": 390,
+      "x": 1410,
+      "y": 6482
+    },
+    "Eco4Final.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 4 · Caña · el recuerdo",
+      "w": 390,
+      "x": 1410,
+      "y": 9438
+    },
+    "Eco4Guia.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 4 · Caña · quién guía",
+      "w": 390,
+      "x": 1410,
+      "y": 7446
+    },
+    "Eco4Juego.dc.html": {
+      "h": 908,
+      "is_interactive": true,
+      "title": "Nivel 4 · Caña · descubrir la melodía",
+      "w": 390,
+      "x": 1410,
+      "y": 8410
+    },
+    "Eco5Antes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 5 · Metal · antes del nivel",
+      "w": 390,
+      "x": 1880,
+      "y": 6482
+    },
+    "Eco5Final.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 5 · Metal · el recuerdo",
+      "w": 390,
+      "x": 1880,
+      "y": 9438
+    },
+    "Eco5Guia.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 5 · Metal · quién guía",
+      "w": 390,
+      "x": 1880,
+      "y": 7446
+    },
+    "Eco5Juego.dc.html": {
+      "h": 908,
+      "is_interactive": true,
+      "title": "Nivel 5 · Metal · descubrir la melodía",
+      "w": 390,
+      "x": 1880,
+      "y": 8410
+    },
+    "Eco6Antes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 6 · Voces · antes del nivel",
+      "w": 390,
+      "x": 2350,
+      "y": 6482
+    },
+    "Eco6Final.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 6 · Voces · el recuerdo",
+      "w": 390,
+      "x": 2350,
+      "y": 9438
+    },
+    "Eco6Guia.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 6 · Voces · quién guía",
+      "w": 390,
+      "x": 2350,
+      "y": 7446
+    },
+    "Eco6Juego.dc.html": {
+      "h": 908,
+      "is_interactive": true,
+      "title": "Nivel 6 · Voces · descubrir la melodía",
+      "w": 390,
+      "x": 2350,
+      "y": 8410
+    },
+    "Eco7Antes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 7 · Teclas · antes del nivel",
+      "w": 390,
+      "x": 2820,
+      "y": 6482
+    },
+    "Eco7Final.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 7 · Teclas · el recuerdo",
+      "w": 390,
+      "x": 2820,
+      "y": 9438
+    },
+    "Eco7Guia.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Nivel 7 · Teclas · quién guía",
+      "w": 390,
+      "x": 2820,
+      "y": 7446
+    },
+    "Eco7Juego.dc.html": {
+      "h": 908,
+      "is_interactive": true,
+      "title": "Nivel 7 · Teclas · descubrir la melodía",
+      "w": 390,
+      "x": 2820,
+      "y": 8410
+    },
+    "EcoAntes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Eco · antes del nivel",
+      "w": 390,
+      "x": 3290,
+      "y": 4914
+    },
+    "EcoFinal.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Eco · el recuerdo",
+      "w": 390,
+      "x": 4700,
+      "y": 4914
+    },
+    "EcoGuia.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Eco · quién guía",
+      "w": 390,
+      "x": 3760,
+      "y": 4914
+    },
+    "EcoIni1.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Inicio",
+      "w": 390,
+      "x": 0,
+      "y": 4914
+    },
+    "EcoIni2.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Preparación 1 · Permisos",
+      "w": 390,
+      "x": 470,
+      "y": 4914
+    },
+    "EcoIni3.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Preparación 2 · No Molestar",
+      "w": 390,
+      "x": 940,
+      "y": 4914
+    },
+    "EcoIni4.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Preparación 3 · Vincular sticks",
+      "w": 390,
+      "x": 1410,
+      "y": 4914
+    },
+    "EcoIni5.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Preparación 4 · Quién usa cada stick",
+      "w": 390,
+      "x": 1880,
+      "y": 4914
+    },
+    "EcoIni6.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Bienvenida · logo Epu",
+      "w": 390,
+      "x": 2350,
+      "y": 4914
+    },
+    "EcoJuego.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Eco · descubrir la melodía (simulación)",
+      "w": 390,
+      "x": 4230,
+      "y": 4914
+    },
+    "EcoNiveles.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Eco · elegir nivel",
+      "w": 390,
+      "x": 2820,
+      "y": 4914
+    },
+    "Final.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Final · el recuerdo",
+      "w": 390,
+      "x": 2820,
+      "y": 1244
+    },
+    "Guia.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Quién guía",
+      "w": 390,
+      "x": 1410,
+      "y": 1244
+    },
+    "Home.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Home",
+      "w": 390,
+      "x": 0,
+      "y": 1244
+    },
+    "Juego.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Juego · cuenta regresiva y luces",
+      "w": 390,
+      "x": 2350,
+      "y": 1244
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Inicio de sesión",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "Niveles.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Selector de niveles",
+      "w": 390,
+      "x": 470,
+      "y": 1244
+    },
+    "Perdida.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Pérdida de stick",
+      "w": 390,
+      "x": 0,
+      "y": 2488
+    },
+    "Prep1.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Preparación 1 · Permisos",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Prep2.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Preparación 2 · No Molestar",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Prep4.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Preparación 3 · Vincular sticks",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "Prep5.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Preparación 4 · Quién usa cada stick",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-05T22:40:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "row1",
+    "row2",
+    "row3",
+    "row4",
+    "ecoNota",
+    "row5"
+  ],
+  "notes": {
+    "ecoNota": {
+      "fill": "purple",
+      "text": "Flujo Eco: Inicio y preparación → Elegir nivel → Antes del nivel → Quién guía → Calibrar sticks (la misma pantalla de arriba) → Descubrir la melodía → Recuerdo. En cada nivel guía una sola persona: el adulto en los niveles 1, 4, 6 y 7, y el niño en los niveles 2, 3 y 5. La partitura no se muestra: la app la usa por detrás. Para probarlo completo usa «App completa · Eco» a la izquierda.",
+      "w": 300,
+      "x": 5170,
+      "y": 4914
+    },
+    "row1": {
+      "kind": "title1",
+      "maxW": 2740,
+      "text": "Primera vez · inicio de sesión y preparación",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "row2": {
+      "kind": "title1",
+      "maxW": 3210,
+      "text": "Juego · home, nivel y recuerdo",
+      "w": 240,
+      "x": 0,
+      "y": 944
+    },
+    "row3": {
+      "kind": "title1",
+      "maxW": 390,
+      "text": "Otras pantallas",
+      "w": 240,
+      "x": 0,
+      "y": 2188
+    },
+    "row4": {
+      "kind": "title1",
+      "maxW": 5090,
+      "text": "Eco · melodías para descubrir juntos",
+      "w": 240,
+      "x": 0,
+      "y": 4614
+    },
+    "row5": {
+      "kind": "title1",
+      "maxW": 3210,
+      "text": "Eco · los 7 niveles, pantalla por pantalla",
+      "w": 240,
+      "x": 0,
+      "y": 6182
+    }
+  },
+  "order": [
+    "App.dc.html",
+    "Main.dc.html",
+    "Prep1.dc.html",
+    "Prep2.dc.html",
+    "Prep4.dc.html",
+    "Prep5.dc.html",
+    "Bienvenida.dc.html",
+    "Home.dc.html",
+    "Niveles.dc.html",
+    "Antes.dc.html",
+    "Guia.dc.html",
+    "Calibrar.dc.html",
+    "Juego.dc.html",
+    "Final.dc.html",
+    "Perdida.dc.html",
+    "AppEco.dc.html",
+    "EcoIni1.dc.html",
+    "EcoIni2.dc.html",
+    "EcoIni3.dc.html",
+    "EcoIni4.dc.html",
+    "EcoIni5.dc.html",
+    "EcoIni6.dc.html",
+    "EcoNiveles.dc.html",
+    "EcoAntes.dc.html",
+    "EcoGuia.dc.html",
+    "EcoJuego.dc.html",
+    "EcoFinal.dc.html",
+    "Eco1Antes.dc.html",
+    "Eco2Antes.dc.html",
+    "Eco3Antes.dc.html",
+    "Eco4Antes.dc.html",
+    "Eco5Antes.dc.html",
+    "Eco6Antes.dc.html",
+    "Eco7Antes.dc.html",
+    "Eco1Guia.dc.html",
+    "Eco2Guia.dc.html",
+    "Eco3Guia.dc.html",
+    "Eco4Guia.dc.html",
+    "Eco5Guia.dc.html",
+    "Eco6Guia.dc.html",
+    "Eco7Guia.dc.html",
+    "Eco1Juego.dc.html",
+    "Eco2Juego.dc.html",
+    "Eco3Juego.dc.html",
+    "Eco4Juego.dc.html",
+    "Eco5Juego.dc.html",
+    "Eco6Juego.dc.html",
+    "Eco7Juego.dc.html",
+    "Eco1Final.dc.html",
+    "Eco2Final.dc.html",
+    "Eco3Final.dc.html",
+    "Eco4Final.dc.html",
+    "Eco5Final.dc.html",
+    "Eco6Final.dc.html",
+    "Eco7Final.dc.html"
+  ],
+  "pages": [],
+  "title": "Epu · 11a Flujo completo"
+}

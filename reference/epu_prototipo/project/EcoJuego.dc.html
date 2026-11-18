@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Eco · descubrir la melodía</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#5B35B8}a:hover{color:#2B2536}
+.orb{transition:left .7s cubic-bezier(.4,0,.2,1), top .7s cubic-bezier(.4,0,.2,1), opacity .4s ease}
+.orb.fast{transition:left .23s linear, top .23s linear, opacity .4s ease}
+.fade{transition:opacity .5s ease}
+.orb.pulse{animation:pulse .9s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.9)}}
+.grow{transition:opacity 1.4s linear}
+.drop{transition:opacity .25s ease}
+@media(prefers-reduced-motion:reduce){.orb.pulse{animation:none}.orb,.orb.fast,.fade,.grow,.drop{transition:none}}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #1d1927; color: #fff; font-family: Nunito, ui-rounded, 'Segoe UI', system-ui, sans-serif; line-height: 1.35">
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(179,162,220,.9) 0, rgba(179,162,220,.45) 1.7%, rgba(179,162,220,0) 7.5%); opacity: {{ aF }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(179,162,220,.9) 0, rgba(179,162,220,.45) 1.7%, rgba(179,162,220,0) 7.5%); opacity: {{ aB }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to right, rgba(179,162,220,.9) 0, rgba(179,162,220,.45) 3.7%, rgba(179,162,220,0) 16%); opacity: {{ aL }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to left, rgba(179,162,220,.9) 0, rgba(179,162,220,.45) 3.7%, rgba(179,162,220,0) 16%); opacity: {{ aR }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(232,94,69,.9) 0, rgba(232,94,69,.45) 1.7%, rgba(232,94,69,0) 7.5%); opacity: {{ cF }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(232,94,69,.9) 0, rgba(232,94,69,.45) 1.7%, rgba(232,94,69,0) 7.5%); opacity: {{ cB }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to right, rgba(232,94,69,.9) 0, rgba(232,94,69,.45) 3.7%, rgba(232,94,69,0) 16%); opacity: {{ cL }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to left, rgba(232,94,69,.9) 0, rgba(232,94,69,.45) 3.7%, rgba(232,94,69,0) 16%); opacity: {{ cR }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(242,228,74,.9) 0, rgba(242,228,74,.45) 1.7%, rgba(242,228,74,0) 7.5%); opacity: {{ uF }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(242,228,74,.9) 0, rgba(242,228,74,.45) 1.7%, rgba(242,228,74,0) 7.5%); opacity: {{ uB }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to right, rgba(242,228,74,.9) 0, rgba(242,228,74,.45) 3.7%, rgba(242,228,74,0) 16%); opacity: {{ uL }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to left, rgba(242,228,74,.9) 0, rgba(242,228,74,.45) 3.7%, rgba(242,228,74,0) 16%); opacity: {{ uR }}; pointer-events: none"></div>
+  <div class="{{ hcls }}" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(242,228,74,.9) 0, rgba(242,228,74,.45) 3.2%, rgba(242,228,74,0) 14%); opacity: {{ hF }}; pointer-events: none"></div>
+  <div class="{{ hcls }}" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(242,228,74,.9) 0, rgba(242,228,74,.45) 3.2%, rgba(242,228,74,0) 14%); opacity: {{ hB }}; pointer-events: none"></div>
+  <div class="{{ hcls }}" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to right, rgba(242,228,74,.9) 0, rgba(242,228,74,.45) 7%, rgba(242,228,74,0) 30%); opacity: {{ hL }}; pointer-events: none"></div>
+  <div class="{{ hcls }}" aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to left, rgba(242,228,74,.9) 0, rgba(242,228,74,.45) 7%, rgba(242,228,74,0) 30%); opacity: {{ hR }}; pointer-events: none"></div>
+  <div class="fade" aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse 95% 80% at 50% 50%, rgba(74,210,130,.7) 0, rgba(74,210,130,.4) 45%, rgba(74,210,130,.16) 100%); opacity: {{ cf }}; pointer-events: none"></div>
+  <span class="{{ oca }}" aria-hidden="true" style="position: absolute; left: {{ ax }}px; top: {{ ay }}px; width: 104px; height: 104px; border-radius: 50%; background: radial-gradient(circle, #CFC2EE 0, #B3A2DC 34%, rgba(179,162,220,.55) 52%, rgba(179,162,220,0) 74%); filter: blur(1.5px); opacity: {{ oo }}; pointer-events: none"></span>
+  <span class="{{ occ }}" aria-hidden="true" style="position: absolute; left: {{ cx }}px; top: {{ cy }}px; width: 84px; height: 84px; border-radius: 50%; background: radial-gradient(circle, #F28A76 0, #E85E45 34%, rgba(232,94,69,.55) 52%, rgba(232,94,69,0) 74%); filter: blur(1.5px); opacity: {{ oo }}; pointer-events: none"></span>
+  <button onClick="{{ sound }}" aria-label="Activar o silenciar el sonido" style="position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; background: transparent; border: 0; cursor: pointer"></button>
+  <a href="EcoFinal.dc.html" data-melodia="{{ mid }}" ref="{{ setNext }}" aria-hidden="true" tabindex="-1" style="position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none">Ver el recuerdo</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"melodia":{"editor":"enum","options":["1","2","3","4","5","6","7"],"default":"4"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  MEL = [
+    { n: 'Madera', k: 'madera', steps: ['S:F', 'S:B', 'S:B', 'S:F'], fr: 'A3:2 C4:2|D4:2 E4:2|D4:1 C4:1 A3:2|C4:2 A3:2' },
+    { n: 'Viento', k: 'viento', steps: ['H:F', 'H:R', 'H:L', 'H:B'], fr: 'E4:2 G4:2|A4:3 G4:1|E4:2 D4:2|E4:4' },
+    { n: 'Cuerda', k: 'cuerda', steps: ['O:L', 'O:R', 'O:R', 'O:L'], fr: 'A3:1 E4:1 D4:2|C4:1 D4:1 E4:2|G4:2 E4:2|D4:1 C4:1 A3:2' },
+    { n: 'Caña', k: 'cana', steps: ['O:F', 'O:B', 'O:F', 'O:B', 'O:F'], fr: 'D4:2 E4:2|G4:3 E4:1|D4:2 C4:2|A3:2 C4:2|D4:4' },
+    { n: 'Metal', k: 'metal', steps: ['G:+', 'G:+', 'G:-', 'G:+', 'G:-'], fr: 'A3:1 C4:1 E4:2|D4:1 E4:1 G4:2|A4:2 G4:2|E4:1 D4:1 C4:2|A3:4' },
+    { n: 'Voces', k: 'voces', steps: ['E:F', 'E:L', 'E:B', 'E:R', 'E:L', 'E:F'], fr: 'A3:4|C4:2 D4:2|E4:4|G4:2 E4:2|D4:2 C4:2|A3:4' },
+    { n: 'Teclas', k: 'teclas', steps: ['S:F', 'O:R', 'G:+', 'O:B', 'E:L', 'Q:L'], fr: 'E4:1 G4:1 A4:2|G4:1 E4:1 D4:2|C4:1 D4:1 E4:2|G4:2 A4:2|E4:1 D4:1 C4:2|A3:4' }
+  ];
+  HZ = { A3: 220, C4: 261.63, D4: 293.66, E4: 329.63, G4: 392, A4: 440 };
+  INST = {
+    madera: { cut: 1800, a: .008, d: .9, p: [['sine', 1, 1, 1], ['sine', 4, .16, .22]] },
+    viento: { cut: 1500, a: .09, d: 0, p: [['sine', 1, 1, 1], ['sine', 2, .12, 1], ['triangle', 1, .14, 1]] },
+    cuerda: { cut: 1400, a: .006, d: 1.3, p: [['triangle', 1, 1, 1], ['sawtooth', 1, .1, .35]] },
+    cana: { cut: 1000, a: .06, d: 0, p: [['square', 1, .3, 1], ['sine', 1, .6, 1]] },
+    metal: { cut: 1900, a: .006, d: 2, p: [['sine', 1, 1, 1], ['sine', 2, .32, .7], ['sine', 3, .12, .45]] },
+    voces: { cut: 800, a: .18, d: 0, p: [['triangle', 1, .55, 1], ['triangle', 1.006, .55, 1], ['sine', .5, .28, 1]] },
+    teclas: { cut: 1600, a: .006, d: 1.6, p: [['sine', 1, 1, 1], ['triangle', 2, .18, .5], ['sine', 1.003, .4, 1]] }
+  };
+  GUIA = ['a', 'c', 'c', 'a', 'c', 'a', 'a'];
+  T = [];
+  NONE = { F: '', B: '', L: '', R: '' };
+  state = { A: [150, 398], C: [240, 446], he: { F: '', B: '', L: '', R: '' }, hold: '', spin: false, conf: false, fin: false, snd: false, orb: true, lead: '' };
+  mel() {
+    let saved = null; try { saved = sessionStorage.getItem('epuMelodia'); } catch (e) {}
+    const id = Math.min(7, Math.max(1, parseInt(this.props.melodia ?? saved ?? '4', 10) || 4));
+    const M = this.MEL[id - 1];
+    return Object.assign({ id, frags: M.fr.split('|').map(f => f.split(' ').map(x => { const q = x.split(':'); return [this.HZ[q[0]], +q[1] * .5]; })) }, M);
+  }
+  ctx() {
+    const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+    this.ac = this.ac || new C(); if (this.ac.state !== 'running') this.ac.resume();
+    if (!this.master) { this.master = this.ac.createGain(); this.master.connect(this.ac.destination); }
+    this.master.gain.value = this.audible() ? 1 : 0;
+    return this.ac;
+  }
+  note(ac, I, f, t, dur) {
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = I.cut; lp.Q.value = .5; lp.connect(this.master || ac.destination);
+    I.p.forEach(q => {
+      const o = ac.createOscillator(), g = ac.createGain(), pk = .13 * q[2];
+      o.type = q[0]; o.frequency.value = f * q[1];
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(pk, t + I.a);
+      let end;
+      if (I.d) { end = t + I.a + I.d * q[3]; g.gain.exponentialRampToValueAtTime(.0001, end); }
+      else { end = t + dur + .15; g.gain.setValueAtTime(pk, Math.max(t + I.a, t + dur - .12)); g.gain.exponentialRampToValueAtTime(.0001, end); }
+      o.connect(g); g.connect(lp); o.start(t); o.stop(end + .05);
+    });
+  }
+  audible() { const p = this.props.sonido; return p === 'on' || (p == null && this.state.snd); }
+  play(from, to) {
+    if (!this.audible()) return;
+    try {
+      const ac = this.ctx(); if (!ac) return;
+      const M = this.mel(), I = this.INST[M.k]; let t = ac.currentTime + .04;
+      for (let i = from; i < to; i++) M.frags[i].forEach(q => { this.note(ac, I, q[0], t, q[1]); t += q[1]; });
+    } catch (e) {}
+  }
+  clear() { this.T.forEach(clearTimeout); this.T = []; }
+  rest(ad) { return ad ? [150, 398] : [240, 446]; }
+  edge(d, ad) {
+    if (d === 'F') return [ad ? 132 : 258, 138];
+    if (d === 'B') return [ad ? 132 : 258, 706];
+    if (d === 'L') return [78, ad ? 320 : 524];
+    if (d === 'R') return [312, ad ? 320 : 524];
+    return this.rest(ad);
+  }
+  circ(ang, ad) { const r = ad ? 140 : 92, q = ang * Math.PI / 180; return [195 + r * Math.cos(q), 422 + r * Math.sin(q)]; }
+  run() {
+    this.clear();
+    const M = this.mel(), n = M.steps.length, opp = { F: 'B', B: 'F', L: 'R', R: 'L' }, NONE = this.NONE;
+    const gA = this.GUIA[M.id - 1] === 'a';
+    let t = 0;
+    const at = (dt, fn) => { t += dt; this.T.push(setTimeout(fn, t)); };
+    const go = (ad, d) => this.setState(ad ? { A: this.edge(d, true) } : { C: this.edge(d, false) });
+    const hint = (d, col) => this.setState(s => ({ he: Object.assign({}, s.he, { [d]: col }) }));
+    const ok = i => { this.setState({ conf: true, he: NONE, hold: '', orb: false, lead: '' }); this.play(i, i + 1); };
+    this.setState({ A: this.rest(true), C: this.rest(false), he: NONE, hold: '', spin: false, conf: false, fin: false, orb: true, lead: '' });
+    M.steps.forEach((sp, i) => {
+      const kind = sp[0], d = sp.slice(2);
+      const L = kind === 'Q' ? false : gA, fc = L ? 'c' : 'a';
+      // 1. la luz del que guía parpadea; 2. el guía elige; 3. se enciende el borde del que sigue; 4. el otro responde
+      at(i === 0 ? 1200 : 500, () => this.setState({ lead: L ? 'a' : 'c' }));
+      if (kind === 'S' || kind === 'O' || kind === 'Q') {
+        const k = kind === 'O' ? opp[d] : d;
+        at(1400, () => { this.setState({ lead: '' }); go(L, d); });
+        at(850, () => hint(k, fc));
+        if (i % 3 === 2) { at(650, () => go(!L, opp[k])); at(1100, () => go(!L, k)); }
+        else at(900, () => go(!L, k));
+        at(800, () => ok(i));
+      } else if (kind === 'H') {
+        at(1400, () => { this.setState({ lead: '' }); go(L, d); });
+        at(850, () => hint(d, fc));
+        at(900, () => go(!L, d));
+        at(750, () => this.setState({ he: NONE, hold: d }));
+        if (i % 2 === 1) {
+          at(650, () => { this.setState({ hold: '' }); go(!L, ''); });
+          at(700, () => hint(d, fc));
+          at(900, () => go(!L, d));
+          at(750, () => this.setState({ he: NONE, hold: d }));
+        }
+        at(1600, () => ok(i));
+      } else if (kind === 'G') {
+        const sg = d === '-' ? -1 : 1, pos = (ad, ang) => (ad ? { A: this.circ(ang, true) } : { C: this.circ(ang, false) });
+        at(1400, () => this.setState(Object.assign({ lead: '' }, pos(L, -90))));
+        at(800, () => this.setState({ spin: true }));
+        for (let q = 1; q <= 4; q++) at(230, () => this.setState(pos(L, -90 + sg * 45 * q)));
+        at(230, () => this.setState(Object.assign({}, pos(L, -90 + sg * 225), pos(!L, -90 + sg * 225))));
+        for (let q = 6; q <= 13; q++) at(230, () => this.setState({ A: this.circ(-90 + sg * 45 * q, true), C: this.circ(-90 + sg * 45 * q, false) }));
+        at(300, () => ok(i));
+      } else {
+        at(1400, () => { this.setState({ lead: '' }); go(L, d); });
+        at(1150, () => go(L, ''));
+        at(500, () => hint(d, fc));
+        if (i % 2 === 1) { at(650, () => go(!L, opp[d])); at(1100, () => go(!L, d)); }
+        else at(900, () => go(!L, d));
+        at(800, () => ok(i));
+      }
+      at(600, () => this.setState({ spin: false, A: this.rest(true), C: this.rest(false) }));
+      at(1500, () => this.setState({ conf: false, orb: i < n - 1 }));
+    });
+    at(900, () => { this.setState({ conf: true }); this.play(0, n); });
+    at(1600, () => this.setState({ conf: false }));
+    for (let j = 1; j < n; j++) { at(400, () => this.setState({ conf: true })); at(1600, () => this.setState({ conf: false })); }
+    at(700, () => { this.setState({ fin: true }); this.goNext(); });
+  }
+  goNext() {
+    try { sessionStorage.setItem('epuMelodia', String(this.mel().id)); sessionStorage.setItem('epuModo', 'eco'); } catch (e) {}
+    const el = this.nextEl; if (!el) return;
+    try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (e) { try { el.click(); } catch (x) {} }
+  }
+  componentDidMount() { this.run(); }
+  componentWillUnmount() { this.clear(); }
+  renderVals() {
+    const st = this.state;
+    if (this.master) this.master.gain.value = this.audible() ? 1 : 0;
+    const v = {
+      ax: Math.round(st.A[0] - 52), ay: Math.round(st.A[1] - 52), cx: Math.round(st.C[0] - 42), cy: Math.round(st.C[1] - 42),
+      oca: 'orb' + (st.spin ? ' fast' : '') + (st.lead === 'a' ? ' pulse' : ''), occ: 'orb' + (st.spin ? ' fast' : '') + (st.lead === 'c' ? ' pulse' : ''), hcls: st.hold ? 'grow' : 'drop',
+      cf: st.conf ? 1 : 0, oo: st.orb ? 1 : 0, mid: String(this.mel().id), setNext: el => { this.nextEl = el; },
+      sound: () => this.setState(s => ({ snd: !s.snd }), () => { try { this.ctx(); } catch (e) {} })
+    };
+    ['F', 'B', 'L', 'R'].forEach(d => {
+      ['a', 'c', 'u'].forEach(c => { v[c + d] = st.he[d] === c ? 1 : 0; });
+      v['h' + d] = st.hold === d ? 1 : 0;
+    });
+    return v;
+  }
+}
+</script>
+</body>
+</html>
