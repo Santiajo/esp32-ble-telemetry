@@ -1,0 +1,46 @@
+name: epu_eco
+description: >-
+  Epu · flujo Eco («Melodías para descubrir juntos»). Traducción a Flutter del
+  prototipo «App completa · Eco» del canvas «Epu · 11a Flujo completo».
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=3.32.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Único paquete externo. Se usa solo en lib/epu/audio/sonidos.dart, así que
+  # cambiarlo por otro (just_audio, flutter_soloud…) toca un solo archivo.
+  audioplayers: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: false
+
+  assets:
+    # 41 audios por nivel (34 trozos + 7 melodías completas) y el tono de
+    # conexión. Son los mismos que entregamos en «epu_sonidos/por_nivel».
+    - assets/sonidos/
+
+  # Nunito en los cuatro pesos que carga el prototipo (600, 700, 800 y 900).
+  # Son instancias estáticas del archivo variable de Google Fonts (licencia OFL,
+  # ver assets/fuentes/OFL.txt). El prototipo no carga el peso 400: el navegador
+  # dibuja con 600 todo lo que pide 400, así que aquí tampoco existe.
+  fonts:
+    - family: Nunito
+      fonts:
+        - asset: assets/fuentes/Nunito-SemiBold.ttf
+          weight: 600
+        - asset: assets/fuentes/Nunito-Bold.ttf
+          weight: 700
+        - asset: assets/fuentes/Nunito-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fuentes/Nunito-Black.ttf
+          weight: 900
