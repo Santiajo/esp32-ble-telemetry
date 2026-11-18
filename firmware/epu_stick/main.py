@@ -40,6 +40,13 @@ SCL_PIN = 7
 LED_PIN = 21                     # D6: LED del stick
 LED_ACTIVE_LOW = False
 SELFTEST_MS = 3000               # autodiagnóstico al arrancar; 0 lo salta
+
+# Ejes del stick. La app espera: stick derecho → gravedad en +Z; punta a la derecha →
+# la gravedad se corre a +X; punta adelante → a +Y (docs/PLAN_BALANCIN.md §3, axis_map.dart).
+# En el stick P2 el sensor va de canto (medido en la mano el 18-11-2026): derecho = +Y,
+# derecha = −X, adelante = +Z. Cada salida es (signo, eje del sensor 0=X 1=Y 2=Z).
+# Es una rotación (determinante +1), así que vale igual para el giroscopio.
+AXES = ((-1, 0), (1, 2), (1, 1))  # X' = −X, Y' = +Z, Z' = +Y
 RATE_HZ = 100
 BATCH_SAMPLES = 3                # muestras por paquete BLE (3 líneas caben con MTU 185)
 CONGESTED_MS = 2000              # tiempo con la mitad de las muestras tras una congestión
@@ -132,7 +139,12 @@ class ICM42688:
         return self.bus.read1(_INT_STATUS) & 0x08
 
     def read(self):
-        return struct.unpack('>hhhhhh', self.bus.read12(_ACCEL_DATA_X1))
+        """Acelerómetro y giroscopio ya en los ejes del stick (ver AXES)."""
+        ax, ay, az, gx, gy, gz = struct.unpack('>hhhhhh', self.bus.read12(_ACCEL_DATA_X1))
+        a = (ax, ay, az)
+        g = (gx, gy, gz)
+        (s0, i0), (s1, i1), (s2, i2) = AXES
+        return s0 * a[i0], s1 * a[i1], s2 * a[i2], s0 * g[i0], s1 * g[i1], s2 * g[i2]
 
 
 def open_bus():
@@ -337,9 +349,9 @@ class Led:
 
 
 def tilt_deg(ax, ay, az):
-    """Inclinación con el stick vertical (Z hacia arriba): adelante/atrás y izquierda/derecha."""
-    fwd = math.degrees(math.atan2(ax, math.sqrt(ay * ay + az * az)))
-    side = math.degrees(math.atan2(ay, math.sqrt(ax * ax + az * az)))
+    """Inclinación con el stick derecho (ejes ya remapeados): adelante + y derecha +, como la app."""
+    fwd = math.degrees(math.atan2(ay, az))
+    side = math.degrees(math.atan2(ax, az))
     return fwd, side
 
 

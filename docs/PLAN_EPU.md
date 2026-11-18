@@ -29,13 +29,14 @@ Fuentes: `docs/Epu · Plan de la semana.xlsx` (calendario de Joaquín), **`refer
 
 Tipos: `S` iguales, `O` opuestos, `H` quietos, `G` giro, `E` eco por turnos, `Q` iguales guiando el niño.
 
-### Regla del guía: qué tan obligatoria es la partitura
+### Regla del guía: libre (confirmado por el equipo, 18-11)
 
-Hay dos lecturas y no coinciden:
-- **Figma y los textos** («El adulto elige si van hacia arriba o hacia abajo», «Cada nivel es una melodía breve y escondida»): **el guía elige** la dirección; lo escondido es la melodía.
-- **El README del paquete**: «la partitura del nivel (`NivelEco.pasos`) dice qué tiene que pasar»; la dirección de cada paso viene escrita.
-
-**Propuesta para el sábado:** el **tipo** de paso es obligatorio (en el nivel 4, el que sigue va al borde contrario); la **dirección la elige el guía** entre las de su nivel, y la que trae la partitura solo sirve para la simulación. Así el texto que leen los usuarios es cierto. → **Confirmar con Joaquín** (§6). Cambiarlo después toca una sola función del motor.
+**No hay un orden escondido: el guía elige libremente.** Lo escondido es la melodía, que se destapa trozo a trozo. El motor:
+- toma de la partitura solo el **tipo** de paso (`S`, `O`, `H`…) y **qué bordes valen** en el nivel: nivel 1 arriba/abajo, nivel 2 los cuatro, nivel 3 izquierda/derecha, nivel 4 arriba/abajo. Coincide con lo que dicen los textos;
+- deja que el guía elija cualquiera de esos bordes;
+- enciende para el que sigue el borde que le toca según la regla (el mismo, o el contrario);
+- con cada acierto toca el **siguiente** trozo, en orden;
+- usa la dirección escrita en `NivelEco.pasos` solo en la simulación de Joaquín.
 
 ## 2. Arquitectura: las pantallas de Joaquín sobre nuestros sticks
 
@@ -81,7 +82,7 @@ Cada tarea dice cuándo está lista. Marca `[x]` al verificar.
 - [x] **`FuenteSticksBle`** (`lib/epu_app/fuente_sticks_ble.dart`): «Conceder permisos» pide los de Bluetooth; «Conectar sticks» vincula `Epu-Adulto` con el P2 real; «Calibrar» toma la postura como cero (3 s); `lecturas` da `lateral`/`frontal` 50 veces por segundo. Probado en el moto g34 con el P2.
   - Pruebas con un stick: `--dart-define=EPU_UN_STICK=true` deja al niño conectado y quieto. El APK instalado hoy está compilado así.
   - Registro en `adb logcat`: `--dart-define=EPU_REGISTRO=true` imprime `[EPU]` con las lecturas cada 1 s y el cero.
-- [ ] **Signos con el stick en la mano:** inclinar el P2 adelante, atrás, izquierda y derecha y ver en el registro que `frontal` da − adelante y `lateral` + derecha. Si un eje sale cambiado, se corrige con el asistente de ejes del banco (queda guardado por MAC).
+- [x] **Ejes del stick en la mano** (18-11): el sensor del P2 va de canto (derecho = +Y, derecha = −X, adelante = +Z del sensor). El firmware los rota (`AXES` en `firmware/epu_stick/main.py`) para mandar lo que espera la app: derecho = +Z, derecha = +X, adelante = +Y. Comprobado con la secuencia grabada en la mano (adelante hasta +76°, derecha hasta +84°) y con el stick cargado (derecho: Z ≈ 1 g). El segundo stick, si viene armado igual, usa el mismo `AXES`; si no, el diagnóstico al arrancar lo muestra.
 - [ ] **Vuelco a borde:** umbral 20° con margen para que no salte. *Listo cuando* el borde que marca la app coincide con el del stick en las 4 direcciones.
 
 ### Viernes 20 · el juego de verdad
@@ -121,7 +122,7 @@ Las pantallas ya existen en el paquete; lo que queda es lógica:
 
 ## 6. Dudas abiertas
 
-1. **Partitura obligatoria o guía libre** (§1). Pregunta para Joaquín, sin términos técnicos: *«En cada nivel, ¿el que guía elige libremente hacia dónde ir, o hay un orden escondido (por ejemplo, en Madera: arriba, abajo, abajo, arriba) que tienen que adivinar para que suene la melodía? Si es libre, ¿cualquier dirección vale o solo algunas (en Madera, solo arriba o abajo)?»*
+1. ~~Partitura obligatoria o guía libre~~: **libre**, confirmado el 18-11 (§1).
 2. **«Quietos» (nivel 2):** se prueba con **1,4 s** (lo que tarda en llenarse la franja amarilla), en vez de los 0,3 s generales. Ajustable el sábado.
 3. **Sonido:** se prueba con `audioplayers`, como viene; si el trozo se oye tarde, se pasa a `flutter_soloud`.
 4. **Calibración en cada nivel:** con el ICM-42688-P **no hace falta por el sensor** (ver §8). Se deja la pantalla «Calibren los sticks» porque toma la postura de cada persona como centro; si en la prueba molesta, se acorta a 1 s.
