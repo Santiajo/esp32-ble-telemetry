@@ -1,0 +1,93 @@
+import 'dart:async';
+import 'dart:io' show Platform;
+
+import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../balancin/platform/stick_hub.dart';
+import '../balancin_v2/screens/bench_screen.dart';
+import '../epu/app.dart';
+import '../epu/estado/estado_eco.dart';
+import '../epu/juego/fuente_sticks.dart';
+import '../epu/navegacion/rutas.dart';
+import '../epu/tema/colores.dart';
+import 'fuente_sticks_ble.dart';
+
+/// Raíz de la app Epu: crea la conexión con los sticks una sola vez, la entrega a
+/// las pantallas de Joaquín por [EpuSticks.fuente] y abre el flujo Eco.
+///
+/// * La primera vez abre en «Inicio» (preparación); cuando los dos sticks quedan
+///   conectados se recuerda, y las siguientes veces abre en el Home.
+/// * Mantener pulsado el logo del Home abre el banco de pruebas, con la misma
+///   conexión (no hay dos `StickHub` peleando por los sticks).
+class EpuRoot extends StatefulWidget {
+  const EpuRoot({super.key});
+
+  /// Clave de «ya hicieron la preparación».
+  static const String preparacionKey = 'epu_preparacion_hecha';
+
+  @override
+  State<EpuRoot> createState() => _EpuRootState();
+}
+
+class _EpuRootState extends State<EpuRoot> {
+  final StickHub _hub = StickHub();
+  late final FuenteSticksBle _fuente = FuenteSticksBle(
+    _hub,
+    unStick: const bool.fromEnvironment('EPU_UN_STICK'),
+    alConectarLosDos: () => unawaited(_marcarPreparacion()),
+  );
+  final EstadoEco _estado = EstadoEco(nivel: 1);
+  bool? _preparado;
+  StreamSubscription<LecturaStick>? _registro;
+
+  @override
+  void initState() {
+    super.initState();
+    EpuSticks.fuente = _fuente;
+    EpuSticks.alMantenerLogo = _abrirBanco;
+    if (FuenteSticksBle.registrar) _registro = _fuente.lecturas.listen((_) {});
+    unawaited(_iniciar());
+  }
+
+  Future<void> _iniciar() async {
+    bool hecho = false;
+    try {
+      hecho = (await SharedPreferences.getInstance()).getBool(EpuRoot.preparacionKey) ?? false;
+    } catch (_) {}
+    // Sticks ya vinculados: reconectar de fondo sin pedir permisos todavía.
+    try {
+      if (!Platform.isAndroid || await Permission.bluetoothConnect.isGranted) await _hub.reconnectSaved();
+    } catch (_) {}
+    if (mounted) setState(() => _preparado = hecho);
+  }
+
+  Future<void> _marcarPreparacion() async {
+    try {
+      await (await SharedPreferences.getInstance()).setBool(EpuRoot.preparacionKey, true);
+    } catch (_) {}
+  }
+
+  void _abrirBanco(BuildContext context) {
+    unawaited(Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(builder: (_) => BenchScreen(hub: _hub)),
+    ));
+  }
+
+  @override
+  void dispose() {
+    unawaited(_registro?.cancel());
+    EpuSticks.alMantenerLogo = null;
+    _estado.dispose();
+    _hub.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = _preparado;
+    if (p == null) return const ColoredBox(color: EpuColores.fondo);
+    return EpuEcoApp(estado: _estado, inicio: p ? Pantalla.home : Pantalla.inicio);
+  }
+}

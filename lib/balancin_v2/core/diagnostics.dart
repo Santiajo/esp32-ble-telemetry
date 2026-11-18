@@ -10,7 +10,7 @@ import 'dart:convert';
 import 'params.dart';
 
 /// Versión de la app; una prueba comprueba que coincide con `pubspec.yaml`.
-const String appVersion = '2.0.0-dev.22';
+const String appVersion = '2.1.0-dev.1';
 
 String diagnosticJson({
   required String kind,

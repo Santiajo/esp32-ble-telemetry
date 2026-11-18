@@ -75,10 +75,13 @@ Cada tarea dice cuándo está lista. Marca `[x]` al verificar.
 - [x] Banco usable en el teléfono y copia local de cada traza.
 - [x] Paquete Flutter de Joaquín recibido y revisado (este plan).
 
-### Jueves 19 · las pantallas de Joaquín andando en el teléfono
-- [ ] Copiar `reference/epu_eco_flutter/lib/epu` a `lib/epu`, sus fuentes y sonidos a `assets/`, y sumar `audioplayers`. *Listo cuando* `flutter analyze` queda limpio y las pruebas de Joaquín (`ilustraciones_test.dart`) pasan junto con las nuestras.
-- [ ] Abrir la app en `EpuEcoApp`, con el banco detrás del gesto escondido. *Listo cuando* el flujo completo corre en el moto g34 con la simulación, y las pantallas se ven como el canvas (revisar desenfoque de las luces y alto de pantalla).
-- [ ] **`FuenteSticksBle`**: conectar, calibrar y `lecturas` con el stick P2 real. *Listo cuando* «Conecta los dos sticks» deja fija la luz del adulto con el tono, y mover el stick cambia `lateral`/`frontal` con el signo correcto.
+### Jueves 19 · las pantallas de Joaquín andando en el teléfono (adelantado al 18-11)
+- [x] `lib/epu` = paquete de Joaquín con el arreglo de recorte; sonidos y Nunito en `assets/`; `audioplayers`. 313/313 pruebas (las 12 de Joaquín incluidas).
+- [x] La app abre en Epu (`lib/epu_app/epu_root.dart`): la primera vez en «Inicio», después en el Home. Sin datos de ejemplo. **Mantener pulsado el logo del Home abre el banco** con la misma conexión; «Atrás» vuelve a Epu. Nombre de la app: «Epu». 2.1.0-dev.1+26.
+- [x] **`FuenteSticksBle`** (`lib/epu_app/fuente_sticks_ble.dart`): «Conceder permisos» pide los de Bluetooth; «Conectar sticks» vincula `Epu-Adulto` con el P2 real; «Calibrar» toma la postura como cero (3 s); `lecturas` da `lateral`/`frontal` 50 veces por segundo. Probado en el moto g34 con el P2.
+  - Pruebas con un stick: `--dart-define=EPU_UN_STICK=true` deja al niño conectado y quieto. El APK instalado hoy está compilado así.
+  - Registro en `adb logcat`: `--dart-define=EPU_REGISTRO=true` imprime `[EPU]` con las lecturas cada 1 s y el cero.
+- [ ] **Signos con el stick en la mano:** inclinar el P2 adelante, atrás, izquierda y derecha y ver en el registro que `frontal` da − adelante y `lateral` + derecha. Si un eje sale cambiado, se corrige con el asistente de ejes del banco (queda guardado por MAC).
 - [ ] **Vuelco a borde:** umbral 20° con margen para que no salte. *Listo cuando* el borde que marca la app coincide con el del stick en las 4 direcciones.
 
 ### Viernes 20 · el juego de verdad

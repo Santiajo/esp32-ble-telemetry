@@ -9,12 +9,15 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('Smoke test de TelemetryStationApp y HomeScreen',
+  testWidgets('La app abre el flujo Epu en «Inicio» la primera vez',
       (WidgetTester tester) async {
     await tester.pumpWidget(const TelemetryStationApp());
-    await tester.pump();
-
-    // Verifica que HomeScreen se monte mostrando la vista de preparación de sonidos
-    expect(find.text('Preparando sonidos…'), findsOneWidget);
+    // EpuRoot lee si ya hicieron la preparación y abre la primera pantalla.
+    for (var i = 0; i < 20 && find.text('¡Comencemos!').evaluate().isEmpty; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('¡Comencemos!'), findsOneWidget);
+    expect(find.text('Un instrumento para sonar juntos'), findsOneWidget);
   });
 }
