@@ -6,8 +6,8 @@ import '../epu/juego/estado_juego.dart';
 /// Ajustes del juego real (se afinan en la prueba del sábado).
 class AjustesEco {
   const AjustesEco({
-    this.umbral = 20,
-    this.salida = 14,
+    this.umbral = 25,
+    this.salida = 18,
     this.cambioLado = 5,
     this.elegirMs = 150,
     this.sostenerMs = 300,
@@ -17,7 +17,8 @@ class AjustesEco {
     this.ninoEnfrente = true,
   });
 
-  /// Grados de vuelco para que cuente como «en un borde».
+  /// Grados de vuelco para que cuente como «en un borde». 25° desde el 18-11: con
+  /// 20° volver al centro bajando el brazo se pasaba al borde de abajo.
   final double umbral;
 
   /// Por debajo de estos grados vuelve al centro (margen para que no salte).

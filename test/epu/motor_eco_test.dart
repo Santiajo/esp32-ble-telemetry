@@ -52,14 +52,14 @@ class Juego {
 
 void main() {
   group('DetectorBorde', () {
-    test('entra a 20°, se queda hasta bajar de 14°', () {
+    test('entra a 25°, se queda hasta bajar de 18°', () {
       final d = DetectorBorde(const AjustesEco());
-      expect(d.actualizar(0, -15), isNull);
+      expect(d.actualizar(0, -22), isNull);
       expect(d.actualizar(0, -25), Borde.frente);
-      expect(d.actualizar(0, -16), Borde.frente);
-      expect(d.actualizar(0, -12), isNull);
+      expect(d.actualizar(0, -19), Borde.frente);
+      expect(d.actualizar(0, -17), isNull);
       expect(d.actualizar(28, 3), Borde.derecha);
-      expect(d.actualizar(-22, 0), Borde.izquierda);
+      expect(d.actualizar(-26, 0), Borde.izquierda);
       expect(d.actualizar(0, 30), Borde.atras);
     });
 
