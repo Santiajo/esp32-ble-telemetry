@@ -215,7 +215,7 @@ Se conecta a la primera (MTU 185, intervalo 15 ms). El retraso un poco mayor es 
 - **APK para probar en otros celulares y mandarle a Joaquín:** `entregas/Epu-2.1.0-dev.7.apk` (sin niño simulado ni registro). Las APK no van al repo (`.gitignore`). EPU-5 y EPU-6 vuelven a «En curso» para probar en otros teléfonos.
 - **Otros teléfonos (18-11, APK dev.7):**
   - Xiaomi: «Conceder permisos» no encendía el Bluetooth y la búsqueda fallaba sin aviso.
-  - Tablet Samsung: no conectó y el stick quedó parpadeando, sin conexión. Causa probable: en Android 11 o anterior la búsqueda Bluetooth no devuelve nada con la Ubicación apagada.
+  - Tablet Samsung (Android 16): la primera vez no conectó y el stick quedó parpadeando. Después conectó sin problemas, también con la Ubicación apagada y el stick a batería: **no era ni la Ubicación ni la batería**, y no se repitió. Sospecha: otro teléfono con la app abierta tenía tomado el stick (cada stick acepta un solo teléfono). Para el sábado: la app abierta en un solo teléfono cerca de los sticks.
   - **Arreglo en dev.8** (`FuenteSticksBle.prepararBluetooth`, canal `epu/sistema` en `MainActivity.kt`): pide encender el Bluetooth con el aviso del sistema y, en Android 11 o anterior, si la Ubicación está apagada abre su ajuste. Se revisa al tocar «Conectar sticks» y cada dos búsquedas fallidas.
-  - **Probado (18-11):** en el Xiaomi y la tablet Samsung el stick se detecta y conecta de inmediato. EPU-5 y EPU-6 cerrados. APK en `entregas/Epu-2.1.0-dev.8.apk`.
+  - **Probado (18-11):** en el Xiaomi, la tablet Samsung y el moto g34 el stick se detecta y conecta de inmediato. La revisión de Ubicación solo aplica en Android 11 o anterior; en Android 12 o más nuevo no hace falta (probado en la tablet con Android 16). EPU-5 y EPU-6 cerrados. APK en `entregas/Epu-2.1.0-dev.8.apk`.
 
