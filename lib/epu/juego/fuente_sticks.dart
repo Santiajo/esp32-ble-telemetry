@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart' show BuildContext;
 
+import '../datos/niveles.dart';
+import 'estado_juego.dart';
+
 /// Los dos sticks.
 enum Stick {
   /// Stick grande, lila: lo usa el adulto.
@@ -100,4 +103,14 @@ class EpuSticks {
 
   /// Mantener pulsado el logo del Home (integración: abre el banco de pruebas).
   static void Function(BuildContext context)? alMantenerLogo;
+
+  /// Juego con los sticks reales (integración). Si no está o devuelve `null`
+  /// para un nivel, la pantalla de juego usa `SimulacionEco`.
+  static JuegoEco? Function(NivelEco nivel, EstadoJuegoEco estado, void Function() alTerminar)? crearJuego;
+}
+
+/// Lo que mueve la pantalla de juego: la simulación o el juego real.
+abstract class JuegoEco {
+  void iniciar();
+  void detener();
 }

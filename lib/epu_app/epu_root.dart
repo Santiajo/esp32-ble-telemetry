@@ -13,6 +13,7 @@ import '../epu/juego/fuente_sticks.dart';
 import '../epu/navegacion/rutas.dart';
 import '../epu/tema/colores.dart';
 import 'fuente_sticks_ble.dart';
+import 'juego_eco_real.dart';
 
 /// Raíz de la app Epu: crea la conexión con los sticks una sola vez, la entrega a
 /// las pantallas de Joaquín por [EpuSticks.fuente] y abre el flujo Eco.
@@ -47,6 +48,7 @@ class _EpuRootState extends State<EpuRoot> {
     super.initState();
     EpuSticks.fuente = _fuente;
     EpuSticks.alMantenerLogo = _abrirBanco;
+    EpuSticks.crearJuego = (nivel, estado, alTerminar) => JuegoEcoReal.para(_fuente, nivel, estado, alTerminar);
     if (FuenteSticksBle.registrar) _registro = _fuente.lecturas.listen((_) {});
     unawaited(_iniciar());
   }
@@ -79,6 +81,7 @@ class _EpuRootState extends State<EpuRoot> {
   void dispose() {
     unawaited(_registro?.cancel());
     EpuSticks.alMantenerLogo = null;
+    EpuSticks.crearJuego = null;
     _estado.dispose();
     _hub.dispose();
     super.dispose();

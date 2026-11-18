@@ -83,11 +83,21 @@ Cada tarea dice cuándo está lista. Marca `[x]` al verificar.
   - Pruebas con un stick: `--dart-define=EPU_UN_STICK=true` deja al niño conectado y quieto. El APK instalado hoy está compilado así.
   - Registro en `adb logcat`: `--dart-define=EPU_REGISTRO=true` imprime `[EPU]` con las lecturas cada 1 s y el cero.
 - [x] **Ejes del stick en la mano** (18-11): el sensor del P2 va de canto (derecho = +Y, derecha = −X, adelante = +Z del sensor). El firmware los rota (`AXES` en `firmware/epu_stick/main.py`) para mandar lo que espera la app: derecho = +Z, derecha = +X, adelante = +Y. Comprobado con la secuencia grabada en la mano (adelante hasta +76°, derecha hasta +84°) y con el stick cargado (derecho: Z ≈ 1 g). El segundo stick, si viene armado igual, usa el mismo `AXES`; si no, el diagnóstico al arrancar lo muestra.
-- [ ] **Vuelco a borde:** umbral 20° con margen para que no salte. *Listo cuando* el borde que marca la app coincide con el del stick en las 4 direcciones.
+- [x] **Vuelco a borde** (`DetectorBorde` en `lib/epu_app/motor_eco.dart`): entra a 20°, sale bajo 14°, y para cambiar de borde sin pasar por el centro el otro eje tiene que ganar por 5°. En el teléfono, inclinar el P2 adelante marcó el borde de arriba (−26°).
 
 ### Viernes 20 · el juego de verdad
-- [ ] **`MotorEco`** niveles 1 a 4 en Dart puro, con pruebas: quién guía, regla del paso (iguales, quietos, opuestos), acierto con < 1 s y 0,3 s, trozo, melodía final y `alTerminar`. *Listo cuando* las pruebas juegan los 4 niveles completos con lecturas inventadas, incluidos los casos de error (el que sigue va al borde equivocado, se suelta antes de tiempo).
-- [ ] Juego con el stick P2 + el segundo stick o, si no está, el niño simulado con botones en pantalla. *Listo cuando* el nivel 1 se completa de punta a punta en el teléfono y el trozo suena sin retraso notorio.
+- [x] **`MotorEco`** (`lib/epu_app/motor_eco.dart`, adelantado al 18-11), niveles 1 a 4. Mueve el `EstadoJuegoEco` de Joaquín en lugar de su simulación (niveles 5 a 7 siguen simulados). 16 pruebas (`test/epu/motor_eco_test.dart`) juegan los niveles completos y los casos de error.
+  1. La luz del guía late.
+  2. El guía elige libre entre los bordes de su nivel: tiene que quedarse 0,15 s en el borde.
+  3. Se enciende la franja del que sigue: el mismo borde o el contrario.
+  4. Si los dos se sostienen juntos 0,3 s (1,4 s en «Quietos»), hay acierto: suena el trozo siguiente, se ve el verde y las luces se apagan 1,5 s.
+  5. Para el siguiente trozo, el guía vuelve al centro.
+  6. Al final: la melodía completa con un destello por trozo, y pasa al recuerdo.
+  - **La ventana de 1 s se usa como gracia:** si el guía se sale de su borde menos de 1 s, no pierde la elección; si se sale más, vuelve a elegir.
+  - **Frente a frente** (confirmado el 18-11): la pantalla se lee desde el adulto, así que el adelante y la derecha del niño van al revés. Es un ajuste (`AjustesEco.ninoEnfrente`).
+  - La pantalla queda encendida durante el juego (`wakelock_plus`).
+- [x] Con un stick, el niño simulado juega solo: si sigue, va a su borde 0,6 s después; si guía, elige uno. Se activa con `EPU_UN_STICK`, igual que en el APK 2.1.0-dev.2 instalado.
+- [ ] Juego con el stick P2 y el niño simulado. *Listo cuando* el nivel 1 se completa de punta a punta en el teléfono y el trozo suena sin retraso notorio.
 - [ ] Niveles completados guardados en el teléfono (`shared_preferences`) y arranque sin datos de ejemplo.
 - [ ] APK 2.1.0 instalado en el teléfono de la prueba.
 

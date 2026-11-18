@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import '../datos/niveles.dart';
 import '../estado/estado_eco.dart';
 import '../juego/estado_juego.dart';
+import '../juego/fuente_sticks.dart';
 import '../juego/simulacion_eco.dart';
 import '../navegacion/rutas.dart';
 import '../tema/colores.dart';
@@ -39,6 +40,7 @@ class PantallaEcoJuego extends StatefulWidget {
 class _PantallaEcoJuegoState extends State<PantallaEcoJuego> {
   final _estado = EstadoJuegoEco();
   SimulacionEco? _sim;
+  JuegoEco? _real; // integración: juego con los sticks reales
 
   @override
   void initState() {
@@ -50,26 +52,35 @@ class _PantallaEcoJuegoState extends State<PantallaEcoJuego> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_sim != null) return;
+    if (_sim != null || _real != null) return;
     final global = EpuEstado.leer(context);
     final nivel = NivelEco.de(global.nivel);
+    void alTerminar() {
+      if (!mounted) return;
+      // La pantalla de juego queda debajo del recuerdo: se restauran las
+      // barras del sistema aquí y no recién al cerrarla.
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      global.marcarCompletado(nivel.id);
+      EpuNavegacion.ir(context, Pantalla.recuerdo);
+    }
+
+    // Integración: con sticks reales juega el motor; si no, la simulación.
+    _real = EpuSticks.crearJuego?.call(nivel, _estado, alTerminar);
+    if (_real != null) {
+      _real!.iniciar();
+      return;
+    }
     _sim = SimulacionEco(
       nivel: nivel,
       estado: _estado,
-      alTerminar: () {
-        if (!mounted) return;
-        // La pantalla de juego queda debajo del recuerdo: se restauran las
-        // barras del sistema aquí y no recién al cerrarla.
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-        global.marcarCompletado(nivel.id);
-        EpuNavegacion.ir(context, Pantalla.recuerdo);
-      },
+      alTerminar: alTerminar,
     )..iniciar();
   }
 
   @override
   void dispose() {
     _sim?.detener();
+    _real?.detener();
     _estado.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
