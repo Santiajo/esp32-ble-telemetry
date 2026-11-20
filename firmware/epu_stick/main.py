@@ -27,6 +27,15 @@ import machine
 from machine import I2C, SPI, Pin
 from micropython import const
 
+# ---------------- Placa nueva (no está en PLACAS) ----------------
+# Para probar otra placa (por ejemplo una ESP32-C3 Super Mini) solo hay que revisar esto.
+# Las placas P1 y P2 de los sticks ya están reconocidas más abajo y no usan estos valores.
+NUEVA_ROL = 'B'                  # 'A' = adulto («Epu - adulto») · 'B' = niño («Epu - niño»)
+NUEVA_SPI = None                 # (CS, SCK, MISO, MOSI) en GPIO si va cableada distinto a los
+                                 # conocidos (SPI_PINES); None = probar solo los conocidos
+NUEVA_LED = 8                    # Super Mini: LED azul de la placa en GPIO8 (None = sin LED)
+NUEVA_LED_INVERTIDO = True       # el LED de la Super Mini se enciende con 0
+
 # ---------------- Configuración ----------------
 # Ejes del stick. La app espera: stick derecho → gravedad en +Z; punta a la derecha →
 # la gravedad se corre a +X; punta adelante → a +Y (docs/PLAN_BALANCIN.md §3, axis_map.dart).
@@ -42,10 +51,9 @@ PLACAS = {
     # medido en la mano el 18-11-2026 con EJES_DE_CANTO: derecho Z' +1,0, adelante Y' +1,05, derecha X' +0,95.
     'ac276e8148fc': {'nombre': 'P1', 'rol': 'B', 'ejes': EJES_DE_CANTO},
 }
-ROL_POR_DEFECTO = 'A'            # placa nueva que no está en PLACAS
-
 PLACA_ID = binascii.hexlify(machine.unique_id()).decode()
-PLACA = PLACAS.get(PLACA_ID, {'nombre': '¿?', 'rol': ROL_POR_DEFECTO, 'ejes': EJES_DE_CANTO})
+PLACA = PLACAS.get(PLACA_ID, {'nombre': 'nueva', 'rol': NUEVA_ROL, 'ejes': EJES_DE_CANTO,
+                              'led': NUEVA_LED, 'led_invertido': NUEVA_LED_INVERTIDO})
 STICK_ROLE = PLACA['rol']
 DEVICE_NAME = 'Epu - adulto' if STICK_ROLE == 'A' else 'Epu - niño'
 AXES = PLACA['ejes']
@@ -55,13 +63,16 @@ BUS = 'spi'                      # 'spi' (así están cableados los sticks) o 'i
 SPI_PINES = (
     (5, 4, 6, 10),               # P2: CS D3, SCK D2, MISO D4, MOSI D10 (respaldo_p2/main.py)
     (5, 6, 7, 10),               # P1: CS D3, SCK D4, MISO D5, MOSI D10 (respaldo_p1/main.py)
+    (7, 4, 5, 6),                # ESP32-C3 Super Mini, pines SPI de la placa (SS 7, SCK 4, MISO 5, MOSI 6)
 )
+if PLACA['nombre'] == 'nueva' and NUEVA_SPI:
+    SPI_PINES = (tuple(NUEVA_SPI),) + SPI_PINES
 SPI_HZ = 1_000_000               # a 8 MHz también funciona, pero solo ahorra 0,1 ms por lectura
 # I2C (otra forma de cablear el sensor): SDA = D4 (GPIO6), SCL = D5 (GPIO7)
 SDA_PIN = 6
 SCL_PIN = 7
-LED_PIN = 21                     # D6: LED del stick (igual en P1 y P2)
-LED_ACTIVE_LOW = False
+LED_PIN = PLACA.get('led', 21)   # P1 y P2: LED del stick en D6 (GPIO21)
+LED_ACTIVE_LOW = PLACA.get('led_invertido', False)
 SELFTEST_MS = 3000               # autodiagnóstico al arrancar; 0 lo salta
 RATE_HZ = 100
 BATCH_SAMPLES = 3                # muestras por paquete BLE (3 líneas caben con MTU 185)
