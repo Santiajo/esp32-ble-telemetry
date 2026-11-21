@@ -34,7 +34,7 @@ class EpuRoot extends StatefulWidget {
 }
 
 class _EpuRootState extends State<EpuRoot> with WidgetsBindingObserver {
-  final StickHub _hub = StickHub();
+  final StickHub _hub = StickHub(bluetoothEncendido: FuenteSticksBle.bluetoothEncendido);
   late final FuenteSticksBle _fuente = FuenteSticksBle(
     _hub,
     unStick: const bool.fromEnvironment('EPU_UN_STICK'),

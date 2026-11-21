@@ -1,5 +1,6 @@
 package com.example.esp32_ble_telemetry
 
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
@@ -18,6 +19,13 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "epu/sistema").setMethodCallHandler { call, result ->
             when (call.method) {
                 "versionAndroid" -> result.success(Build.VERSION.SDK_INT)
+                // Estado real del Bluetooth (no necesita permiso). flutter_blue_plus guarda el
+                // primer valor que lee; si lo leyó antes de tener el permiso queda en «no
+                // listo» aunque esté encendido (Samsung A55, 20-11-2026).
+                "bluetoothEncendido" -> {
+                    val bm = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager?
+                    result.success(bm?.adapter?.isEnabled ?: false)
+                }
                 "ubicacionEncendida" -> {
                     val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
                     val on = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) lm.isLocationEnabled

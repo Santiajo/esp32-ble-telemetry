@@ -39,9 +39,24 @@ enum PairOutcome {
 /// Los permisos BLE y el encendido del adaptador se piden desde la UI (necesitan
 /// un BuildContext); [pair] solo verifica que el adaptador esté encendido.
 class StickHub extends ChangeNotifier {
-  StickHub({double Function()? clock}) : clock = clock ?? AppClock.nowMs;
+  StickHub({double Function()? clock, this.bluetoothEncendido}) : clock = clock ?? AppClock.nowMs;
 
   final double Function() clock;
+
+  /// Estado real del Bluetooth. Si no se da, se usa `FlutterBluePlus.adapterStateNow`,
+  /// que guarda el primer valor leído y puede quedar en «no listo» aunque esté
+  /// encendido (Samsung A55, 20-11-2026). Epu lo pregunta a Android directamente.
+  final Future<bool> Function()? bluetoothEncendido;
+
+  Future<bool> _bluetoothOn() async {
+    final f = bluetoothEncendido;
+    if (f != null) {
+      try {
+        return await f();
+      } catch (_) {}
+    }
+    return FlutterBluePlus.adapterStateNow == BluetoothAdapterState.on;
+  }
   final Map<StickRole, BleStickLink> _links = {};
   final LossMonitor _loss = LossMonitor();
   final StreamController<LossEvent> _lossEvents = StreamController<LossEvent>.broadcast();
@@ -128,7 +143,7 @@ class StickHub extends ChangeNotifier {
     Duration scanTimeout = const Duration(seconds: 12),
     Duration connectTimeout = const Duration(seconds: 15),
   }) async {
-    if (FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on) {
+    if (!await _bluetoothOn()) {
       return PairOutcome.bluetoothOff;
     }
     if (isConnected(role)) return PairOutcome.paired;

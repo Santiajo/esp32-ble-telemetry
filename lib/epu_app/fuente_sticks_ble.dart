@@ -89,14 +89,14 @@ class FuenteSticksBle implements FuenteSticks {
     if (_ultimoAviso != null && ahora.difference(_ultimoAviso!) < const Duration(seconds: 20)) return ok;
     _ultimoAviso = ahora;
     try {
-      final estado = await FlutterBluePlus.adapterState
-          .firstWhere((e) => e != BluetoothAdapterState.unknown)
-          .timeout(const Duration(seconds: 3), onTimeout: () => FlutterBluePlus.adapterStateNow);
-      if (estado != BluetoothAdapterState.on) {
+      // Se pregunta a Android, no al valor guardado de flutter_blue_plus (ver
+      // bluetoothEncendido): así no se pide encenderlo cuando ya está encendido.
+      if (!await bluetoothEncendido()) {
         await FlutterBluePlus.turnOn();
-        await FlutterBluePlus.adapterState
-            .firstWhere((e) => e == BluetoothAdapterState.on)
-            .timeout(const Duration(seconds: 20));
+        final fin = DateTime.now().add(const Duration(seconds: 20));
+        while (!await bluetoothEncendido() && DateTime.now().isBefore(fin)) {
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+        }
       }
     } catch (_) {
       // La persona no aceptó encenderlo: se vuelve a pedir en el próximo intento.
@@ -110,9 +110,16 @@ class FuenteSticksBle implements FuenteSticks {
     return ok;
   }
 
-  /// Hace falta volver a preparar: Bluetooth apagado (o, en Android 11 o anterior,
-  /// sin Ubicación, que se revisa en [prepararBluetooth]).
-  bool get _bluetoothApagado => FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on;
+  /// Bluetooth encendido según Android (no según el valor que guarda flutter_blue_plus,
+  /// que puede quedar desactualizado si se leyó antes de tener el permiso).
+  static Future<bool> bluetoothEncendido() async {
+    if (!Platform.isAndroid) return FlutterBluePlus.adapterStateNow == BluetoothAdapterState.on;
+    try {
+      return await _sistema.invokeMethod<bool>('bluetoothEncendido') ?? false;
+    } catch (_) {
+      return FlutterBluePlus.adapterStateNow == BluetoothAdapterState.on;
+    }
+  }
 
   @override
   Stream<Stick> conectar() {
@@ -130,7 +137,7 @@ class FuenteSticksBle implements FuenteSticks {
           if (r == PairOutcome.paired || !vivo) continue;
           fallos++;
           // Bluetooth apagado, o varias búsquedas sin nada: volver a revisar el teléfono.
-          if (r == PairOutcome.bluetoothOff || _bluetoothApagado || fallos % 2 == 0) await prepararBluetooth();
+          if (r == PairOutcome.bluetoothOff || fallos % 2 == 0) await prepararBluetooth();
           await Future<void>.delayed(const Duration(seconds: 1));
         }
       }

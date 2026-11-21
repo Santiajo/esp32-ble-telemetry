@@ -135,10 +135,11 @@ class EspDeviceController extends ChangeNotifier {
     if (_dispositivo == null || _desconexionManual) return false;
 
     try {
-      // Timeout acotado para liberar la ranura GATT rápidamente si el ESP está apagado
+      // 10 s: con 3,5 s algunos Samsung (A55) no alcanzaban a conectar y quedaba
+      // intermitente (20-11-2026). Si el ESP está apagado, el bucle sigue de fondo.
       await _dispositivo!.connect(
         license: License.nonprofit,
-        timeout: const Duration(milliseconds: 3500),
+        timeout: const Duration(seconds: 10),
         autoConnect: false,
       );
 
