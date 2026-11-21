@@ -60,5 +60,5 @@ skills-lock.json
 # Entregables
 entregable/
 
-# APK para probar en otros teléfonos (pesan ~75 MB; no van al repo)
-entregas/*.apk
+# Entregas (APK de ~75 MB y copias del firmware para el equipo): no van al repo
+entregas/
