@@ -241,3 +241,8 @@ Joaquín cargó 12 tickets nuevos y rehízo la página de Figma (ahora `745:1064
 
 **Siguen:** EPU-22 → EPU-20 → EPU-21 → EPU-18 («Tu archivo» y la huella), EPU-17 (LED desde la app), EPU-28 (interruptor).
 
+
+**23-11 (2.1.0-dev.12):**
+- **EPU-23 cerrado:** el Home ya no muestra «Sesiones pasadas» (las sesiones van a «Tu archivo», EPU-20). **Se deja «Repasar la preparación»**, acordado con Joaquín: permite repetir el onboarding y vincular sticks.
+- **Alerta de desconexión (reporte de Simón):** si un stick pasa **2 s sin mandar datos** en medio del juego (apagado, sin batería o fuera de alcance), se detienen los sonidos y se abre la pantalla «Se perdió un stick» de Joaquín (`JuegoEcoReal.alPerderStick` → `EpuNavegacion.mostrarPerdida`). Antes nadie la llamaba. Pruebas en `test/epu/juego_eco_real_test.dart`. **Falta probarla con los sticks** (apagar uno en medio de un nivel).
+- **Retraso del P1 (niño):** pendiente de los datos de Simón (banco de pruebas: Hz, retraso y cortes; líneas `[STATS]` en Thonny). Hipótesis: el SPI del P1 a 1 MHz pierde lecturas; el arreglo sería bajarle la velocidad.

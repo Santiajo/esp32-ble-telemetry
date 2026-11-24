@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../epu/audio/sonidos.dart';
@@ -17,8 +19,11 @@ class JuegoEcoReal implements JuegoEco {
     required NivelEco nivel,
     required EstadoJuegoEco estado,
     required void Function() alTerminar,
+    this.alPerderStick,
+    DateTime Function()? reloj,
     AjustesEco ajustes = const AjustesEco(),
-  }) : motor = MotorEco(
+  })  : _reloj2 = reloj ?? DateTime.now,
+        motor = MotorEco(
           nivel: nivel,
           estado: estado,
           ajustes: ajustes,
@@ -28,8 +33,27 @@ class JuegoEcoReal implements JuegoEco {
         );
 
   /// Crea el juego real para los niveles que sabe jugar el motor (1 a 4).
-  static JuegoEco? para(FuenteSticks fuente, NivelEco nivel, EstadoJuegoEco estado, void Function() alTerminar) =>
-      MotorEco.soporta(nivel) ? JuegoEcoReal(fuente: fuente, nivel: nivel, estado: estado, alTerminar: alTerminar) : null;
+  static JuegoEco? para(FuenteSticks fuente, NivelEco nivel, EstadoJuegoEco estado, void Function() alTerminar,
+          {void Function(Stick stick)? alPerderStick}) =>
+      MotorEco.soporta(nivel)
+          ? JuegoEcoReal(
+              fuente: fuente, nivel: nivel, estado: estado, alTerminar: alTerminar, alPerderStick: alPerderStick)
+          : null;
+
+  /// Un stick dejó de mandar datos durante [perdidaTras] (se apagó, se fue de
+  /// alcance o se le acabó la batería). Abre «Se perdió un stick».
+  final void Function(Stick stick)? alPerderStick;
+
+  /// Sin datos de un stick durante este tiempo = stick perdido. El aviso de
+  /// desconexión del Bluetooth puede tardar ~5 s; esto avisa antes y también
+  /// cubre un stick conectado que dejó de mandar.
+  static const Duration perdidaTras = Duration(seconds: 2);
+
+  /// Hora actual (inyectable en las pruebas).
+  final DateTime Function() _reloj2;
+
+  late DateTime _inicio = _reloj2();
+  bool _perdido = false;
 
   final FuenteSticks fuente;
   final MotorEco motor;
@@ -48,7 +72,8 @@ class JuegoEcoReal implements JuegoEco {
   @override
   void iniciar() {
     unawaited(WakelockPlus.enable().catchError((_) {}));
-    _sub = fuente.lecturas.listen((l) => _ultima[l.stick] = (l, DateTime.now()));
+    _sub = fuente.lecturas.listen((l) => _ultima[l.stick] = (l, _reloj2()));
+    _inicio = _reloj2();
     _t.start();
     _reloj = Timer.periodic(const Duration(milliseconds: 20), (_) => _tick());
   }
@@ -56,11 +81,20 @@ class JuegoEcoReal implements JuegoEco {
   Vuelco? _vuelco(Stick s) {
     if (s == Stick.pequeno && _ninoSimulado) return _nino.vuelco(motor, _t.elapsedMilliseconds.toDouble());
     final u = _ultima[s];
-    if (u == null || DateTime.now().difference(u.$2) > vencimiento) return null;
+    if (u == null || _reloj2().difference(u.$2) > vencimiento) return null;
     return (lateral: u.$1.lateral, frontal: u.$1.frontal);
   }
 
   void _tick() {
+    if (_perdido) return;
+    final perdido = _stickPerdido();
+    if (perdido != null) {
+      _perdido = true;
+      _reloj?.cancel();
+      unawaited(EpuSonidos.instancia.detener());
+      alPerderStick?.call(perdido);
+      return;
+    }
     motor.tick(_t.elapsedMilliseconds.toDouble(), adulto: _vuelco(Stick.grande), nino: _vuelco(Stick.pequeno));
     if (FuenteSticksBle.registrar && ++_n % 50 == 0) {
       // ignore: avoid_print
@@ -68,6 +102,23 @@ class JuegoEcoReal implements JuegoEco {
           ' · adulto ${motor.bordeAdulto?.name} · niño ${motor.bordeNino?.name}');
     }
     if (motor.terminado) _reloj?.cancel();
+  }
+
+  /// Un paso del juego, como el que corre 50 veces por segundo (para pruebas).
+  @visibleForTesting
+  void pasoParaPruebas() => _tick();
+
+  /// El primer stick real que lleva [perdidaTras] sin datos (o sin ninguno desde
+  /// que empezó el juego), o null.
+  Stick? _stickPerdido() {
+    if (motor.terminado) return null;
+    final ahora = _reloj2();
+    for (final s in Stick.values) {
+      if (s == Stick.pequeno && _ninoSimulado) continue;
+      final ultimo = _ultima[s]?.$2 ?? _inicio;
+      if (ahora.difference(ultimo) > perdidaTras) return s;
+    }
+    return null;
   }
 
   @override

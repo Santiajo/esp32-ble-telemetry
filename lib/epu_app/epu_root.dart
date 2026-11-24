@@ -11,6 +11,7 @@ import '../epu/app.dart';
 import '../epu/estado/estado_eco.dart';
 import '../epu/juego/fuente_sticks.dart';
 import '../epu/navegacion/rutas.dart';
+import '../epu/pantallas/perdida.dart' show CausaPerdida;
 import '../epu/tema/colores.dart';
 import 'fuente_sticks_ble.dart';
 import 'juego_eco_real.dart';
@@ -55,7 +56,8 @@ class _EpuRootState extends State<EpuRoot> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     EpuSticks.fuente = _fuente;
     EpuSticks.alMantenerLogo = _abrirBanco;
-    EpuSticks.crearJuego = (nivel, estado, alTerminar) => JuegoEcoReal.para(_fuente, nivel, estado, alTerminar);
+    EpuSticks.crearJuego = (nivel, estado, alTerminar) =>
+        JuegoEcoReal.para(_fuente, nivel, estado, alTerminar, alPerderStick: _mostrarPerdida);
     if (FuenteSticksBle.registrar) _registro = _fuente.lecturas.listen((_) {});
     unawaited(_iniciar());
   }
@@ -108,6 +110,14 @@ class _EpuRootState extends State<EpuRoot> with WidgetsBindingObserver {
     try {
       await (await SharedPreferences.getInstance()).setString(progresoKey, _progreso.toJson());
     } catch (_) {}
+  }
+
+  /// Un stick dejó de mandar datos en pleno juego: «Se perdió un stick» de Joaquín.
+  /// Al reconectarlo, esa pantalla vuelve sola a «Antes del nivel».
+  void _mostrarPerdida(Stick stick) {
+    final ctx = EpuNavegacion.registro.navigator?.context;
+    if (ctx == null || !ctx.mounted) return;
+    unawaited(EpuNavegacion.mostrarPerdida(ctx, stick: stick, causa: CausaPerdida.fueraDeAlcance));
   }
 
   void _abrirBanco(BuildContext context) {
