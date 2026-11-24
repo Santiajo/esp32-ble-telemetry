@@ -1,0 +1,23 @@
+Epu — paleta de marca (etapa 3)
+
+Principales
+  Arcilla   #D9634D   RGB 217 99 77    Pantone 7416 C / RAL 3022 (aprox.)   letra-isotipo (la u), acentos, fondo del ícono de app
+  Lino      #EFECE5   RGB 239 236 229  RAL 9001 blanco crema (aprox.)        fondo; letras en negativo
+  Carbón    #3D3A37   RGB 61 58 55     Pantone Black 7 C (aprox.)            texto; versión de un color
+
+Secundarios
+  Malva     #A896D6   RGB 168 150 214  Pantone 2645 C / RAL 4009 (aprox.)    letra E
+  Oliva     #7E9142   RGB 126 145 66   Pantone 5767 C (aprox.)               letra p
+  Amarillo  #EBD75A   RGB 235 215 90   Pantone 1205 C (aprox.)               el pivote (luz del eje); solo sobre otra letra, Arcilla o Malva
+
+Piezas
+  Stick A (adulto): madera natural clara, tapa en Arcilla, sello grabado sin tinta
+  Stick B (niño):   madera natural clara, tapa en Malva
+  Eje:              cerámica en Lino, base en Carbón, sello en bajorrelieve
+  Luz:              ámbar cálido 2700 K, difusa
+
+Reglas
+  Una letra por color; nunca dos seguidas iguales; sin transparencias ni letras montadas.
+  La letra-isotipo va siempre en Arcilla en la versión a color.
+  Sobre fotografía, siempre la versión de un color en Lino o blanco.
+  Referencias Pantone/RAL aproximadas: verificar con muestra física antes de fabricar.
