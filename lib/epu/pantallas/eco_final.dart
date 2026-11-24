@@ -74,7 +74,7 @@ class _PantallaEcoFinalState extends State<PantallaEcoFinal> with SingleTickerPr
       children: [
         Text('Nivel ${n.id} · ${n.nombre}', style: EpuTextos.etiqueta, textAlign: TextAlign.center),
         const SizedBox(height: 4),
-        Text('La descubrieron juntos', style: EpuTextos.tituloGrande, textAlign: TextAlign.center),
+        _TituloJuntos(quieto: quieto),
       ],
     );
 
@@ -319,3 +319,75 @@ class _BotonDoble extends StatelessWidget {
         ),
       );
 }
+
+/// «La descubrieron juntos» con «juntos» en degradado lila → naranjo → lila que se
+/// desplaza en ciclos de 10 s, lineal y sin fin (EPU-19, 21-11-2026). Colores y reparto
+/// del Figma «Vistas + Kit» (nodo 745:1874: lila `#B3A2DC` al inicio de la palabra y
+/// naranjo `#E85E45` al final). Con «Quitar animaciones» queda quieto así.
+class _TituloJuntos extends StatefulWidget {
+  const _TituloJuntos({required this.quieto});
+
+  final bool quieto;
+
+  @override
+  State<_TituloJuntos> createState() => _TituloJuntosState();
+}
+
+class _TituloJuntosState extends State<_TituloJuntos> with SingleTickerProviderStateMixin {
+  late final AnimationController _ciclo = AnimationController(vsync: this, duration: const Duration(seconds: 10));
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.quieto) _ciclo.repeat();
+  }
+
+  @override
+  void didUpdateWidget(_TituloJuntos old) {
+    super.didUpdateWidget(old);
+    if (widget.quieto && _ciclo.isAnimating) {
+      _ciclo
+        ..stop()
+        ..value = 0;
+    } else if (!widget.quieto && !_ciclo.isAnimating) {
+      _ciclo.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ciclo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final estilo = EpuTextos.tituloGrande;
+    return Text.rich(
+      TextSpan(children: [
+        const TextSpan(text: 'La descubrieron '),
+        WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: AnimatedBuilder(
+            animation: _ciclo,
+            builder: (context, child) => ShaderMask(
+              blendMode: BlendMode.srcIn,
+              // Un período del degradado mide dos palabras: lila → naranjo sobre la
+              // palabra y naranjo → lila fuera de ella; se corre un período cada 10 s.
+              shaderCallback: (r) => LinearGradient(
+                colors: const [EpuColores.lilaAdulto, EpuColores.coralNino, EpuColores.lilaAdulto],
+                tileMode: TileMode.repeated,
+              ).createShader(Rect.fromLTWH(r.left - _ciclo.value * 2 * r.width, r.top, 2 * r.width, r.height)),
+              child: child,
+            ),
+            child: Text('juntos', style: estilo),
+          ),
+        ),
+      ]),
+      style: estilo,
+      textAlign: TextAlign.center,
+    );
+  }
+}
+

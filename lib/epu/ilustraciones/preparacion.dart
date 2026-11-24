@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 
 import '../tema/colores.dart';
 import '../util/svg.dart';
+import 'geometria_mano.dart';
+import 'manos.dart';
 
 /// Ilustraciones de la preparación y de «Calibrar», copiadas del SVG en línea
 /// de cada pantalla. Coordenadas en el viewBox original; el widget escala.
@@ -195,3 +197,44 @@ void pintarCalibrar(Canvas c, AnimacionCalibrar a) {
   anillos(196, 143, 12);
   luz(196, 143, 12, 7);
 }
+
+// ── Calibrar con las manos (EPU-24, 21-11-2026; viewBox 120 × 110) ──────────
+/// Las mismas manos de «Quién guía» (escena de 120 × 100 corrida 10 hacia abajo),
+/// con una flecha verde punteada hacia arriba sobre cada luz y, al calibrar, los
+/// anillos amarillos que se expanden y la luz que parpadea ([AnimacionCalibrar]).
+///
+/// Medidas tomadas del Figma «Vistas + Kit» (componente «Ilustración de calibración»,
+/// 285 × 261,25 = 2,375 px por unidad): luces en (30, 21) y (88, 40,4) de la escena;
+/// flecha del adulto con puntos de y 11,3 a −1,4 y punta en −5,8; la del niño de 31,5
+/// a 22,2 y punta en 17,4. Los anillos usan el radio del anillo de la mano (8,5),
+/// escalado como la mano (el del niño al 74 %).
+void pintarCalibrarManos(Canvas c, AnimacionCalibrar a) {
+  c
+    ..save()
+    ..translate(0, 10);
+  final quieta = GeometriaMano(0, 0);
+  final luz = LuzMano(opacidad: a.luzOpacidad);
+  dibujarMano(c, quieta, EstiloMano.adulto, luz);
+  dibujarMano(c, quieta, EstiloMano.nino, luz);
+
+  final verde = trazoSvg(EpuColores.flecha, 1.3);
+  void flecha(double x, double desde, double hasta, double punta) {
+    dibujarPunteado(c, trazadoSvg('M$x $desde L$x $hasta'), const [.4, 3.6], verde);
+    c.drawPath(trazadoSvg('M${x - 3} ${punta + 3.4} L$x $punta L${x + 3} ${punta + 3.4}'), verde);
+  }
+
+  flecha(30, 11.3, -1.4, -5.8);
+  flecha(88, 31.5, 22.2, 17.4);
+
+  void anillos(EstiloMano e) {
+    final centro = Offset(e.grupoX + e.escala * quieta.luzX, e.grupoY + e.escala * quieta.luzY);
+    for (final (s, o) in [(a.anillo1Escala, a.anillo1Opacidad), (a.anillo2Escala, a.anillo2Opacidad)]) {
+      if (o > 0) c.drawCircle(centro, 8.5 * e.escala * s, trazoSvg(EpuColores.luzStick, 1.8 * e.escala * s, opacidad: o));
+    }
+  }
+
+  anillos(EstiloMano.adulto);
+  anillos(EstiloMano.nino);
+  c.restore();
+}
+

@@ -17,7 +17,7 @@ import '../widgets/reloj.dart';
 /// Eco · antes del nivel (EcoAntes.dc.html).
 ///
 /// Muestra el movimiento del nivel con las dos manos animadas (sin partitura)
-/// y bloquea «Comenzar» durante 3 s con una barra que se llena, para que
+/// y bloquea «Comenzar» durante 4 s (EPU-26; antes 3) con una barra que se llena, para que
 /// alcancen a mirar la animación.
 class PantallaEcoAntes extends StatefulWidget {
   const PantallaEcoAntes({super.key});
@@ -33,12 +33,12 @@ class _PantallaEcoAntesState extends State<PantallaEcoAntes> with SingleTickerPr
   Timer? _desbloqueo;
 
   late final AnimationController _barra =
-      AnimationController(vsync: this, duration: const Duration(seconds: 3))..forward();
+      AnimationController(vsync: this, duration: const Duration(seconds: 4))..forward();
 
   @override
   void initState() {
     super.initState();
-    _desbloqueo = Timer(const Duration(milliseconds: 3000), () {
+    _desbloqueo = Timer(const Duration(milliseconds: 4000), () {
       if (mounted) setState(() => _desbloqueado = true);
     });
     EpuSonidos.instancia.precargarNivel(_nivel);
@@ -109,7 +109,7 @@ class _PantallaEcoAntesState extends State<PantallaEcoAntes> with SingleTickerPr
   }
 }
 
-/// «Comenzar»: gris con una barra que se llena en 3 s (lineal); después pasa
+/// «Comenzar»: gris con una barra que se llena en 4 s (lineal; EPU-26); después pasa
 /// a oscuro en 0,3 s y recién ahí se puede tocar (`pointer-events: none`
 /// mientras está bloqueado).
 class _BotonComenzar extends StatelessWidget {

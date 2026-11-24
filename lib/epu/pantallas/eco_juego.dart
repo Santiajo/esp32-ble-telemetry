@@ -235,8 +235,12 @@ class _Orbe extends StatelessWidget {
 ///
 /// | franja          | bordes de arriba/abajo | bordes de los lados |
 /// |-----------------|------------------------|---------------------|
-/// | pista (.fade)   | .9 → .45 en 1,7 %, 0 en 7,5 % | .45 en 3,7 %, 0 en 16 % |
-/// | sostener        | .45 en 3,2 %, 0 en 14 %       | .45 en 7 %, 0 en 30 %   |
+/// | pista           | .6 → .34 → .14 → .05 → 0 en 0 / 0,8 / 2 / 3,2 / 4,4 % | igual en 0 / 1,8 / 4,4 / 7 / 9,6 % |
+/// | sostener        | .9 → .45 en 3,2 %, 0 en 14 %   | .45 en 7 %, 0 en 30 %   |
+///
+/// La pista (lila, coral y amarilla) es la de EPU-25 (21-11-2026): más suave y cerca de la
+/// mitad de ancha; los valores se leyeron del Figma «Vistas + Kit» (nodos 745:1865 y
+/// 745:2753). La de sostener no cambia.
 class _Franja extends StatelessWidget {
   const _Franja({required this.borde, required this.color, required this.ancha});
 
@@ -248,11 +252,12 @@ class _Franja extends StatelessWidget {
   Widget build(BuildContext context) {
     final vertical = borde == Borde.frente || borde == Borde.atras;
     final List<double> stops = switch ((vertical, ancha)) {
-      (true, false) => [0, .017, .075],
-      (false, false) => [0, .037, .16],
+      (true, false) => [0, .008, .02, .032, .044],
+      (false, false) => [0, .018, .044, .07, .096],
       (true, true) => [0, .032, .14],
       (false, true) => [0, .07, .30],
     };
+    final List<double> alfas = ancha ? const [.9, .45, 0] : const [.6, .34, .14, .05, 0];
     final (inicio, fin) = switch (borde) {
       Borde.frente => (Alignment.topCenter, Alignment.bottomCenter),
       Borde.atras => (Alignment.bottomCenter, Alignment.topCenter),
@@ -264,7 +269,7 @@ class _Franja extends StatelessWidget {
         gradient: LinearGradient(
           begin: inicio,
           end: fin,
-          colors: [color.withValues(alpha: .9), color.withValues(alpha: .45), color.withValues(alpha: 0)],
+          colors: [for (final a in alfas) color.withValues(alpha: a)],
           stops: stops,
         ),
       ),

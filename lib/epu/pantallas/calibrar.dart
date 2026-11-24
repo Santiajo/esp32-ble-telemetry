@@ -57,19 +57,20 @@ class _PantallaCalibrarState extends State<PantallaCalibrar> {
     final f = _fase;
 
     Widget lienzo(AnimacionCalibrar a) => LienzoSvg(
-          vbAncho: 320,
-          vbAlto: 260,
-          ancho: 290,
-          pintor: (c) => pintarCalibrar(c, a),
-          etiqueta: 'Dos manos sosteniendo los sticks derechos, con la luz de la punta mirando hacia arriba',
+          // EPU-24: las manos de los niveles (antes, rectángulos en un viewBox de 320 × 260).
+          vbAncho: 120,
+          vbAlto: 110,
+          ancho: 285,
+          pintor: (c) => pintarCalibrarManos(c, a),
+          etiqueta: 'El adulto y el niño sostienen sus sticks derechos, con una flecha hacia arriba sobre cada luz',
         );
 
     final ilustracion = ZonaIlustracion(
       minimo: 260,
       maximo: 388,
       child: DibujoCentrado(
-        ancho: 290,
-        alto: 290 * 260 / 320,
+        ancho: 285,
+        alto: 285 * 110 / 120,
         child: f != _Fase.calibrando
             ? lienzo(const AnimacionCalibrar())
             : quieto
@@ -82,7 +83,7 @@ class _PantallaCalibrarState extends State<PantallaCalibrar> {
       children: [
         Text('Calibren los sticks', style: EpuTextos.tituloMediano, textAlign: TextAlign.center),
         const SizedBox(height: 8),
-        Text('Cada uno sostiene su stick, con la luz hacia arriba', style: EpuTextos.cuerpo, textAlign: TextAlign.center),
+        Text('Cada uno sostiene su stick, con la luz al frente tuyo', style: EpuTextos.cuerpo, textAlign: TextAlign.center),
         const SizedBox(height: 8),
         Text('Quédense quietos hasta que termine.', style: EpuTextos.detalle, textAlign: TextAlign.center),
       ],

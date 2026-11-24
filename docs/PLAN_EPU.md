@@ -223,3 +223,17 @@ Se conecta a la primera (MTU 185, intervalo 15 ms). El retraso un poco mayor es 
   2. Cada intento de conexión tenía 3,5 s; los Samsung suelen tardar más la primera vez. **Ahora 10 s** (`EspDeviceController`).
   - dev.9 en `entregas/Epu-2.1.0-dev.9.apk`. **Sin probar en el A55 todavía.**
 
+## 10. Tickets del 21-11 (EPU-17 a EPU-28)
+
+Joaquín cargó 12 tickets nuevos y rehízo la página de Figma (ahora `745:1064`). **EPU-22 manda sobre las sesiones** (cada nivel terminado es una sesión); EPU-23 (Home solo con «Jugar») queda en espera hasta hablarlo con Joaquín, porque quita «Repasar la preparación», la única forma de vincular un stick nuevo.
+
+**Hechos el 23-11 (2.1.0-dev.10), comprobados en el teléfono contra Figma:**
+- **EPU-26:** «Comenzar» bloqueado 4 s.
+- **EPU-25:** franja de pista (lila, coral y amarilla) con los valores exactos de Figma: opacidad .6 → .34 → .14 → .05 → 0 en 0 / 0,8 / 2 / 3,2 / 4,4 % del alto (arriba y abajo) y en 0 / 1,8 / 4,4 / 7 / 9,6 % del ancho (lados). La franja ancha de «sostener» no cambia.
+- **EPU-19:** «juntos» con degradado lila → naranjo → lila que avanza en ciclos de 10 s; quieto con «Quitar animaciones».
+- **EPU-24:** calibrar con las manos de «Quién guía», flechas punteadas y anillos (viewBox 120 × 110, medidas tomadas de la captura de Figma). Texto nuevo: «con la luz al frente tuyo».
+
+**Límite de Figma:** el plan gratuito agotó las consultas de la herramienta; para «Tu archivo» y el recuerdo nuevo hará falta más acceso, capturas o el paquete Flutter actualizado de Joaquín.
+
+**Siguen:** EPU-22 → EPU-20 → EPU-21 → EPU-18 («Tu archivo» y la huella), EPU-17 (LED desde la app), EPU-28 (interruptor), EPU-27 (orientación del niño, con Joaquín), EPU-15 (icono).
+
