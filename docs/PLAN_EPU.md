@@ -235,5 +235,9 @@ Joaquín cargó 12 tickets nuevos y rehízo la página de Figma (ahora `745:1064
 
 **Límite de Figma:** el plan gratuito agotó las consultas de la herramienta; para «Tu archivo» y el recuerdo nuevo hará falta más acceso, capturas o el paquete Flutter actualizado de Joaquín.
 
-**Siguen:** EPU-22 → EPU-20 → EPU-21 → EPU-18 («Tu archivo» y la huella), EPU-17 (LED desde la app), EPU-28 (interruptor), EPU-27 (orientación del niño, con Joaquín), EPU-15 (icono).
+- **EPU-15 (23-11, dev.11):** icono de la app = isotipo de Joaquín tal cual (`reference/epu_branding/epu-isotipo-color.svg`), renderizado con Edge sobre Lino #EFECE5 (icono adaptable con margen para que ningún recorte lo corte). Visto en el moto g34.
+- **EPU-27 (orientación del niño):** queda como está. Frente a frente, el adelante del niño es el borde de abajo de la pantalla; Joaquín no lo había considerado.
+- **EPU-24 queda en curso:** las flechas y anillos se ubicaron midiendo la captura de Figma (sin coordenadas exactas por el límite); lo revisa Joaquín.
+
+**Siguen:** EPU-22 → EPU-20 → EPU-21 → EPU-18 («Tu archivo» y la huella), EPU-17 (LED desde la app), EPU-28 (interruptor).
 

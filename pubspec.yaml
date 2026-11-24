@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.1.0-dev.10+35
+version: 2.1.0-dev.11+36
 
 environment:
   sdk: ^3.13.4
@@ -112,8 +112,13 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
+# Icono de Epu (EPU-15): el isotipo de Joaquín tal cual
+# (reference/epu_branding/epu-isotipo-color.svg), renderizado a PNG sobre Lino #EFECE5.
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#EFECE5"
+  adaptive_icon_foreground: "assets/icon/icon_frente.png"
+  remove_alpha_ios: true
   min_sdk_android: 21
