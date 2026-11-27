@@ -246,3 +246,17 @@ Joaquín cargó 12 tickets nuevos y rehízo la página de Figma (ahora `745:1064
 - **EPU-23 cerrado:** el Home ya no muestra «Sesiones pasadas» (las sesiones van a «Tu archivo», EPU-20). **Se deja «Repasar la preparación»**, acordado con Joaquín: permite repetir el onboarding y vincular sticks.
 - **Alerta de desconexión (reporte de Simón):** si un stick pasa **2 s sin mandar datos** en medio del juego (apagado, sin batería o fuera de alcance), se detienen los sonidos y se abre la pantalla «Se perdió un stick» de Joaquín (`JuegoEcoReal.alPerderStick` → `EpuNavegacion.mostrarPerdida`). Antes nadie la llamaba. Pruebas en `test/epu/juego_eco_real_test.dart`. **Falta probarla con los sticks** (apagar uno en medio de un nivel).
 - **Retraso del P1 (niño):** pendiente de los datos de Simón (banco de pruebas: Hz, retraso y cortes; líneas `[STATS]` en Thonny). Hipótesis: el SPI del P1 a 1 MHz pierde lecturas; el arreglo sería bajarle la velocidad.
+
+## 11. Paquete 0.3 de Joaquín integrado (26-11-2026, 2.1.0-dev.13)
+
+Joaquín entregó la versión 0.3 de su paquete (`reference/epu_eco_flutter`, con `CAMBIOS.md`; la 0.1 quedó en `reference/epu_eco_flutter_legacy`). Se copió sobre `lib/epu` y se volvieron a poner los ganchos de integración.
+
+- **EPU-18 · recuerdo «huella»:** su dibujo, tal cual. **Se dibuja con lo que jugaron:** `MotorEco.pasosJugados` (tipo del paso + borde que eligió el guía, p. ej. `S:F`) entra a `DatosHuella.de` en vez de `NivelEco.pasos`. Con la simulación, la partitura.
+- **EPU-20 · marcador:** el suyo; el recuerdo guarda nivel, fecha y pasos.
+- **EPU-21 · «Tu archivo»:** el suyo; cada recuerdo/sesión abre su propio dibujo (`EstadoEco.pasosVista`).
+- **EPU-22 · sesiones:** una por nivel terminado, con minutos reales, trozos y pasos. Reemplaza a `ProgresoEpu` (borrado).
+- **Guardado:** `EstadoEco.archivoJson()` en `shared_preferences` (`epu_archivo`); del guardado antiguo (`epu_progreso`) se rescatan los niveles completados.
+- **«Quién va en cada lado» (0.3):** 5 s al empezar; el juego real y el aviso de stick perdido parten en `_empezar()`.
+- **«Repasar la preparación»** se mantiene como enlace bajo «Jugar» (Joaquín lo había quitado).
+- **Modos para revisar sin sticks:** `--dart-define=EPU_SIMULADO=true` (tiempos de `SimulacionEco`, guarda aparte en `epu_archivo_simulado`) y `EPU_DEMO=true` (archivo lleno de ejemplo, no guarda).
+- Capturas para Joaquín en `entregas/capturas_joaquin/` (con `LEEME.md`). **Falta probar con los sticks** un nivel completo (pasos jugados reales, aviso de pérdida después de los 5 s).

@@ -12,11 +12,18 @@ import '../navegacion/rutas.dart';
 import '../tema/colores.dart';
 import '../util/css.dart';
 import '../util/degradados.dart';
+import '../widgets/lados_de_cada_uno.dart';
 import '../widgets/reloj.dart';
 
 /// Eco · descubrir la melodía (EcoJuego.dc.html).
 ///
 /// Fondo oscuro, sin textos ni botones: el teléfono va dentro del eje.
+///
+/// Antes de empezar se muestran 5 s «Quién va en cada lado»
+/// ([LadosDeCadaUno]): arriba, junto a la cámara, el niño; abajo, el adulto.
+/// Recién después arranca la simulación (o, en la app real, la lectura de
+/// los sticks).
+///
 /// Solo hay luces:
 /// * dos luces difusas, una por stick (lila 104 px, coral 84 px);
 /// * franjas en los bordes que indican hacia dónde ir (del color de quien
@@ -42,9 +49,17 @@ class _PantallaEcoJuegoState extends State<PantallaEcoJuego> {
   SimulacionEco? _sim;
   JuegoEco? _real; // integración: juego con los sticks reales
 
+  /// Para registrar cuánto duró la sesión.
+  final _inicio = DateTime.now();
+
+  /// `true` durante los 5 s de «Quién va en cada lado».
+  bool _lados = true;
+
   @override
   void initState() {
     super.initState();
+    // Las luces de los sticks aparecen recién cuando empieza el juego.
+    _estado.cambiar(lucesVisibles: false);
     // Pantalla completa: sin barra de estado ni de navegación mientras se juega.
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
@@ -61,20 +76,31 @@ class _PantallaEcoJuegoState extends State<PantallaEcoJuego> {
       // barras del sistema aquí y no recién al cerrarla.
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       global.marcarCompletado(nivel.id);
+      // Integración: el recuerdo se dibuja con lo que de verdad jugaron (con la
+      // simulación, la partitura). El juego siempre termina con todos los trozos.
+      final pasos = _real?.pasosJugados;
+      global.pasosVista = pasos;
+      // Cada nivel terminado queda como sesión en «Tu archivo» (menú del Home).
+      global.registrarSesion(
+        nivel.id,
+        minutos: (DateTime.now().difference(_inicio).inSeconds / 60).round(),
+        logrados: nivel.trozos,
+        pasos: pasos,
+      );
       EpuNavegacion.ir(context, Pantalla.recuerdo);
     }
 
     // Integración: con sticks reales juega el motor; si no, la simulación.
     _real = EpuSticks.crearJuego?.call(nivel, _estado, alTerminar);
-    if (_real != null) {
-      _real!.iniciar();
-      return;
-    }
-    _sim = SimulacionEco(
-      nivel: nivel,
-      estado: _estado,
-      alTerminar: alTerminar,
-    )..iniciar();
+    if (_real == null) _sim = SimulacionEco(nivel: nivel, estado: _estado, alTerminar: alTerminar);
+  }
+
+  /// Termina «Quién va en cada lado» y arranca el juego.
+  void _empezar() {
+    if (!mounted) return;
+    setState(() => _lados = false);
+    _sim?.iniciar();
+    _real?.iniciar(); // los sticks se leen recién aquí (CAMBIOS 0.3)
   }
 
   @override
@@ -94,9 +120,16 @@ class _PantallaEcoJuegoState extends State<PantallaEcoJuego> {
       child: ColoredBox(
         color: EpuColores.noche,
         child: LayoutBuilder(
-          builder: (context, k) => ListenableBuilder(
-            listenable: _estado,
-            builder: (context, _) => _VistaJuego(estado: _estado, tamano: k.biggest),
+          builder: (context, k) => Stack(
+            children: [
+              Positioned.fill(
+                child: ListenableBuilder(
+                  listenable: _estado,
+                  builder: (context, _) => _VistaJuego(estado: _estado, tamano: k.biggest),
+                ),
+              ),
+              if (_lados) Positioned.fill(child: LadosDeCadaUno(alTerminar: _empezar)),
+            ],
           ),
         ),
       ),
@@ -233,14 +266,21 @@ class _Orbe extends StatelessWidget {
 
 /// Franja de luz en un borde (degradado lineal desde el borde hacia adentro).
 ///
-/// | franja          | bordes de arriba/abajo | bordes de los lados |
-/// |-----------------|------------------------|---------------------|
-/// | pista           | .6 → .34 → .14 → .05 → 0 en 0 / 0,8 / 2 / 3,2 / 4,4 % | igual en 0 / 1,8 / 4,4 / 7 / 9,6 % |
-/// | sostener        | .9 → .45 en 3,2 %, 0 en 14 %   | .45 en 7 %, 0 en 30 %   |
+/// Pista (`.fade`): más difuminada y angosta que en la versión anterior
+/// (que iba .9 → .45 → 0 y llegaba al 7,5 % / 16 %). Ahora parte en .6 y se
+/// desvanece en cinco tramos, sin borde marcado. El largo no cambia: sigue
+/// cubriendo todo el borde.
 ///
-/// La pista (lila, coral y amarilla) es la de EPU-25 (21-11-2026): más suave y cerca de la
-/// mitad de ancha; los valores se leyeron del Figma «Vistas + Kit» (nodos 745:1865 y
-/// 745:2753). La de sostener no cambia.
+/// | opacidad               | .6 | .34   | .14   | .05   | 0     |
+/// |------------------------|----|-------|-------|-------|-------|
+/// | bordes de arriba/abajo | 0  | 0,8 % | 2 %   | 3,2 % | 4,4 % |
+/// | bordes de los lados    | 0  | 1,8 % | 4,4 % | 7 %   | 9,6 % |
+///
+/// Sostener (sin cambios): .9 → .45 → 0; .45 en 3,2 % y 0 en 14 % arriba y
+/// abajo, .45 en 7 % y 0 en 30 % a los lados.
+///
+/// Los porcentajes son del alto (arriba/abajo) o del ancho (lados) de la
+/// pantalla.
 class _Franja extends StatelessWidget {
   const _Franja({required this.borde, required this.color, required this.ancha});
 

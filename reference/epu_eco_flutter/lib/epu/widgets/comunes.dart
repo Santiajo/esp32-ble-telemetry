@@ -24,9 +24,14 @@ class PantallaBase extends StatelessWidget {
     this.fondo = EpuColores.fondo,
     this.bloquearVolver = false,
     this.encima,
+    this.accion,
   });
 
   final Widget child;
+
+  /// Botón redondo arriba a la derecha (`top 14; right 14`), como el
+  /// marcador para guardar el recuerdo.
+  final Widget? accion;
 
   /// Capa por encima de todo, botón «Atrás» y barra de estado incluidos (el
   /// círculo que cubre la pantalla al terminar la preparación).
@@ -61,6 +66,7 @@ class PantallaBase extends StatelessWidget {
                         left: 14,
                         child: BotonAtras(alTocar: () => EpuNavegacion.volverA(context, destino)),
                       ),
+                    if (accion != null) Positioned(top: 14, right: 14, child: accion!),
                   ],
                 ),
               ),

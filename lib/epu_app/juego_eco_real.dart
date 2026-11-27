@@ -122,6 +122,9 @@ class JuegoEcoReal implements JuegoEco {
   }
 
   @override
+  List<String> get pasosJugados => motor.pasosJugados;
+
+  @override
   void detener() {
     _reloj?.cancel();
     unawaited(_sub?.cancel());

@@ -6,6 +6,8 @@ Los valores (duraciones, retrasos, curvas, colores, tamaños, textos) se copiaro
 
 Reemplaza al paquete anterior `epu_flutter`, que solo traía el kit y tres animaciones.
 
+**Versión 0.3.** Suma «Quién va en cada lado» al empezar el juego (5 s: arriba el niño, abajo el adulto) y los textos nuevos de «Calibrar». La **0.2** sumó el recuerdo abstracto, el marcador para guardarlo, el menú «Tu archivo» con recuerdos y sesiones por nivel, el Home solo con «Jugar», las manos nuevas de «Calibrar», la luz de ayuda más suave y la espera de 4 s en «Comenzar». El detalle, archivo por archivo, está en `CAMBIOS.md`.
+
 ## Cómo correrlo
 
 ```bash
@@ -21,9 +23,9 @@ flutter run
 
 * Requiere Flutter 3.32 o más nuevo (Dart 3.8).
 * La fuente Nunito ya viene incluida en `assets/fuentes` (pesos 600, 700, 800 y 900, licencia OFL).
-* `flutter test` corre las pruebas que comparan el dibujo y el movimiento de las manos contra el prototipo.
+* `flutter test` corre las pruebas que comparan contra el prototipo el dibujo y el movimiento de las manos, y el dibujo del recuerdo.
 
-La app abre en modo demostración: los sticks son simulados con los mismos tiempos del prototipo, los niveles 1 y 2 aparecen completados y el Home muestra dos sesiones de ejemplo, igual que en el canvas.
+La app abre en modo demostración: los sticks son simulados con los mismos tiempos del prototipo, los niveles 1 y 2 aparecen completados y «Tu archivo» trae los recuerdos y sesiones de ejemplo del canvas. Para ver el archivo lleno (varias semanas de juego), pasar `EpuEcoApp(estado: EstadoEco.demoLleno())`.
 
 ## Estructura
 
@@ -37,9 +39,10 @@ lib/
     │                         trazados SVG, punteados, degradados elípticos)
     ├── widgets/              piezas comunes (botón Atrás, botón principal, pasos,
     │                         botón con estado, botón Jugar, reloj de animación)
-    ├── ilustraciones/        logo, ilustraciones de preparación, manos con stick
+    ├── ilustraciones/        logo, ilustraciones de preparación, manos con stick,
+    │                         dibujo del recuerdo (huella)
     ├── datos/niveles.dart    los 7 niveles: textos, partitura oculta, animaciones
-    ├── estado/               nivel elegido, niveles completados, sesiones
+    ├── estado/               nivel elegido, niveles completados, recuerdos y sesiones
     ├── navegacion/rutas.dart las 14 pantallas y cómo se va de una a otra
     ├── audio/sonidos.dart    reproducción de los audios
     ├── juego/                estado de la pantalla de juego, simulación y sticks
@@ -60,12 +63,12 @@ test/                         pruebas contra los valores del prototipo
 | 4 | Conecta los dos sticks | `Prep4` | `prep_conectar.dart` | sola, 1,5 s después de conectar |
 | 5 | Quién usa cada stick | `Prep5` | `prep_quien_usa.dart` | Bienvenida |
 | 6 | Bienvenida | `Bienvenida` | `bienvenida.dart` | Home, sola a los 2,6 s |
-| 7 | Home | `Home` | `home.dart` | Elegir nivel · Recuerdo · Preparación |
+| 7 | Home (con el menú «Tu archivo») | `Home` | `home.dart` | Elegir nivel · Recuerdo (desde el menú) |
 | 8 | ¿Qué melodía van a descubrir? | `EcoNiveles` | `eco_niveles.dart` | Antes del nivel |
 | 9 | Antes del nivel | `EcoAntes` | `eco_antes.dart` | Quién guía |
 | 10 | Quién guía | `EcoGuia` | `eco_guia.dart` | Calibrar |
 | 11 | Calibren los sticks | `Calibrar` | `calibrar.dart` | Juego, 1,2 s después de calibrar |
-| 12 | Descubrir la melodía | `EcoJuego` | `eco_juego.dart` | Recuerdo, al terminar |
+| 12 | Descubrir la melodía (empieza con 5 s de «Quién va en cada lado») | `EcoJuego` | `eco_juego.dart` | Recuerdo, al terminar |
 | 13 | La descubrieron juntos | `EcoFinal` | `eco_final.dart` | Siguiente nivel · Elegir nivel |
 | 14 | Se perdió un stick | `Perdida` | `perdida.dart` | vuelve a Antes del nivel |
 
@@ -88,23 +91,29 @@ Todas están en el código con sus valores originales. Resumen:
 | Bienvenida | logo | aparece ×2,2 → ×3 en el centro (0,1–0,7 s) y baja a su lugar ×3 → ×1 (1,4–2,25 s) |
 | | capa de fondo | se desvanece 1,85–2,45 s, ease-in-out |
 | Home | botón «Jugar» | 5 manchas de color con ritmos de 9, 10,5, 13, 14 y 10 s, ease-in-out en cada tramo |
+| | menú «Tu archivo» | abre: velo 0,25 s ease y panel 0,35 s `cubic-bezier(.2,.8,.2,1)`; cierra: los dos en 0,22 s (ease / ease-in) |
+| | pestañas | color 0,25 s ease |
+| | «Ver N más» | el chevrón gira 180° en 0,25 s ease |
 | Antes del nivel | manos y sticks | modelo 3D del prototipo (`geo`), fases de la tabla `PH`, pasos de 33 ms que acercan un 22 % |
 | | flechas | entran en 0,6 s `cubic-bezier(.2,.7,.3,1)` desde −5 hasta +1,5 unidades; se apagan en 0,25 s |
 | | flecha de giro | una vuelta cada 1,68 s, lineal |
 | | anillo de «quietos» | late ×0,8 ↔ ×1,25 cada 1 s |
-| | «Comenzar» | bloqueado 3 s con barra lineal; después pasa a oscuro en 0,3 s |
+| | «Comenzar» | bloqueado 4 s con barra lineal; después pasa a oscuro en 0,3 s |
 | Quién guía | dibujo | entra: 0,5 s `cubic-bezier(.2,.8,.2,1)`, retraso 0,1 s |
 | | luz de quien guía | parpadea 1 → 0,35 y su anillo late ×0,8 ↔ ×1,25, cada 1,1 s |
-| Calibrar | anillos | ×1 → ×2,8 y 0,9 → 0 de opacidad, 1,3 s ease-out, el segundo con 0,65 s de retraso |
+| Calibrar | anillos (en la luz de las manos nuevas) | ×1 → ×2,8 y 0,9 → 0 de opacidad, 1,3 s ease-out, el segundo con 0,65 s de retraso |
 | | luz | parpadea 1 → 0,3 cada 0,7 s |
 | | botón | barra lineal de 3 s |
-| Juego | luces de los sticks | se mueven en 0,7 s `cubic-bezier(.4,0,.2,1)` (en el giro, tramos de 0,23 s lineales); aparecen y se apagan en 0,4 s |
+| Juego | quién va en cada lado | 5 s: cada color se abre en círculo difuminado desde su borde (1,4 s, `cubic-bezier(.65,0,.35,1)`), queda 2,2 s y se desvanece 1,4 s |
+| | luces de los sticks | se mueven en 0,7 s `cubic-bezier(.4,0,.2,1)` (en el giro, tramos de 0,23 s lineales); aparecen y se apagan en 0,4 s |
 | | luz de quien guía | late 1 → 0,4 y ×1 → ×0,9 cada 0,9 s |
-| | franjas de pista | 0,5 s ease |
+| | franjas de pista | 0,5 s ease (más difuminadas y angostas que en la versión 0.1) |
 | | franja de sostener | crece en 1,4 s lineal, se va en 0,25 s ease |
 | | luz verde de acierto | 0,5 s ease |
-| Recuerdo | destellos | entran desde ×0,4, 0,5 s ease-out, uno cada 0,15 s |
-| | «Escuchar la melodía» | cada destello crece a ×1,35 (0,35 s ease) mientras suena su trozo |
+| Recuerdo | dibujo | estático (sin animación de entrada) |
+| | «Escuchar la melodía» | resalta el trozo que suena (más opaco, su luz ×1,35) y atenúa el resto, de golpe |
+| | «juntos» | degradado lila ↔ coral que se corre un largo completo cada 10 s, lineal, sin fin |
+| | marcador | fondo a teal en 0,3 s; pop ×1 → ×1,22 → ×1 en 0,45 s `cubic-bezier(.2,.8,.2,1)` |
 | Pérdida de stick | anillo punteado | 0,35 ↔ 1 de opacidad y ×0,97 ↔ ×1, 1,6 s ease-in-out |
 | | botón | brillo del color del stick y luz que parpadea cada 250 ms |
 
@@ -176,6 +185,7 @@ EpuNavegacion.mostrarPerdida(context, stick: Stick.pequeno, causa: CausaPerdida.
 * **Analizador:** `dart analyze` sobre Flutter 3.47.9, sin errores ni avisos.
 * **Manos:** la geometría de las manos se probó contra el JavaScript del prototipo en 114 poses y salió idéntica, carácter por carácter. Ese JavaScript es el que dibuja «Antes del nivel», «Quién guía» y las miniaturas.
 * **Movimiento:** el movimiento de «Antes del nivel» en los 7 niveles se comparó contra el prototipo durante 12 s y también salió idéntico. Las pruebas quedaron en `test/`.
+* **Recuerdo:** los datos del dibujo (3.216 valores entre hilos y luces de los 7 niveles) se compararon contra el JavaScript del prototipo y salieron idénticos (`test/recuerdo_test.dart`).
 * **No se corrió en un teléfono:** el entorno donde se escribió no tiene el motor de Flutter. Conviene revisar en un Android real:
   * que las pantallas se vean iguales al canvas;
   * la latencia de los sonidos al acertar;
@@ -186,4 +196,6 @@ EpuNavegacion.mostrarPerdida(context, stick: Stick.pequeno, causa: CausaPerdida.
 * La implementación de `FuenteSticks` con Bluetooth y la lógica del juego con los sticks reales.
 * Permisos de Bluetooth y de No Molestar (Android `ACCESS_NOTIFICATION_POLICY`) en «Conceder permisos».
 * Mantener la pantalla encendida durante el juego (por ejemplo, con el paquete `wakelock_plus`).
-* Guardar en el teléfono los niveles completados y las sesiones.
+* Guardar en el teléfono los niveles completados, los recuerdos y las sesiones (`EstadoEco` los deja en memoria).
+* Contar los trozos logrados de verdad al registrar la sesión (hoy se anotan todos, porque la simulación siempre completa el nivel).
+* Decidir si la preparación necesita una entrada: ya no está en el Home ni en el menú.

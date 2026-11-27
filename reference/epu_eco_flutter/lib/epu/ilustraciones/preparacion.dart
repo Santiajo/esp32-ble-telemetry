@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 
 import '../tema/colores.dart';
 import '../util/svg.dart';
+import 'geometria_mano.dart';
+import 'manos.dart';
 
 /// Ilustraciones de la preparación y de «Calibrar», copiadas del SVG en línea
 /// de cada pantalla. Coordenadas en el viewBox original; el widget escala.
@@ -152,43 +154,39 @@ class AnimacionCalibrar {
   final double anillo1Escala, anillo1Opacidad, anillo2Escala, anillo2Opacidad, luzOpacidad;
 }
 
+/// «Calibrar» (modo eco): las mismas manos de «Quién guía» y de las
+/// pantallas de nivel, quietas, con una flecha verde punteada hacia arriba
+/// sobre cada stick.
+///
+/// SVG: `viewBox="0 -10 120 110"`, 285 px de ancho. [LienzoSvg] no maneja
+/// el −10 del viewBox, así que se corre todo 10 unidades hacia abajo; el
+/// lienzo se pide con `vbAlto: 110`.
+///
+/// Flechas (trazo 1,4, remates redondos, `stroke-dasharray=".4 3.2"`):
+/// * adulto: `M30 11 L30 -4.5` y punta `M27 -2.8 L30 -6 L33 -2.8`;
+/// * niño: `M88 31 L88 18.5` y punta `M85 20.2 L88 17 L91 20.2`.
+///
+/// Mientras calibra, en la luz de cada stick se expanden dos anillos (r 8,5,
+/// trazo 1,8) y la luz parpadea; ver [AnimacionCalibrar].
 void pintarCalibrar(Canvas c, AnimacionCalibrar a) {
-  final verde = trazoSvg(EpuColores.flecha, 3.5);
-  dibujarPunteado(c, trazadoSvg('M129 54 L129 18'), const [1, 8], verde);
-  c.drawPath(trazadoSvg('M121 22 L129 13 L137 22'), verde);
-  dibujarPunteado(c, trazadoSvg('M196 114 L196 84'), const [1, 8], verde);
-  c.drawPath(trazadoSvg('M188 88 L196 79 L204 88'), verde);
+  c
+    ..save()
+    ..translate(0, 10);
+  final verde = trazoSvg(EpuColores.flecha, 1.4);
+  dibujarPunteado(c, trazadoSvg('M30 11 L30 -4.5'), const [.4, 3.2], verde);
+  c.drawPath(trazadoSvg('M27 -2.8 L30 -6 L33 -2.8'), verde);
+  dibujarPunteado(c, trazadoSvg('M88 31 L88 18.5'), const [.4, 3.2], verde);
+  c.drawPath(trazadoSvg('M85 20.2 L88 17 L91 20.2'), verde);
 
-  // Anillos: `transform-box: fill-box; transform-origin: center` → crecen
-  // sobre su centro y el trazo crece con ellos.
-  void anillos(double cx, double cy, double r) {
-    for (final (s, o) in [(a.anillo1Escala, a.anillo1Opacidad), (a.anillo2Escala, a.anillo2Opacidad)]) {
-      if (o > 0) c.drawCircle(Offset(cx, cy), r * s, trazoSvg(EpuColores.luzStick, 3 * s, opacidad: o));
-    }
-  }
-
-  // Luz (grupo con opacidad): halo .45 + núcleo.
-  void luz(double cx, double cy, double rh, double rn) {
-    if (a.luzOpacidad <= 0) return;
-    c
-      ..saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, a.luzOpacidad))
-      ..drawCircle(Offset(cx, cy), rh, rellenoSvg(EpuColores.luzStick, opacidad: .45))
-      ..drawCircle(Offset(cx, cy), rn, rellenoSvg(EpuColores.luzStick))
-      ..restore();
-  }
-
-  final mano = rellenoSvg(EpuColores.ilustracionClaro);
-  final dedos = trazoSvg(EpuColores.ilustracionLinea, 3);
-
-  rectSvg(c, 105, 62, 48, 174, 24, rellenoSvg(EpuColores.lilaAdulto));
-  anillos(129, 86, 13);
-  luz(129, 86, 13, 8);
-  rectSvg(c, 95, 150, 68, 58, 22, mano);
-  c.drawPath(trazadoSvg('M104 166 L140 166 M104 179 L140 179 M104 192 L140 192'), dedos);
-
-  rectSvg(c, 177, 124, 38, 112, 19, rellenoSvg(EpuColores.coralNino));
-  rectSvg(c, 169, 168, 54, 46, 18, mano);
-  c.drawPath(trazadoSvg('M177 181 L206 181 M177 191 L206 191 M177 201 L206 201'), dedos);
-  anillos(196, 143, 12);
-  luz(196, 143, 12, 7);
+  final luz = LuzMano(
+    anilloOpacidad: a.anillo1Opacidad,
+    anilloEscala: a.anillo1Escala,
+    anillo2Opacidad: a.anillo2Opacidad,
+    anillo2Escala: a.anillo2Escala,
+    opacidad: a.luzOpacidad,
+  );
+  final quieta = GeometriaMano(0, 0);
+  dibujarMano(c, quieta, EstiloMano.adulto, luz);
+  dibujarMano(c, quieta, EstiloMano.nino, luz);
+  c.restore();
 }

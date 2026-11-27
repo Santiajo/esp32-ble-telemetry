@@ -20,6 +20,11 @@ import '../widgets/reloj.dart';
 /// | calibrando  | «Calibrando… no se muevan», blanco con borde teal y barra de 3 s | dos anillos amarillos se expanden (×2,8, 1,3 s, ease-out, el segundo con 0,65 s de retraso) y la luz parpadea (0,7 s) |
 /// | listo       | «Sticks calibrados» teal con check | quieta                       |
 ///
+/// La ilustración usa las mismas manos de «Quién guía» y de las pantallas de
+/// nivel (adulto con el stick lila grande, niño con el coral más pequeño),
+/// con una flecha verde punteada hacia arriba sobre cada stick. Antes era un
+/// dibujo de rectángulos con otro estilo. Ver `pintarCalibrar`.
+///
 /// 1,2 s después de calibrar pasa al juego.
 class PantallaCalibrar extends StatefulWidget {
   const PantallaCalibrar({super.key});
@@ -56,20 +61,21 @@ class _PantallaCalibrarState extends State<PantallaCalibrar> {
     final quieto = sinMovimiento(context);
     final f = _fase;
 
+    // Mismas manos que las pantallas de nivel (viewBox 0 −10 120 110, 285 px).
     Widget lienzo(AnimacionCalibrar a) => LienzoSvg(
-          vbAncho: 320,
-          vbAlto: 260,
-          ancho: 290,
+          vbAncho: 120,
+          vbAlto: 110,
+          ancho: 285,
           pintor: (c) => pintarCalibrar(c, a),
-          etiqueta: 'Dos manos sosteniendo los sticks derechos, con la luz de la punta mirando hacia arriba',
+          etiqueta: 'Dos manos sosteniendo los sticks derechos, con la luz de la punta hacia el frente',
         );
 
     final ilustracion = ZonaIlustracion(
       minimo: 260,
       maximo: 388,
       child: DibujoCentrado(
-        ancho: 290,
-        alto: 290 * 260 / 320,
+        ancho: 285,
+        alto: 285 * 110 / 120,
         child: f != _Fase.calibrando
             ? lienzo(const AnimacionCalibrar())
             : quieto
@@ -82,10 +88,21 @@ class _PantallaCalibrarState extends State<PantallaCalibrar> {
       children: [
         Text('Calibren los sticks', style: EpuTextos.tituloMediano, textAlign: TextAlign.center),
         const SizedBox(height: 8),
-        Text('Cada uno sostiene su stick, con la luz hacia arriba', style: EpuTextos.cuerpo, textAlign: TextAlign.center),
-        const SizedBox(height: 8),
-        Text('Quédense quietos hasta que termine.', style: EpuTextos.detalle, textAlign: TextAlign.center),
+        Text('Cada uno sostiene su stick, con la luz hacia el frente tuyo como en el dibujo',
+            style: EpuTextos.cuerpo, textAlign: TextAlign.center),
       ],
+    );
+
+    // Aviso arriba del todo (18 px, 900, interlineado 1,2), con «niño» en el
+    // coral del stick del niño. Reemplaza a «Quédense quietos hasta que
+    // termine.», que iba debajo del texto.
+    final aviso = Text.rich(
+      const TextSpan(children: [
+        TextSpan(text: 'Leer esta instrucción al '),
+        TextSpan(text: 'niño', style: TextStyle(color: EpuColores.coralNino)),
+      ]),
+      style: EpuTextos.nunito(18, FontWeight.w900, alto: 1.2),
+      textAlign: TextAlign.center,
     );
 
     return PantallaBase(
@@ -93,7 +110,7 @@ class _PantallaCalibrarState extends State<PantallaCalibrar> {
       relleno: const EdgeInsets.fromLTRB(22, 66, 22, 28),
       child: ColumnaConBoton(
         separacion: 18,
-        arriba: [ilustracion, textos],
+        arriba: [aviso, ilustracion, textos],
         boton: BotonEstado(
           etiqueta: switch (f) {
             _Fase.inicial => 'Calibrar',

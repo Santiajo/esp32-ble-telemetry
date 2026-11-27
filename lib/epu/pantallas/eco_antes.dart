@@ -17,8 +17,10 @@ import '../widgets/reloj.dart';
 /// Eco · antes del nivel (EcoAntes.dc.html).
 ///
 /// Muestra el movimiento del nivel con las dos manos animadas (sin partitura)
-/// y bloquea «Comenzar» durante 4 s (EPU-26; antes 3) con una barra que se llena, para que
-/// alcancen a mirar la animación.
+/// y bloquea «Comenzar» durante 4 s con una barra que se llena, para que
+/// alcancen a mirar la animación (antes eran 3 s).
+///
+/// La pantalla «Quién guía» NO tiene este bloqueo (se probó y se descartó).
 class PantallaEcoAntes extends StatefulWidget {
   const PantallaEcoAntes({super.key});
 
@@ -109,7 +111,7 @@ class _PantallaEcoAntesState extends State<PantallaEcoAntes> with SingleTickerPr
   }
 }
 
-/// «Comenzar»: gris con una barra que se llena en 4 s (lineal; EPU-26); después pasa
+/// «Comenzar»: gris con una barra que se llena en 4 s (lineal); después pasa
 /// a oscuro en 0,3 s y recién ahí se puede tocar (`pointer-events: none`
 /// mientras está bloqueado).
 class _BotonComenzar extends StatelessWidget {

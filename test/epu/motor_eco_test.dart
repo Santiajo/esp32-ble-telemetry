@@ -93,6 +93,8 @@ void main() {
       j.paso(adulto: atras, nino: adelante);
       j.paso(adulto: atras, nino: adelante);
       expect(j.trozos, [0, 1, 2, 3]);
+      // El recuerdo se dibuja con lo que eligieron (la partitura dice F, B, B, F).
+      expect(j.motor.pasosJugados, ['S:F', 'S:F', 'S:B', 'S:B']);
       // Como el prototipo: 0,9 s + 4 destellos de 2 s (el último de 1,6 s) + 0,7 s = 9,2 s.
       j.durante(9000);
       expect(j.melodias, 1);
@@ -193,6 +195,7 @@ void main() {
     expect(j.motor.objetivo, Borde.derecha);
     j.durante(400, adulto: derecha, nino: derecha);
     expect(j.trozos, [0]);
+    expect(j.motor.pasosJugados.single, matches(RegExp(r'^[A-Z]:L$')));
   });
 
   test('nivel 4 · Sube y baja: completo, con el niño al revés del adulto', () {

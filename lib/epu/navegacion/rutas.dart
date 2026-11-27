@@ -35,6 +35,9 @@ enum Pantalla {
   perdida, //         Perdida.dc.html     («Pérdida de stick»)
 }
 
+/// Argumento de [Pantalla.recuerdo] cuando se abre desde «Tu archivo».
+enum ArgumentosRecuerdo { desdeArchivo }
+
 /// Navegación del flujo.
 ///
 /// En el prototipo cada enlace apunta a una pantalla concreta (por ejemplo,
@@ -102,7 +105,8 @@ class EpuNavegacion {
         Pantalla.guia => const PantallaEcoGuia(),
         Pantalla.calibrar => const PantallaCalibrar(),
         Pantalla.juego => const PantallaEcoJuego(),
-        Pantalla.recuerdo => const PantallaEcoFinal(),
+        // Abierto desde «Tu archivo» (menú del Home): se muestra ya guardado.
+        Pantalla.recuerdo => PantallaEcoFinal(desdeArchivo: argumentos == ArgumentosRecuerdo.desdeArchivo),
         Pantalla.perdida => switch (argumentos) {
             (StickPerdido s, CausaPerdida c) => PantallaPerdida(stick: s, causa: c),
             _ => const PantallaPerdida(),

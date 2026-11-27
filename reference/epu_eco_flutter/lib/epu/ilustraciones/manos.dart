@@ -39,6 +39,8 @@ class LuzMano {
   const LuzMano({
     this.anilloOpacidad = 0,
     this.anilloEscala = 1,
+    this.anillo2Opacidad = 0,
+    this.anillo2Escala = 1,
     this.opacidad,
   });
 
@@ -47,6 +49,10 @@ class LuzMano {
 
   /// Escala del anillo (animación `hr`: .8 → 1.25 → .8).
   final double anilloEscala;
+
+  /// Segundo anillo: solo lo usa «Calibrar», donde dos anillos se expanden
+  /// desfasados mientras calibra.
+  final double anillo2Opacidad, anillo2Escala;
 
   /// Opacidad de la luz. Si es `null` se usa la de la geometría (se atenúa al
   /// volcar hacia adelante). «Quién guía» la reemplaza por el parpadeo `bl`.
@@ -95,14 +101,12 @@ void dibujarMano(Canvas canvas, GeometriaMano g, EstiloMano e, LuzMano luz) {
   canvas
     ..save()
     ..translate(g.luzX, g.luzY);
-  if (luz.anilloOpacidad > 0) {
-    // `transform-box: fill-box; transform-origin: center` → escala sobre su
-    // centro, que es (0, 0). El trazo también se escala.
-    canvas.drawCircle(
-      Offset.zero,
-      8.5 * luz.anilloEscala,
-      trazoSvg(EpuColores.luzStick, 1.8 * luz.anilloEscala, opacidad: luz.anilloOpacidad),
-    );
+  // `transform-box: fill-box; transform-origin: center` → cada anillo
+  // escala sobre su centro, que es (0, 0). El trazo también se escala.
+  for (final (op, esc) in [(luz.anilloOpacidad, luz.anilloEscala), (luz.anillo2Opacidad, luz.anillo2Escala)]) {
+    if (op > 0) {
+      canvas.drawCircle(Offset.zero, 8.5 * esc, trazoSvg(EpuColores.luzStick, 1.8 * esc, opacidad: op));
+    }
   }
   final op = (luz.opacidad ?? g.luzOpacidad).clamp(0.0, 1.0);
   if (op > 0) {

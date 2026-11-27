@@ -1,39 +1,67 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
 import '../audio/sonidos.dart';
 import '../datos/niveles.dart';
 import '../estado/estado_eco.dart';
+import '../ilustraciones/huella.dart';
 import '../navegacion/rutas.dart';
 import '../tema/colores.dart';
 import '../tema/textos.dart';
 import '../util/css.dart';
-import '../util/degradados.dart';
 import '../widgets/comunes.dart';
 
 /// Eco · el recuerdo (EcoFinal.dc.html).
 ///
-/// Un destello por trozo, del color de quien guió (en el nivel 7 el último
-/// es coral porque lo eligió el niño). Los destellos entran uno tras otro
-/// (`in .5s ease-out`, retraso .15 s + .15 s por destello: aparecen desde
-/// ×0,4). «Escuchar la melodía» la toca completa y agranda cada destello
-/// (×1,35, transición .35 s ease) mientras suena su trozo (2 s cada uno).
+/// De arriba hacia abajo:
+/// * «Nivel N · nombre · instrumento» y «La descubrieron juntos», con
+///   «juntos» pintado con un degradado lila ↔ coral que se desplaza lento
+///   ([_PalabraJuntos]).
+/// * El dibujo del recuerdo ([DibujoHuella]): estático, sin fondo, pegado
+///   arriba del área central para usar mejor el espacio.
+/// * Leyenda: Adulto (lila), Niño (coral) y «Se encontraron» (amarillo).
+/// * Resumen de quién guió.
+/// * «Escuchar la melodía» y «Siguiente nivel» (o «Elegir nivel» en el 7).
+///
+/// Arriba a la derecha va el marcador para guardar el recuerdo en
+/// «Tu archivo» ([_Marcador]). Si la pantalla se abrió desde el archivo, el
+/// marcador ya aparece guardado ([desdeArchivo]).
+///
+/// Cambios respecto de la versión anterior del paquete: se reemplazaron los
+/// destellos por el dibujo, se quitó «X segundos · N trozos» (el
+/// instrumento pasó al encabezado) y se sumó el marcador.
 class PantallaEcoFinal extends StatefulWidget {
-  const PantallaEcoFinal({super.key});
+  const PantallaEcoFinal({super.key, this.desdeArchivo = false});
+
+  /// `true` cuando se abre tocando un recuerdo o una sesión de «Tu archivo».
+  final bool desdeArchivo;
 
   @override
   State<PantallaEcoFinal> createState() => _PantallaEcoFinalState();
 }
 
-class _PantallaEcoFinalState extends State<PantallaEcoFinal> with SingleTickerProviderStateMixin {
+class _PantallaEcoFinalState extends State<PantallaEcoFinal> {
   late final NivelEco _n = NivelEco.de(EpuEstado.leer(context).nivel);
-  late final Duration _total = Duration(milliseconds: 150 + 150 * (_n.trozos - 1) + 500);
-  late final AnimationController _entrada = AnimationController(vsync: this, duration: _total)..forward();
 
   int _sonando = -1;
   final List<Timer> _timers = [];
 
+  /// Se guardó en esta visita (dispara la animación del marcador).
+  bool _guardadoAhora = false;
+
+  bool get _guardado => _guardadoAhora || widget.desdeArchivo;
+
+  void _guardar() {
+    if (_guardado) return;
+    EpuEstado.leer(context).guardarRecuerdo(_n.id);
+    setState(() => _guardadoAhora = true);
+  }
+
+  /// Toca la melodía completa y resalta en el dibujo el trozo que suena
+  /// (2 s por trozo).
   void _escuchar() {
     for (final t in _timers) {
       t.cancel();
@@ -51,14 +79,12 @@ class _PantallaEcoFinalState extends State<PantallaEcoFinal> with SingleTickerPr
     for (final t in _timers) {
       t.cancel();
     }
-    _entrada.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final n = _n;
-    final quieto = sinMovimiento(context);
     final guioAdulto = n.guiaAdulto;
     final dos = n.ultimoTrozoNino;
     final estado = EpuEstado.leer(context);
@@ -72,62 +98,76 @@ class _PantallaEcoFinalState extends State<PantallaEcoFinal> with SingleTickerPr
 
     final encabezado = Column(
       children: [
-        Text('Nivel ${n.id} · ${n.nombre}', style: EpuTextos.etiqueta, textAlign: TextAlign.center),
+        Text('Nivel ${n.id} · ${n.nombre} · ${n.instrumento}', style: EpuTextos.etiqueta, textAlign: TextAlign.center),
         const SizedBox(height: 4),
-        Text('La descubrieron juntos', style: EpuTextos.tituloGrande, textAlign: TextAlign.center),
+        Text.rich(
+          TextSpan(children: [
+            const TextSpan(text: 'La descubrieron '),
+            WidgetSpan(
+              alignment: PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
+              child: _PalabraJuntos(estilo: EpuTextos.tituloGrande),
+            ),
+          ]),
+          style: EpuTextos.tituloGrande,
+          textAlign: TextAlign.center,
+        ),
       ],
     );
 
-    Widget punto(Color c) => Container(width: 12, height: 12, decoration: BoxDecoration(color: c, shape: BoxShape.circle));
-
-    final centro = Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Semantics(
-          image: true,
-          label: 'Recuerdo de la melodía: ${n.trozos} destellos de color, uno por cada trozo, del color de quien guió',
-          child: SizedBox(
-            height: 190,
-            child: AnimatedBuilder(
-              animation: _entrada,
-              builder: (context, _) => _Destellos(
-                nivel: n,
-                sonando: _sonando,
-                entrada: (i) {
-                  if (quieto) return 1;
-                  final inicio = 150 + 150 * i, ms = _entrada.value * _total.inMilliseconds;
-                  return Curves.easeOut.transform(((ms - inicio) / 500).clamp(0.0, 1.0));
-                },
-                quieto: quieto,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        Row(
+    // Leyenda: `gap 6px 14px; 12.5px 800`. El punto amarillo lleva un aro
+    // `box-shadow: 0 0 0 2.5px rgba(242,228,74,.45)`.
+    Widget item(Color c, String texto, {bool aro = false}) => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            punto(guioAdulto ? EpuColores.lilaAdulto : EpuColores.coralNino),
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: c,
+                shape: BoxShape.circle,
+                boxShadow: aro ? [BoxShadow(color: c.withValues(alpha: .45), spreadRadius: 2.5)] : null,
+              ),
+            ),
             const SizedBox(width: 6),
-            Text(guioAdulto ? 'Guió el adulto' : 'Guió el niño', style: EpuTextos.leyenda),
-            if (dos) ...[
-              const SizedBox(width: 16),
-              punto(EpuColores.coralNino),
-              const SizedBox(width: 6),
-              Text('Último trozo: el niño', style: EpuTextos.leyenda),
-            ],
+            Text(texto, style: EpuTextos.leyenda),
           ],
-        ),
-        const SizedBox(height: 18),
-        Text('${n.instrumento} · ${n.trozos * 2} segundos · ${n.trozos} trozos',
-            style: EpuTextos.subtitulo, textAlign: TextAlign.center),
-        const SizedBox(height: 6),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 300),
-          child: Text(resumen, style: EpuTextos.cuerpo, textAlign: TextAlign.center),
-        ),
+        );
+    final leyenda = Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 14,
+      runSpacing: 6,
+      children: [
+        item(EpuColores.lilaAdulto, guioAdulto ? 'Adulto · guió' : 'Adulto'),
+        item(EpuColores.coralNino, guioAdulto ? (dos ? 'Niño · guió el último' : 'Niño') : 'Niño · guió'),
+        item(EpuColores.luzStick, 'Se encontraron', aro: true),
       ],
     );
+
+    // Área central: `justify-content: flex-start; gap 14`. El dibujo ocupa
+    // todo el ancho (346 px en el marco de 390) y es cuadrado; en pantallas
+    // bajas se achica para que quepan la leyenda y el resumen.
+    final centro = LayoutBuilder(builder: (context, k) {
+      final lado = math.min(k.maxWidth, math.max(160.0, k.maxHeight - 110));
+      return Column(
+        children: [
+          DibujoHuella(
+            nivel: n,
+            lado: lado,
+            resaltado: _sonando,
+            etiqueta: 'Recuerdo de la melodía: trazos lila y coral que salen del centro hacia donde se movió '
+                'cada stick, con ${n.trozos} luces amarillas donde se encontraron',
+          ),
+          const SizedBox(height: 14 - 4), // `margin-top: -4px` de la leyenda
+          leyenda,
+          const SizedBox(height: 14),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 300),
+            child: Text(resumen, style: EpuTextos.cuerpo, textAlign: TextAlign.center),
+          ),
+        ],
+      );
+    });
 
     final siguiente = n.id < 7;
     final botones = IntrinsicHeight(
@@ -135,11 +175,7 @@ class _PantallaEcoFinalState extends State<PantallaEcoFinal> with SingleTickerPr
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: _BotonDoble(
-              texto: 'Escuchar la melodía',
-              oscuro: false,
-              alTocar: _escuchar,
-            ),
+            child: _BotonDoble(texto: 'Escuchar la melodía', oscuro: false, alTocar: _escuchar),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -163,6 +199,7 @@ class _PantallaEcoFinalState extends State<PantallaEcoFinal> with SingleTickerPr
     return PantallaBase(
       atras: Pantalla.elegirNivel,
       relleno: const EdgeInsets.fromLTRB(22, 66, 22, 28),
+      accion: _Marcador(guardado: _guardado, animar: _guardadoAhora, alTocar: _guardar),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -177,110 +214,156 @@ class _PantallaEcoFinalState extends State<PantallaEcoFinal> with SingleTickerPr
   }
 }
 
-/// Fila de destellos encimados (`margin: 0 -7px`) sobre un brillo verde.
-class _Destellos extends StatelessWidget {
-  const _Destellos({
-    required this.nivel,
-    required this.sonando,
-    required this.entrada,
-    required this.quieto,
-  });
+/// «juntos» con los colores del adulto y del niño mezclándose.
+///
+/// CSS: `background: linear-gradient(90deg, lila 0%, coral 50%, lila 100%);
+/// background-size: 200% 100%; background-clip: text;
+/// animation: jt 10s linear infinite` (`background-position` 0 % → 200 %).
+///
+/// Con `background-size: 200%` el degradado mide el doble de la palabra y
+/// se repite; ir de 0 % a 200 % lo corre exactamente un largo completo
+/// (2 × ancho) hacia la izquierda, así el ciclo empalma sin salto. Con
+/// «Quitar animaciones» queda quieto en la posición inicial (lila a la
+/// izquierda, coral en el borde derecho).
+class _PalabraJuntos extends StatefulWidget {
+  const _PalabraJuntos({required this.estilo});
 
-  final NivelEco nivel;
-  final int sonando;
-  final double Function(int i) entrada;
-  final bool quieto;
+  final TextStyle estilo;
 
   @override
-  Widget build(BuildContext context) {
-    final n = nivel.trozos;
-    final lado = n > 5 ? 64.0 : 74.0;
-    return LayoutBuilder(builder: (context, k) {
-      final w = k.maxWidth;
-      // Cada destello ocupa (lado − 14) en la fila y la fila va centrada.
-      final x0 = (w - n * (lado - 14)) / 2;
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Brillo de fondo: `left/right 10; top 35; alto 120; radio 60;
-          // radial-gradient(ellipse at center, verde .3 0, .12 50%, 0 75%)`.
-          Positioned(
-            left: 10,
-            right: 10,
-            top: 35,
-            height: 120,
-            child: LayoutBuilder(
-              builder: (context, kb) => DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(60),
-                  gradient: RadialGradient(
-                    radius: .7071,
-                    colors: const [
-                      Color.fromRGBO(34, 160, 84, .3),
-                      Color.fromRGBO(34, 160, 84, .12),
-                      Color.fromRGBO(34, 160, 84, 0),
-                    ],
-                    stops: const [0, .5, .75],
-                    transform: elipseHastaEsquinas(kb.biggest),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          for (var i = 0; i < n; i++)
-            Positioned(
-              left: x0 + i * (lado - 14) - 7,
-              top: (190 - lado) / 2,
-              width: lado,
-              height: lado,
-              child: _Destello(
-                adulto: nivel.guiaAdulto && !(nivel.ultimoTrozoNino && i == n - 1),
-                grande: sonando == i,
-                entrada: entrada(i),
-                quieto: quieto,
-              ),
-            ),
-        ],
-      );
-    });
-  }
+  State<_PalabraJuntos> createState() => _PalabraJuntosState();
 }
 
-class _Destello extends StatelessWidget {
-  const _Destello({required this.adulto, required this.grande, required this.entrada, required this.quieto});
+class _PalabraJuntosState extends State<_PalabraJuntos> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 10));
 
-  final bool adulto;
-  final bool grande;
-  final double entrada;
-  final bool quieto;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (sinMovimiento(context)) {
+      _c
+        ..stop()
+        ..value = 0;
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _c,
+        builder: (context, child) => ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (b) {
+            final largo = 2 * b.width, x0 = -largo * _c.value;
+            return ui.Gradient.linear(
+              Offset(x0, 0),
+              Offset(x0 + largo, 0),
+              const [EpuColores.lilaAdulto, EpuColores.coralNino, EpuColores.lilaAdulto],
+              const [0, .5, 1],
+              TileMode.repeated,
+            );
+          },
+          child: child,
+        ),
+        child: Text('juntos', style: widget.estilo.copyWith(color: EpuColores.blanco)),
+      );
+}
+
+/// Marcador para guardar el recuerdo (arriba a la derecha).
+///
+/// * Círculo blanco de 44 px con sombra `0 2px 10px rgba(43,37,54,.1)` y
+///   el ícono de marcador vacío (`M5.5 3.5 L14.5 3.5 L14.5 16.5 L10 13
+///   L5.5 16.5 Z`, trazo 2,2) en tinta.
+/// * Guardado: fondo teal (transición .3 s) e ícono blanco relleno. Al
+///   guardarlo hace un «pop» (`flagpop .45s cubic-bezier(.2,.8,.2,1)`:
+///   escala 1 → 1,22 al 40 % → 1).
+/// * No hay texto de confirmación: el estado del botón basta.
+class _Marcador extends StatelessWidget {
+  const _Marcador({required this.guardado, required this.animar, required this.alTocar});
+
+  final bool guardado;
+
+  /// Solo se anima cuando se guarda en esta visita (no al abrir desde el archivo).
+  final bool animar;
+  final VoidCallback alTocar;
 
   @override
   Widget build(BuildContext context) {
-    // `radial-gradient(circle, color 0, color 30%, transparente 70%)`.
-    final c = adulto ? const Color.fromRGBO(179, 162, 220, .95) : const Color.fromRGBO(232, 94, 69, .9);
-    final circulo = DecoratedBox(
+    final quieto = sinMovimiento(context);
+    final circulo = AnimatedContainer(
+      duration: quieto ? Duration.zero : const Duration(milliseconds: 300),
+      curve: Curves.ease,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
+        color: guardado ? EpuColores.teal : EpuColores.blanco,
         shape: BoxShape.circle,
-        gradient: RadialGradient(
-          radius: .7071,
-          colors: [c, c, c.withValues(alpha: 0)],
-          stops: const [0, .3, .7],
+        boxShadow: [sombraCss(0, 2, 10, const Color.fromRGBO(43, 37, 54, .1))],
+      ),
+      alignment: Alignment.center,
+      child: CustomPaint(size: const Size.square(20), painter: _IconoMarcador(guardado)),
+    );
+    return Semantics(
+      button: true,
+      toggled: guardado,
+      label: guardado ? 'Recuerdo guardado' : 'Guardar el recuerdo',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: guardado ? null : alTocar,
+        behavior: HitTestBehavior.opaque,
+        child: TweenAnimationBuilder<double>(
+          // Arranca en 0 y corre una vez cuando [animar] pasa a true.
+          tween: Tween(begin: 0, end: animar && !quieto ? 1 : 0),
+          duration: Duration(milliseconds: animar && !quieto ? 450 : 0),
+          builder: (context, p, child) {
+            // En CSS la curva se aplica a cada tramo entre fotogramas:
+            // 0 → 40 %: 1 → 1,22; 40 → 100 %: 1,22 → 1.
+            final s = p < .4
+                ? mezclar(1, 1.22, CurvasEpu.pop.transform(p / .4))
+                : mezclar(1.22, 1, CurvasEpu.pop.transform(((p - .4) / .6).clamp(0.0, 1.0)));
+            return Transform.scale(scale: animar ? s : 1, child: child);
+          },
+          child: circulo,
         ),
       ),
     );
-    // La escala propia (1 o 1,35) cambia con transición de .35 s ease; la
-    // entrada parte desde ×0,4 y llega a esa escala.
-    return TweenAnimationBuilder<double>(
-      tween: Tween(end: grande ? 1.35 : 1),
-      duration: quieto ? Duration.zero : const Duration(milliseconds: 350),
-      curve: Curves.ease,
-      builder: (context, escala, child) => Opacity(
-        opacity: entrada,
-        child: Transform.scale(scale: mezclar(.4, escala, entrada), child: child),
-      ),
-      child: circulo,
+  }
+}
+
+class _IconoMarcador extends CustomPainter {
+  const _IconoMarcador(this.guardado);
+  final bool guardado;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Path()
+      ..moveTo(5.5, 3.5)
+      ..lineTo(14.5, 3.5)
+      ..lineTo(14.5, 16.5)
+      ..lineTo(10, 13)
+      ..lineTo(5.5, 16.5)
+      ..close();
+    final color = guardado ? EpuColores.blanco : EpuColores.tinta;
+    if (guardado) canvas.drawPath(p, Paint()..color = color);
+    canvas.drawPath(
+      p,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..strokeJoin = StrokeJoin.round
+        ..color = color,
     );
   }
+
+  @override
+  bool shouldRepaint(_IconoMarcador old) => old.guardado != guardado;
 }
 
 /// Botones del recuerdo: `min-height 56; padding 10 12; radio 16;

@@ -3,7 +3,7 @@ description: >-
   Epu · flujo Eco («Melodías para descubrir juntos»). Traducción a Flutter del
   prototipo «App completa · Eco» del canvas «Epu · 11a Flujo completo».
 publish_to: none
-version: 0.1.0+1
+version: 0.3.0+3
 
 environment:
   sdk: ^3.8.0

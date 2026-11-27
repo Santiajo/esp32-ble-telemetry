@@ -59,7 +59,8 @@ class EpuTextos {
   static final tituloAviso =
       nunito(24, FontWeight.w900, alto: 1.1, espaciadoEm: -.01);
 
-  /// «Sesiones pasadas»: 18 px, 900, −.01em.
+  /// Título de sección: 18 px, 900, −.01em (lo usaba «Sesiones pasadas» del
+  /// Home hasta la versión 0.1).
   static final tituloSeccion =
       nunito(18, FontWeight.w900, espaciadoEm: -.01);
 

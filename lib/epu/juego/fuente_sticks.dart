@@ -113,4 +113,8 @@ class EpuSticks {
 abstract class JuegoEco {
   void iniciar();
   void detener();
+
+  /// Los pasos que jugaron (`S:B`, `O:L`…) para dibujar el recuerdo; `null` si
+  /// no se registran.
+  List<String>? get pasosJugados;
 }

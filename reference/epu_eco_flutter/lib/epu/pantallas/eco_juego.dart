@@ -11,11 +11,18 @@ import '../navegacion/rutas.dart';
 import '../tema/colores.dart';
 import '../util/css.dart';
 import '../util/degradados.dart';
+import '../widgets/lados_de_cada_uno.dart';
 import '../widgets/reloj.dart';
 
 /// Eco · descubrir la melodía (EcoJuego.dc.html).
 ///
 /// Fondo oscuro, sin textos ni botones: el teléfono va dentro del eje.
+///
+/// Antes de empezar se muestran 5 s «Quién va en cada lado»
+/// ([LadosDeCadaUno]): arriba, junto a la cámara, el niño; abajo, el adulto.
+/// Recién después arranca la simulación (o, en la app real, la lectura de
+/// los sticks).
+///
 /// Solo hay luces:
 /// * dos luces difusas, una por stick (lila 104 px, coral 84 px);
 /// * franjas en los bordes que indican hacia dónde ir (del color de quien
@@ -40,9 +47,17 @@ class _PantallaEcoJuegoState extends State<PantallaEcoJuego> {
   final _estado = EstadoJuegoEco();
   SimulacionEco? _sim;
 
+  /// Para registrar cuánto duró la sesión.
+  final _inicio = DateTime.now();
+
+  /// `true` durante los 5 s de «Quién va en cada lado».
+  bool _lados = true;
+
   @override
   void initState() {
     super.initState();
+    // Las luces de los sticks aparecen recién cuando empieza el juego.
+    _estado.cambiar(lucesVisibles: false);
     // Pantalla completa: sin barra de estado ni de navegación mientras se juega.
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
@@ -62,9 +77,24 @@ class _PantallaEcoJuegoState extends State<PantallaEcoJuego> {
         // barras del sistema aquí y no recién al cerrarla.
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
         global.marcarCompletado(nivel.id);
+        // Cada nivel terminado queda como sesión en «Tu archivo» (menú del
+        // Home). La simulación siempre completa todos los trozos; con los
+        // sticks reales, pasar aquí los trozos que de verdad lograron.
+        global.registrarSesion(
+          nivel.id,
+          minutos: (DateTime.now().difference(_inicio).inSeconds / 60).round(),
+          logrados: nivel.trozos,
+        );
         EpuNavegacion.ir(context, Pantalla.recuerdo);
       },
-    )..iniciar();
+    );
+  }
+
+  /// Termina «Quién va en cada lado» y arranca el juego.
+  void _empezar() {
+    if (!mounted) return;
+    setState(() => _lados = false);
+    _sim?.iniciar();
   }
 
   @override
@@ -83,9 +113,16 @@ class _PantallaEcoJuegoState extends State<PantallaEcoJuego> {
       child: ColoredBox(
         color: EpuColores.noche,
         child: LayoutBuilder(
-          builder: (context, k) => ListenableBuilder(
-            listenable: _estado,
-            builder: (context, _) => _VistaJuego(estado: _estado, tamano: k.biggest),
+          builder: (context, k) => Stack(
+            children: [
+              Positioned.fill(
+                child: ListenableBuilder(
+                  listenable: _estado,
+                  builder: (context, _) => _VistaJuego(estado: _estado, tamano: k.biggest),
+                ),
+              ),
+              if (_lados) Positioned.fill(child: LadosDeCadaUno(alTerminar: _empezar)),
+            ],
           ),
         ),
       ),
@@ -222,10 +259,21 @@ class _Orbe extends StatelessWidget {
 
 /// Franja de luz en un borde (degradado lineal desde el borde hacia adentro).
 ///
-/// | franja          | bordes de arriba/abajo | bordes de los lados |
-/// |-----------------|------------------------|---------------------|
-/// | pista (.fade)   | .9 → .45 en 1,7 %, 0 en 7,5 % | .45 en 3,7 %, 0 en 16 % |
-/// | sostener        | .45 en 3,2 %, 0 en 14 %       | .45 en 7 %, 0 en 30 %   |
+/// Pista (`.fade`): más difuminada y angosta que en la versión anterior
+/// (que iba .9 → .45 → 0 y llegaba al 7,5 % / 16 %). Ahora parte en .6 y se
+/// desvanece en cinco tramos, sin borde marcado. El largo no cambia: sigue
+/// cubriendo todo el borde.
+///
+/// | opacidad               | .6 | .34   | .14   | .05   | 0     |
+/// |------------------------|----|-------|-------|-------|-------|
+/// | bordes de arriba/abajo | 0  | 0,8 % | 2 %   | 3,2 % | 4,4 % |
+/// | bordes de los lados    | 0  | 1,8 % | 4,4 % | 7 %   | 9,6 % |
+///
+/// Sostener (sin cambios): .9 → .45 → 0; .45 en 3,2 % y 0 en 14 % arriba y
+/// abajo, .45 en 7 % y 0 en 30 % a los lados.
+///
+/// Los porcentajes son del alto (arriba/abajo) o del ancho (lados) de la
+/// pantalla.
 class _Franja extends StatelessWidget {
   const _Franja({required this.borde, required this.color, required this.ancha});
 
@@ -237,11 +285,12 @@ class _Franja extends StatelessWidget {
   Widget build(BuildContext context) {
     final vertical = borde == Borde.frente || borde == Borde.atras;
     final List<double> stops = switch ((vertical, ancha)) {
-      (true, false) => [0, .017, .075],
-      (false, false) => [0, .037, .16],
+      (true, false) => [0, .008, .02, .032, .044],
+      (false, false) => [0, .018, .044, .07, .096],
       (true, true) => [0, .032, .14],
       (false, true) => [0, .07, .30],
     };
+    final List<double> alfas = ancha ? const [.9, .45, 0] : const [.6, .34, .14, .05, 0];
     final (inicio, fin) = switch (borde) {
       Borde.frente => (Alignment.topCenter, Alignment.bottomCenter),
       Borde.atras => (Alignment.bottomCenter, Alignment.topCenter),
@@ -253,7 +302,7 @@ class _Franja extends StatelessWidget {
         gradient: LinearGradient(
           begin: inicio,
           end: fin,
-          colors: [color.withValues(alpha: .9), color.withValues(alpha: .45), color.withValues(alpha: 0)],
+          colors: [for (final a in alfas) color.withValues(alpha: a)],
           stops: stops,
         ),
       ),

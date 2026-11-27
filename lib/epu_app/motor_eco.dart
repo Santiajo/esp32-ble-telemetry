@@ -143,6 +143,12 @@ class MotorEco {
   int _destellos = 0;
   bool _iniciado = false;
 
+  final List<String> _jugados = [];
+
+  /// Lo que jugaron, en la notación de la partitura (`S:B`: tipo del paso y
+  /// borde que eligió el guía). Con esto se dibuja el recuerdo (EPU-18).
+  List<String> get pasosJugados => List.unmodifiable(_jugados);
+
   /// Paso actual (0 = primer trozo). Para pruebas y el registro.
   int get paso => _paso;
   bool get terminado => _fase == _Fase.terminado;
@@ -252,6 +258,7 @@ class MotorEco {
     if (ahora - _juntosDesde! >= (quietos ? ajustes.quietosMs : ajustes.sostenerMs)) {
       _fase = _Fase.acierto;
       _faseDesde = ahora;
+      _jugados.add('${nivel.pasos[_paso][0]}:${_elegido!.letra}');
       estado.cambiar(
         acierto: true,
         pistas: const {},

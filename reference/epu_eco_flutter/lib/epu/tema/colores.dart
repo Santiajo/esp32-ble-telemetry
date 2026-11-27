@@ -64,7 +64,8 @@ class EpuColores {
   static const centroLuzAdulto = Color(0xFFCFC2EE);
   static const centroLuzNino = Color(0xFFF28A76);
 
-  /// Verde del brillo de fondo en «La descubrieron juntos».
+  /// Verde del brillo de fondo de los destellos del recuerdo (versión 0.1).
+  /// Desde la versión 0.2 el recuerdo es la huella y este color no se usa.
   static const verdeRecuerdo = Color(0xFF22A054);
 
   /// Colores del logo (archivo logo-epu.svg).

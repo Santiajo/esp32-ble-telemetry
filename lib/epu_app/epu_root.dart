@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
@@ -15,7 +16,6 @@ import '../epu/pantallas/perdida.dart' show CausaPerdida;
 import '../epu/tema/colores.dart';
 import 'fuente_sticks_ble.dart';
 import 'juego_eco_real.dart';
-import 'progreso_epu.dart';
 
 /// Raíz de la app Epu: crea la conexión con los sticks una sola vez, la entrega a
 /// las pantallas de Joaquín por [EpuSticks.fuente] y abre el flujo Eco.
@@ -34,30 +34,42 @@ class EpuRoot extends StatefulWidget {
   State<EpuRoot> createState() => _EpuRootState();
 }
 
-class _EpuRootState extends State<EpuRoot> with WidgetsBindingObserver {
+class _EpuRootState extends State<EpuRoot> {
   final StickHub _hub = StickHub(bluetoothEncendido: FuenteSticksBle.bluetoothEncendido);
   late final FuenteSticksBle _fuente = FuenteSticksBle(
     _hub,
     unStick: const bool.fromEnvironment('EPU_UN_STICK'),
     alConectarLosDos: () => unawaited(_marcarPreparacion()),
   );
-  /// Clave del progreso guardado (niveles completados y sesiones).
-  static const String progresoKey = 'epu_progreso';
+
+  /// Sin sticks: las pantallas usan los tiempos simulados de Joaquín
+  /// (`--dart-define=EPU_SIMULADO=true`). No toca el Bluetooth.
+  static const bool simulado = bool.fromEnvironment('EPU_SIMULADO');
+
+  /// «Tu archivo» lleno de ejemplo (`EstadoEco.demoLleno`) para revisar vistas.
+  /// No se guarda nada (`--dart-define=EPU_DEMO=true`).
+  static const bool demo = bool.fromEnvironment('EPU_DEMO');
+
+  /// Clave del archivo guardado: niveles completados, recuerdos y sesiones.
+  /// (En modo simulado se guarda aparte, para no mezclar partidas de mentira).
+  static const String archivoKey = simulado ? 'epu_archivo_simulado' : 'epu_archivo';
+
+  /// Clave antigua (hasta dev.12): de ahí solo se rescatan los niveles completados.
+  static const String progresoAntiguoKey = 'epu_progreso';
 
   EstadoEco? _estado;
-  ProgresoEpu _progreso = ProgresoEpu();
-  final List<SesionPasada> _sesionesHome = [];
   bool? _preparado;
   StreamSubscription<LecturaStick>? _registro;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    EpuSticks.fuente = _fuente;
     EpuSticks.alMantenerLogo = _abrirBanco;
-    EpuSticks.crearJuego = (nivel, estado, alTerminar) =>
-        JuegoEcoReal.para(_fuente, nivel, estado, alTerminar, alPerderStick: _mostrarPerdida);
+    if (!simulado) {
+      EpuSticks.fuente = _fuente;
+      EpuSticks.crearJuego = (nivel, estado, alTerminar) =>
+          JuegoEcoReal.para(_fuente, nivel, estado, alTerminar, alPerderStick: _mostrarPerdida);
+    }
     if (FuenteSticksBle.registrar) _registro = _fuente.lecturas.listen((_) {});
     unawaited(_iniciar());
   }
@@ -67,16 +79,17 @@ class _EpuRootState extends State<EpuRoot> with WidgetsBindingObserver {
     try {
       final prefs = await SharedPreferences.getInstance();
       hecho = prefs.getBool(EpuRoot.preparacionKey) ?? false;
-      _progreso = ProgresoEpu.fromJson(prefs.getString(progresoKey));
+      final texto = prefs.getString(archivoKey) ?? (simulado ? null : prefs.getString(progresoAntiguoKey));
+      if (texto != null) _estado = EstadoEco.desdeArchivo((jsonDecode(texto) as Map).cast<String, Object?>());
     } catch (_) {}
-    _sesionesHome
-      ..clear()
-      ..addAll(_progreso.sesionesParaHome(DateTime.now()));
-    _estado = EstadoEco(nivel: 1, completados: {..._progreso.completados}, sesiones: _sesionesHome)
-      ..addListener(_alCambiarEstado);
+    if (demo) _estado = EstadoEco.demoLleno();
+    _estado ??= EstadoEco(nivel: 1);
+    _estado!.addListener(_alCambiarEstado);
     // Sticks ya vinculados: reconectar de fondo sin pedir permisos todavía.
     try {
-      if (!Platform.isAndroid || await Permission.bluetoothConnect.isGranted) await _hub.reconnectSaved();
+      if (!simulado && (!Platform.isAndroid || await Permission.bluetoothConnect.isGranted)) {
+        await _hub.reconnectSaved();
+      }
     } catch (_) {}
     if (mounted) setState(() => _preparado = hecho);
   }
@@ -87,28 +100,22 @@ class _EpuRootState extends State<EpuRoot> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
-  /// Un nivel recién completado (la pantalla de juego llama a `marcarCompletado`):
-  /// se suma a la sesión, se actualiza el Home y se guarda.
+  /// Cualquier cambio del estado (nivel completado, sesión registrada, recuerdo
+  /// guardado) se guarda en el teléfono. Es poco y cambia pocas veces.
   void _alCambiarEstado() {
     final e = _estado;
-    if (e == null) return;
-    // Cada vez que termina un nivel se registra, aunque ya estuviera completado antes.
-    final terminado = e.ultimoTerminado;
-    if (terminado == null || terminado == _ultimoRegistrado) return;
-    _ultimoRegistrado = terminado;
-    final ahora = DateTime.now();
-    _progreso.terminarNivel(terminado.nivel, ahora);
-    _sesionesHome
-      ..clear()
-      ..addAll(_progreso.sesionesParaHome(ahora));
-    unawaited(_guardar());
+    if (e == null || demo) return;
+    final texto = jsonEncode(e.archivoJson());
+    if (texto == _ultimoGuardado) return;
+    _ultimoGuardado = texto;
+    unawaited(_guardar(texto));
   }
 
-  ({int nivel, int vez})? _ultimoRegistrado;
+  String? _ultimoGuardado;
 
-  Future<void> _guardar() async {
+  Future<void> _guardar(String texto) async {
     try {
-      await (await SharedPreferences.getInstance()).setString(progresoKey, _progreso.toJson());
+      await (await SharedPreferences.getInstance()).setString(archivoKey, texto);
     } catch (_) {}
   }
 
@@ -126,15 +133,8 @@ class _EpuRootState extends State<EpuRoot> with WidgetsBindingObserver {
     ));
   }
 
-  /// Cerrar la app o mandarla al fondo termina la sesión de juego.
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) _progreso.cerrarSesion();
-  }
-
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     unawaited(_registro?.cancel());
     EpuSticks.alMantenerLogo = null;
     EpuSticks.crearJuego = null;
